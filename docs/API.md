@@ -211,6 +211,197 @@ export const usePlaybackState = () => {
 
 ---
 
+## Library (Milestone 2)
+
+### import_library
+
+Importa una biblioteca musical desde una carpeta especificada. Escanea recursivamente, extrae metadatos y los almacena en la base de datos. Emite eventos de progreso durante el proceso.
+
+**Parámetros:**
+- `path`: `string` - Ruta absoluta a la carpeta raíz de la biblioteca
+
+**Retorno:**
+```typescript
+interface ImportResult {
+  imported: number;
+  failed: number;
+  totalFiles: number;
+}
+```
+
+**Eventos emitidos:**
+```typescript
+// Emitido cada 100 pistas o cada segundo
+interface ImportProgress {
+  current: number;
+  total: number;
+  phase: "scanning" | "importing" | "complete";
+}
+listen<ImportProgress>("library:import-progress", (event) => {
+  console.log(`${event.payload.current}/${event.payload.total}`);
+});
+
+// Emitido al completar
+listen<ImportResult>("library:import-complete", (event) => {
+  console.log(`Importadas: ${event.payload.imported}`);
+});
+```
+
+**Ejemplo:**
+```typescript
+import { invoke, listen } from "@tauri-apps/api/core";
+
+// Escuchar eventos de progreso
+const unlisten = await listen<ImportProgress>("library:import-progress", (event) => {
+  const { current, total, phase } = event.payload;
+  console.log(`Fase: ${phase}, Progreso: ${current}/${total}`);
+});
+
+// Iniciar importación
+const result = await invoke<ImportResult>("import_library", {
+  path: "/home/user/Music"
+});
+
+console.log(`Importadas ${result.imported} pistas`);
+console.log(`Fallidas: ${result.failed}`);
+
+// Limpiar listener
+unlisten();
+```
+
+**Errores:**
+- `"PathNotFound"` - La ruta especificada no existe
+- `"PermissionDenied"` - Sin permisos de lectura en la carpeta
+- `"IoError"` - Error de sistema de archivos
+- `"DatabaseError"` - Error al guardar en base de datos
+
+---
+
+### get_all_tracks
+
+Obtiene todas las pistas de la biblioteca.
+
+**Parámetros:** Ninguno
+
+**Retorno:**
+```typescript
+interface Track {
+  id: string;
+  path: string;
+  title: string;
+  artist: string | null;
+  album: string | null;
+  duration: number;
+  bpm: number | null;
+  fileSize: number;
+  format: string;
+  sampleRate: number;
+  bitrate: number;
+  channels: number;
+}
+
+// Retorna array de pistas
+Track[]
+```
+
+**Ejemplo:**
+```typescript
+const tracks = await invoke<Track[]>("get_all_tracks");
+console.log(`Total de pistas: ${tracks.length}`);
+```
+
+**Errores:**
+- `"DatabaseError"` - Error al consultar base de datos
+
+---
+
+### search_tracks
+
+Busca pistas por título, artista o álbum.
+
+**Parámetros:**
+- `query`: `string` - Término de búsqueda (mínimo 2 caracteres recomendado)
+
+**Retorno:**
+```typescript
+Track[] // Array de pistas que coinciden
+```
+
+**Ejemplo:**
+```typescript
+const results = await invoke<Track[]>("search_tracks", {
+  query: "beatles"
+});
+
+results.forEach(track => {
+  console.log(`${track.title} - ${track.artist}`);
+});
+```
+
+**Errores:**
+- `"DatabaseError"` - Error al consultar base de datos
+
+---
+
+### get_track_by_id
+
+Obtiene una pista específica por su ID.
+
+**Parámetros:**
+- `id`: `string` - ID de la pista
+
+**Retorno:**
+```typescript
+Track // Pista encontrada
+```
+
+**Ejemplo:**
+```typescript
+const track = await invoke<Track>("get_track_by_id", {
+  id: "track-uuid-123"
+});
+
+console.log(`Título: ${track.title}`);
+console.log(`Duración: ${track.duration}s`);
+```
+
+**Errores:**
+- `"TrackNotFound"` - No se encontró pista con ese ID
+- `"DatabaseError"` - Error al consultar base de datos
+
+---
+
+### get_library_stats
+
+Obtiene estadísticas de la biblioteca.
+
+**Parámetros:** Ninguno
+
+**Retorno:**
+```typescript
+interface LibraryStats {
+  totalTracks: number;
+  totalDuration: number;
+  totalSize: number;
+  formatDistribution: Record<string, number>;
+}
+```
+
+**Ejemplo:**
+```typescript
+const stats = await invoke<LibraryStats>("get_library_stats");
+
+console.log(`Total de pistas: ${stats.totalTracks}`);
+console.log(`Duración total: ${(stats.totalDuration / 3600).toFixed(2)} horas`);
+console.log(`Tamaño total: ${(stats.totalSize / 1024 / 1024 / 1024).toFixed(2)} GB`);
+console.log(`Formatos:`, stats.formatDistribution);
+```
+
+**Errores:**
+- `"DatabaseError"` - Error al consultar base de datos
+
+---
+
 ## Próximas Funciones (Roadmap)
 
 ### En desarrollo:
@@ -227,4 +418,4 @@ export const usePlaybackState = () => {
 
 ---
 
-*Última actualización: Diciembre 2025*
+*Última actualización: Diciembre 2025 (Milestone 2)*

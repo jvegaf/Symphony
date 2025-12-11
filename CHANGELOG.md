@@ -249,16 +249,144 @@ y este proyecto sigue [Semantic Versioning](https://semver.org/es/).
 
 ---
 
+### 📋 Milestone 2 - Importación de Biblioteca (Completado 100%)
+
+#### Agregado - 2025-12-11
+
+##### Backend Library
+- Implementado módulo de escaneo (`library/scanner.rs`)
+  - Struct `LibraryScanner` con método `scan_directory()`
+  - Escaneo recursivo de directorios
+  - Filtrado por extensiones: mp3, flac, wav, ogg, m4a, aac
+  - Manejo de permisos y directorios inaccesibles
+  - Función auxiliar `is_supported_audio_file()`
+  - **Tests:** 10 tests (escaneo recursivo, filtrado, permisos, directorios vacíos)
+
+- Implementado módulo de extracción de metadatos (`library/metadata.rs`)
+  - Struct `MetadataExtractor` con `extract_metadata()`
+  - Struct `TrackMetadata` con campos completos
+  - Extracción de ID3 tags, FLAC tags, etc.
+  - Método batch: `extract_metadata_batch()`
+  - Integración con `AudioDecoder` de Milestone 1
+  - Conversión de `TrackMetadata` a modelo `Track`
+  - **Tests:** 11 tests (extracción MP3/FLAC/WAV, campos vacíos, batch processing)
+
+- Implementado coordinador de importación (`library/importer.rs`)
+  - Struct `LibraryImporter` con `import_library()`
+  - Enums: `ImportPhase` (Scanning, Importing, Complete)
+  - Structs: `ImportProgress`, `ImportResult`
+  - Eventos Tauri: `library:import-progress` (cada 100 pistas o 1 seg)
+  - Evento Tauri: `library:import-complete` al finalizar
+  - Coordinación: scanner → metadata → database
+  - Función auxiliar `metadata_to_track()`
+  - **Tests:** 7 tests (importación exitosa, progreso, eventos, errores)
+
+- Implementado sistema de errores (`library/error.rs`)
+  - Enum `LibraryError` con 6 variantes
+  - Conversiones desde io::Error, rusqlite::Error, AudioError
+  - Type alias `LibraryResult<T>`
+  - Trait implementations completos
+  - **Tests:** 4 tests (display, conversiones)
+
+##### Comandos Tauri (Library)
+- Implementados 5 comandos (`commands/library.rs`)
+  - `import_library`: Importa biblioteca con progreso
+  - `get_all_tracks`: Obtiene todas las pistas
+  - `search_tracks`: Búsqueda por título/artista/álbum
+  - `get_track_by_id`: Obtiene pista específica
+  - `get_library_stats`: Estadísticas de biblioteca
+  - Struct `LibraryState` con `Arc<Mutex<LibraryImporter>>`
+  - Struct `LibraryStats` con totales y distribución de formatos
+  - **Tests:** 2 tests (import command, get_all_tracks command)
+
+- Agregadas queries de base de datos (`db/queries.rs`)
+  - `search_tracks()`: Búsqueda con patrón LIKE
+  - `get_track_by_id()`: Alias de get_track()
+
+- Actualizado `lib.rs` con módulo library y comandos
+
+##### Frontend Library
+- Implementados tipos TypeScript (`types/library.ts`)
+  - Interfaces: `Track`, `ImportProgress`, `ImportResult`, `LibraryStats`
+  - Enums: `ImportPhase`, `SearchOptions`
+  - Compatibilidad con backend Rust (camelCase)
+
+- Implementados hooks personalizados (`hooks/useLibrary.ts`)
+  - `useImportLibrary()`: Importación con tracking de progreso
+    - Escucha eventos `library:import-progress` y `library:import-complete`
+    - Estado: progress, isPending, isError, error
+    - Limpieza automática de listeners
+  - `useGetAllTracks()`: Query de todas las pistas (cache 5 min)
+  - `useSearchTracks(query, enabled)`: Búsqueda condicional (cache 2 min)
+  - `useGetTrack(id, enabled)`: Query de pista específica (cache 5 min)
+  - `useLibraryStats()`: Estadísticas de biblioteca (cache 1 min)
+  - Integración completa con TanStack Query
+  - **Tests:** 14 tests (hooks, progress events, queries, invalidation)
+
+- Implementado componente `ImportDialog` (`components/ImportDialog.tsx`)
+  - Selección de carpeta con `@tauri-apps/plugin-dialog`
+  - Barra de progreso con porcentaje y conteo
+  - Indicador de fase (scanning/importing/complete)
+  - Manejo de errores con alertas visuales
+  - Estado de completado con confirmación
+  - Callbacks: `onComplete`, `onError`
+  - Estilos Tailwind CSS con modo oscuro
+  - **Tests:** 13 tests (selección, importación, progreso, callbacks)
+
+- Implementado componente `TrackList` (`components/TrackList.tsx`)
+  - Virtualización con `react-window` para grandes bibliotecas
+  - Columnas: Título, Artista, Álbum, Duración, BPM
+  - Búsqueda integrada (mínimo 2 caracteres)
+  - Ordenamiento por columna (ascendente/descendente)
+  - Indicadores visuales de ordenamiento (↑/↓)
+  - Formateo de duración (MM:SS)
+  - Selección de pista con highlight
+  - Callbacks: `onTrackClick`, `onTrackDoubleClick`
+  - Estados: loading, empty, no results
+  - Props: `tracks`, `height`, callbacks
+  - **Tests:** 23 tests (renderizado, búsqueda, ordenamiento, virtualización)
+
+##### Dependencias
+- Frontend:
+  - `@tanstack/react-query`: Data fetching y cache
+  - `@tauri-apps/plugin-dialog`: Diálogos nativos
+  - `react-window`: Virtualización de listas
+  - `@types/react-window`: Tipos TypeScript
+- Backend:
+  - `tempfile = "3.8"` (dev-dependency para tests)
+
+##### Documentación
+- Actualizado `docs/API.md` con 5 comandos de biblioteca
+  - Documentación completa con firmas TypeScript
+  - Ejemplos de uso con eventos y listeners
+  - Casos de error específicos
+  - Guía de hooks personalizados
+
+**Tests Milestone 2 Backend:** +34 tests (10 scanner + 11 metadata + 7 importer + 4 error + 2 commands)  
+**Tests Milestone 2 Frontend:** +50 tests (14 useLibrary + 13 ImportDialog + 23 TrackList)  
+**Tests Totales:** 187 passed (69 backend + 118 frontend)  
+**Cobertura:** 80%+ en todos los módulos ✅
+
+#### ✅ Milestone 2 Completado al 100%
+- 8/8 tareas completadas
+- 84 nuevos tests (34 backend + 50 frontend)
+- Backend: scanner, metadata, importer, commands completos
+- Frontend: hooks, ImportDialog, TrackList completos
+- Documentación actualizada
+- Cobertura > 80%
+
+---
+
 ## [0.1.0] - Planeado para Q1 2026
 
-### Milestone 1 - Core Audio
+### Milestone 1 - Core Audio ✅
 - Decodificación de audio con Symphonia
 - Reproducción con Rodio
 - Generación de waveforms
 - Comandos Tauri de audio
 - UI de AudioPlayer y WaveformViewer
 
-### Milestone 2 - Importación de Biblioteca
+### Milestone 2 - Importación de Biblioteca ✅
 - Escaneo recursivo de directorios
 - Extracción de metadatos
 - Importación con progreso en tiempo real
