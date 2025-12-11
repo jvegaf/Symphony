@@ -62,6 +62,27 @@ npm run build
 npm run tauri build
 ```
 
+### Con Makefile (Recomendado)
+
+```bash
+# Setup inicial completo
+make setup
+
+# Modo desarrollo
+make dev
+
+# Ejecutar tests
+make test
+
+# Build de producción
+make build
+
+# Ver todos los comandos
+make help
+```
+
+Ver [MAKEFILE.md](./docs/MAKEFILE.md) para documentación completa.
+
 ## 📁 Estructura del Proyecto
 
 ```
@@ -100,6 +121,22 @@ cargo test
 cargo tarpaulin  # Cobertura
 ```
 
+### Con Makefile
+
+```bash
+# Ejecutar todos los tests (frontend + backend)
+make test
+
+# Generar reportes de cobertura
+make coverage
+
+# Tests en modo watch (desarrollo)
+make test-watch
+
+# Verificación completa (lint + types + tests)
+make check
+```
+
 **Objetivo de cobertura:** ≥ 80%
 
 ## 📖 Documentación
@@ -112,21 +149,24 @@ cargo tarpaulin  # Cobertura
 
 ## 🎯 Estado del Proyecto
 
-**Milestone Actual:** Milestone 0 - Setup Inicial (62.5% completado)
+**Progreso General:** 37.5% (3 de 8 milestones completados)
 
-### ✅ Completado
-- Requisitos documentados en formato EARS
-- Arquitectura técnica diseñada
-- Proyecto Tauri + React + TypeScript inicializado
-- Tailwind CSS configurado con modo oscuro
-- Componentes UI base implementados
+### ✅ Milestones Completados
+- **Milestone 0:** Setup Inicial (68 tests)
+- **Milestone 1:** Core Audio - Decodificación, reproducción, waveforms (82 tests)
+- **Milestone 2:** Importación de Biblioteca - Scanner, metadata, importación (222 tests)
 
-### 🔄 En Progreso
-- Setup de testing (Vitest + cargo test)
-- Esquema SQLite
-- CI/CD con GitHub Actions
+### 🔄 Siguiente Milestone
+- **Milestone 3:** Playlists y Edición - CRUD, drag & drop, editor de metadatos
 
-Ver [implementation-plan.md](./docs/implementation-plan.md) para detalles completos.
+### 📊 Estadísticas Actuales
+- **Tests Totales:** 222 (153 frontend + 69 backend)
+- **Cobertura:** 80%+ en todos los módulos
+- **Componentes React:** 9
+- **Comandos Tauri:** 13
+- **Formatos Soportados:** MP3, FLAC, WAV, OGG, M4A, AAC
+
+Ver [project-status.md](./docs/project-status.md) y [implementation-plan.md](./docs/implementation-plan.md) para detalles completos.
 
 ## 🤝 Contribuir
 
