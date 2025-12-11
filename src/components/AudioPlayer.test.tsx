@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { AudioPlayer } from "./AudioPlayer";
-import * as useAudioPlayerModule from "@/hooks/useAudioPlayer";
+import * as useAudioPlayerModule from "../hooks/useAudioPlayer";
 
 // Mock del hook useAudioPlayer
 const mockPlay = vi.fn();

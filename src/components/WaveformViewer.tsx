@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import WaveSurfer from "wavesurfer.js";
-import { Card } from "@/components/ui/Card";
-import { Button } from "@/components/ui/Button";
+import { Card } from "./ui/Card";
+import { Button } from "./ui/Button";
 
 /**
  * Props del componente WaveformViewer
@@ -78,7 +78,6 @@ export function WaveformViewer({
         cursorColor: "#60a5fa",
         barWidth: 2,
         barGap: 1,
-        responsive: true,
         normalize: true,
       });
 

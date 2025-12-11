@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import type { PlaybackStateResponse } from "@/types/audio";
+import type { PlaybackStateResponse } from "../types/audio";
 
 /**
  * Estado del reproductor de audio

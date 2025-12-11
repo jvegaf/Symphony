@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { open } from "@tauri-apps/plugin-dialog";
 import { ImportDialog } from "./ImportDialog";
-import * as useLibraryHook from "@/hooks/useLibrary";
+import * as useLibraryHook from "../hooks/useLibrary";
 
 // Mock Tauri dialog
 vi.mock("@tauri-apps/plugin-dialog", () => ({
@@ -17,10 +17,10 @@ const mockOpen = vi.mocked(open);
 const mockMutate = vi.fn();
 const mockUseImportLibrary = {
   mutate: mockMutate,
-  progress: { current: 0, total: 0, phase: "scanning" as const },
+  progress: { current: 0, total: 0, phase: "scanning" as "scanning" | "importing" | "complete" },
   isPending: false,
   isError: false,
-  error: null,
+  error: null as Error | null,
 };
 
 vi.spyOn(useLibraryHook, "useImportLibrary").mockReturnValue(
@@ -187,9 +187,14 @@ describe("ImportDialog", () => {
     // Simular éxito
     const mutateCall = mockMutate.mock.calls[0];
     const options = mutateCall[1];
-    options.onSuccess({ imported: 95, failed: 5, totalFiles: 100 });
+    options.onSuccess({ imported: 95, failed: 5, totalFiles: 100, durationSecs: 45 });
 
-    expect(onComplete).toHaveBeenCalledWith({ imported: 95, failed: 5 });
+    expect(onComplete).toHaveBeenCalledWith({ 
+      imported: 95, 
+      failed: 5, 
+      totalFiles: 100, 
+      durationSecs: 45 
+    });
   });
 
   it("debería llamar onError callback en error", async () => {

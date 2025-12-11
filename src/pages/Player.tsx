@@ -1,19 +1,16 @@
-import { useState } from "react";
 import { Card } from "../components/ui/Card";
 import { AudioPlayer } from "../components/AudioPlayer";
 import { WaveformViewer } from "../components/WaveformViewer";
 import { useGetTrack } from "../hooks/useLibrary";
-import type { Track } from "../types/library";
 
 interface PlayerPageProps {
-  trackId?: string;
+  trackId?: number;
 }
 
 export const Player = ({ trackId }: PlayerPageProps) => {
-  const [currentTrackId, setCurrentTrackId] = useState<string | undefined>(trackId);
-  const { data: track, isLoading } = useGetTrack(currentTrackId || "", !!currentTrackId);
+  const { data: track, isLoading } = useGetTrack(trackId || 0, !!trackId);
 
-  if (!currentTrackId) {
+  if (!trackId) {
     return (
       <div className="h-screen bg-white dark:bg-slate-950 flex items-center justify-center">
         <div className="text-center space-y-4">
@@ -75,8 +72,6 @@ export const Player = ({ trackId }: PlayerPageProps) => {
               )}
             </div>
             <div className="flex items-center space-x-4 text-sm text-gray-500 dark:text-gray-500">
-              <span>{track.format.toUpperCase()}</span>
-              <span>•</span>
               <span>{track.bitrate} kbps</span>
               <span>•</span>
               <span>{track.sampleRate / 1000} kHz</span>
@@ -92,24 +87,18 @@ export const Player = ({ trackId }: PlayerPageProps) => {
 
         {/* Waveform Viewer */}
         <Card title="Forma de Onda">
-          <WaveformViewer track={track} />
+          <WaveformViewer audioPath={track.path} />
         </Card>
 
         {/* Audio Player */}
         <Card title="Controles de Reproducción">
-          <AudioPlayer track={track} />
+          <AudioPlayer trackPath={track.path} trackTitle={track.title} />
         </Card>
 
         {/* Additional Info */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <Card title="Información Técnica">
             <dl className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <dt className="text-gray-600 dark:text-gray-400">Formato:</dt>
-                <dd className="text-gray-900 dark:text-gray-100 font-medium">
-                  {track.format.toUpperCase()}
-                </dd>
-              </div>
               <div className="flex justify-between">
                 <dt className="text-gray-600 dark:text-gray-400">Bitrate:</dt>
                 <dd className="text-gray-900 dark:text-gray-100 font-medium">
@@ -123,15 +112,15 @@ export const Player = ({ trackId }: PlayerPageProps) => {
                 </dd>
               </div>
               <div className="flex justify-between">
-                <dt className="text-gray-600 dark:text-gray-400">Canales:</dt>
-                <dd className="text-gray-900 dark:text-gray-100 font-medium">
-                  {track.channels === 2 ? "Stereo" : "Mono"}
-                </dd>
-              </div>
-              <div className="flex justify-between">
                 <dt className="text-gray-600 dark:text-gray-400">Tamaño:</dt>
                 <dd className="text-gray-900 dark:text-gray-100 font-medium">
                   {(track.fileSize / (1024 * 1024)).toFixed(2)} MB
+                </dd>
+              </div>
+              <div className="flex justify-between">
+                <dt className="text-gray-600 dark:text-gray-400">Duración:</dt>
+                <dd className="text-gray-900 dark:text-gray-100 font-medium">
+                  {Math.floor(track.duration / 60)}:{String(Math.floor(track.duration % 60)).padStart(2, '0')}
                 </dd>
               </div>
             </dl>
@@ -163,14 +152,6 @@ export const Player = ({ trackId }: PlayerPageProps) => {
                   </dd>
                 </div>
               )}
-              {track.trackNumber && (
-                <div className="flex justify-between">
-                  <dt className="text-gray-600 dark:text-gray-400">Pista:</dt>
-                  <dd className="text-gray-900 dark:text-gray-100 font-medium">
-                    #{track.trackNumber}
-                  </dd>
-                </div>
-              )}
               {track.bpm && (
                 <div className="flex justify-between">
                   <dt className="text-gray-600 dark:text-gray-400">BPM:</dt>
@@ -179,10 +160,18 @@ export const Player = ({ trackId }: PlayerPageProps) => {
                   </dd>
                 </div>
               )}
+              {track.key && (
+                <div className="flex justify-between">
+                  <dt className="text-gray-600 dark:text-gray-400">Clave:</dt>
+                  <dd className="text-gray-900 dark:text-gray-100 font-medium">
+                    {track.key}
+                  </dd>
+                </div>
+              )}
               <div className="flex justify-between">
                 <dt className="text-gray-600 dark:text-gray-400">Rating:</dt>
                 <dd className="text-gray-900 dark:text-gray-100 font-medium">
-                  {track.rating > 0 ? "⭐".repeat(track.rating) : "Sin rating"}
+                  {track.rating && track.rating > 0 ? "⭐".repeat(track.rating) : "Sin rating"}
                 </dd>
               </div>
             </dl>

@@ -20,7 +20,7 @@ type View = "library" | "player";
 function App() {
   const { theme, toggleTheme } = useTheme();
   const [currentView, setCurrentView] = useState<View>("library");
-  const [selectedTrackId, setSelectedTrackId] = useState<string | undefined>();
+  const [selectedTrackId] = useState<number | undefined>();
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -55,7 +55,7 @@ function App() {
               <span className="text-2xl font-bold text-gray-900 dark:text-gray-100">
                 🎵 Symphony
               </span>
-              <Button variant="secondary" onClick={toggleTheme} size="sm">
+              <Button variant="secondary" onClick={toggleTheme}>
                 {theme === "dark" ? "☀️" : "🌙"}
               </Button>
             </div>

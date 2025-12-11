@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { useAudioPlayer } from "@/hooks/useAudioPlayer";
-import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
+import { useAudioPlayer } from "../hooks/useAudioPlayer";
+import { Button } from "./ui/Button";
+import { Card } from "./ui/Card";
 
 /**
  * Props del componente AudioPlayer

@@ -56,7 +56,7 @@ describe("WaveformViewer", () => {
   });
 
   it("debería inicializar WaveSurfer con opciones correctas", () => {
-    const { container } = render(
+    render(
       <WaveformViewer
         audioPath="/test/song.mp3"
         height={256}
@@ -74,7 +74,6 @@ describe("WaveformViewer", () => {
         cursorColor: "#60a5fa",
         barWidth: 2,
         barGap: 1,
-        responsive: true,
         normalize: true,
       })
     );

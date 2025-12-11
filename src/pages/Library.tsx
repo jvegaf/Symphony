@@ -37,7 +37,7 @@ export const Library = () => {
             </h1>
             {stats && (
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {stats.totalTracks} pistas • {Math.round(stats.totalDuration / 60)} minutos • {(stats.totalSize / (1024 * 1024 * 1024)).toFixed(2)} GB
+                {stats.totalTracks} pistas • {stats.totalSizeGb.toFixed(2)} GB
               </p>
             )}
           </div>
@@ -102,7 +102,6 @@ export const Library = () => {
             </div>
             <Button
               variant="primary"
-              size="sm"
               onClick={() => handleTrackDoubleClick(selectedTrack)}
             >
               ▶️ Reproducir

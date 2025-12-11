@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { useImportLibrary } from "@/hooks/useLibrary";
+import { useImportLibrary } from "../hooks/useLibrary";
+import type { ImportResult } from "../types/library";
 
 export interface ImportDialogProps {
-  onComplete?: (result: { imported: number; failed: number }) => void;
+  onComplete?: (result: ImportResult) => void;
   onError?: (error: Error) => void;
 }
 
@@ -48,10 +49,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
 
     mutate(selectedPath, {
       onSuccess: (result) => {
-        onComplete?.({
-          imported: result.imported,
-          failed: result.failed,
-        });
+        onComplete?.(result);
       },
       onError: (err) => {
         onError?.(err as Error);
