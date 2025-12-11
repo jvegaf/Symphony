@@ -49,9 +49,38 @@ y este proyecto sigue [Semantic Versioning](https://semver.org/es/).
 - Estructura de directorios según arquitectura diseñada
 - Hot reload funcionando en modo desarrollo
 
+##### Testing - 2025-12-11
+- Configurado Vitest con React Testing Library
+  - Instalado `@testing-library/react`, `@testing-library/jest-dom`, `@testing-library/user-event`
+  - Configurado jsdom environment
+  - Cobertura con threshold 80% (statements/functions/branches/lines)
+- Creado setup de test con mocks de Tauri APIs
+  - Mock de `@tauri-apps/api/core` (invoke)
+  - Mock de `@tauri-apps/api/event` (listen, emit)
+  - Mock de matchMedia y localStorage
+- Implementados tests para todos los componentes UI
+  - `Button.test.tsx`: 9 tests (variants, disabled state, click handlers)
+  - `Input.test.tsx`: 12 tests (label, error, disabled, auto-generated IDs)
+  - `Card.test.tsx`: 9 tests (with/without title, dark mode)
+- Implementados tests para hooks
+  - `useTheme.test.ts`: 9 tests (toggle, localStorage, system preference)
+- Implementados tests para utilidades
+  - `cn.test.ts`: 10 tests (combine, conditional, complex cases)
+- Agregados scripts de test a package.json
+  - `test`: Vitest en watch mode
+  - `test:ui`: Vitest con interfaz gráfica
+  - `test:run`: Ejecutar tests una vez
+  - `test:coverage`: Generar reporte de cobertura
+- Configurado cargo test con tokio-test
+  - Agregado `tokio` y `tokio-test` a dev-dependencies
+  - Creados 3 tests de ejemplo en lib.rs
+- Instalado cargo-tarpaulin para cobertura de Rust
+
+**Cobertura Frontend:** 100% statements, 94.73% branches, 100% functions/lines  
+**Tests Frontend:** 49 passed (5 archivos)  
+**Tests Backend:** 3 passed (Rust)
+
 #### Próximos Pasos
-- ⏳ Configurar Vitest para testing frontend
-- ⏳ Setup de cargo test para backend
 - ⏳ Implementar esquema SQLite con migraciones
 - ⏳ Configurar GitHub Actions para CI/CD
 
