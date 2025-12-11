@@ -1,6 +1,8 @@
 mod db;
+mod audio;
+mod commands;
 
-use db::Database;
+use commands::audio::AudioPlayerState;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -17,7 +19,16 @@ pub fn run() {
 
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet])
+        .manage(AudioPlayerState::new())
+        .invoke_handler(tauri::generate_handler![
+            greet,
+            commands::audio::play_track,
+            commands::audio::pause_playback,
+            commands::audio::resume_playback,
+            commands::audio::stop_playback,
+            commands::audio::get_playback_state,
+            commands::audio::decode_audio_metadata,
+        ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
