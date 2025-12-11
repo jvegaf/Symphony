@@ -26,6 +26,11 @@ rusqlite = { version = "0.32", features = ["bundled"] }
 chrono = { version = "0.4", features = ["serde"] }
 dirs = "6"
 
+# Audio dependencies
+symphonia = { version = "0.5", features = ["mp3", "flac", "wav", "ogg", "aac"] }
+rodio = { version = "0.17", features = ["symphonia-all"] }
+hound = "3.5"
+
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
 tokio-test = "0.4"
