@@ -121,7 +121,9 @@ cargo clippy               # Rust linter
 | Documento | Para |
 |-----------|------|
 | [copilot-instructions.md](.github/copilot-instructions.md) | Overview del proyecto |
-| [react-typescript.instructions.md](.github/instructions/react-typescript.instructions.md) | Frontend |
+| [react-typescript.instructions.md](.github/insarchitect.agent.md](./agents/architect.agent.md) | Planificación de arquitectura |
+| [reviewer.agent.md](./agents/reviewer.agent.md) | Code reviews de calidad |
+| [debugger.agent.md](./agents/debugger.agent.md) | Debugging y troubleshooting |tructions/react-typescript.instructions.md) | Frontend |
 | [tauri-rust.instructions.md](.github/instructions/tauri-rust.instructions.md) | Backend |
 | [testing.instructions.md](.github/instructions/testing.instructions.md) | Testing TDD |
 | [documentation.instructions.md](.github/instructions/documentation.instructions.md) | Docs en español |
