@@ -141,6 +141,50 @@ pub fn delete_track(conn: &Connection, id: i64) -> Result<()> {
     Ok(())
 }
 
+/// Busca pistas por título, artista o álbum
+pub fn search_tracks(conn: &Connection, query: &str) -> Result<Vec<Track>> {
+    let search_pattern = format!("%{}%", query);
+    let mut stmt = conn.prepare(
+        "SELECT id, path, title, artist, album, genre, year,
+                duration, bitrate, sample_rate, file_size,
+                bpm, key, rating, play_count, last_played,
+                date_added, date_modified
+         FROM tracks 
+         WHERE title LIKE ?1 OR artist LIKE ?1 OR album LIKE ?1
+         ORDER BY date_added DESC",
+    )?;
+
+    let tracks = stmt.query_map([&search_pattern], |row| {
+        Ok(Track {
+            id: row.get(0)?,
+            path: row.get(1)?,
+            title: row.get(2)?,
+            artist: row.get(3)?,
+            album: row.get(4)?,
+            genre: row.get(5)?,
+            year: row.get(6)?,
+            duration: row.get(7)?,
+            bitrate: row.get(8)?,
+            sample_rate: row.get(9)?,
+            file_size: row.get(10)?,
+            bpm: row.get(11)?,
+            key: row.get(12)?,
+            rating: row.get(13)?,
+            play_count: row.get(14)?,
+            last_played: row.get(15)?,
+            date_added: row.get(16)?,
+            date_modified: row.get(17)?,
+        })
+    })?;
+
+    tracks.collect()
+}
+
+/// Obtiene una pista por ID (alias de get_track para consistencia de API)
+pub fn get_track_by_id(conn: &Connection, id: i64) -> Result<Track> {
+    get_track(conn, id)
+}
+
 /// CRUD para playlists
 
 pub fn insert_playlist(conn: &Connection, playlist: &Playlist) -> Result<i64> {

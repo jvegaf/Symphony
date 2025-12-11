@@ -1,9 +1,9 @@
 # Resumen Milestone 1 - Core Audio
 
-**Fecha de Finalización:** 11 de diciembre de 2025  
-**Estado:** ✅ Completado 100% (8/8 tareas)  
-**Tests Agregados:** 68 tests (16 backend + 52 frontend)  
-**Tests Totales:** 103 tests (35 backend + 68 frontend)  
+**Fecha de Finalización:** 11 de diciembre de 2025
+**Estado:** ✅ Completado 100% (8/8 tareas)
+**Tests Agregados:** 68 tests (16 backend + 52 frontend)
+**Tests Totales:** 103 tests (35 backend + 68 frontend)
 **Cobertura Frontend:** 90.18% statements, 83.78% branches ✅, 95.23% functions, 90.44% lines
 
 ## Objetivos Cumplidos
@@ -187,12 +187,12 @@ Implementamos un wrapper `AudioOutput` con `unsafe impl Send` para Rodio, ya que
 
 ### Convenciones Seguidas
 
-✅ **TypeScript Strict Mode:** Activado con todos los flags  
-✅ **Conventional Commits:** Todos los commits siguen el formato  
-✅ **Documentación en Español:** README, CHANGELOG, comentarios  
-✅ **TDD:** Tests escritos antes de implementación  
-✅ **Accessibilidad:** aria-labels en todos los botones  
-✅ **Tailwind CSS:** Estilos consistentes con modo oscuro  
+✅ **TypeScript Strict Mode:** Activado con todos los flags
+✅ **Conventional Commits:** Todos los commits siguen el formato
+✅ **Documentación en Español:** README, CHANGELOG, comentarios
+✅ **TDD:** Tests escritos antes de implementación
+✅ **Accessibilidad:** aria-labels en todos los botones
+✅ **Tailwind CSS:** Estilos consistentes con modo oscuro
 ✅ **Error Handling:** Try/catch completo con mensajes descriptivos
 
 ## Decisiones Arquitectónicas
