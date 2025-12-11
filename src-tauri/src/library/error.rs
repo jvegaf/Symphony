@@ -56,7 +56,7 @@ pub type Result<T> = std::result::Result<T, LibraryError>;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::Path;
+
 
     #[test]
     fn test_error_display_io_error() {

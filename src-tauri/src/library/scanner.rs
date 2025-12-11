@@ -104,7 +104,7 @@ impl Default for LibraryScanner {
 mod tests {
     use super::*;
     use std::fs::{self, File};
-    use std::io::Write;
+
     use tempfile::TempDir;
 
     fn create_test_library() -> TempDir {
@@ -132,13 +132,13 @@ mod tests {
 
     #[test]
     fn test_scanner_new() {
-        let scanner = LibraryScanner::new();
+        let _scanner = LibraryScanner::new();
         assert!(true); // Scanner se crea correctamente
     }
 
     #[test]
     fn test_scanner_default() {
-        let scanner = LibraryScanner::default();
+        let _scanner = LibraryScanner::default();
         assert!(true); // Scanner default funciona
     }
 

@@ -119,7 +119,7 @@ impl Default for MetadataExtractor {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs::{self, File};
+    use std::fs::File;
     use std::io::Write;
     use tempfile::TempDir;
 
@@ -150,13 +150,13 @@ mod tests {
 
     #[test]
     fn test_metadata_extractor_new() {
-        let extractor = MetadataExtractor::new();
+        let _extractor = MetadataExtractor::new();
         assert!(true); // Se crea correctamente
     }
 
     #[test]
     fn test_metadata_extractor_default() {
-        let extractor = MetadataExtractor::default();
+        let _extractor = MetadataExtractor::default();
         assert!(true); // Default funciona
     }
 

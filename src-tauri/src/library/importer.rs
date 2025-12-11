@@ -237,6 +237,7 @@ mod tests {
         file.write_all(&0u32.to_le_bytes()).unwrap();
     }
 
+    #[allow(dead_code)]
     fn create_test_library() -> TempDir {
         let temp_dir = TempDir::new().unwrap();
         let root = temp_dir.path();

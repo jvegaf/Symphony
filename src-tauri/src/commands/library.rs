@@ -129,7 +129,7 @@ mod tests {
 
     #[test]
     fn test_library_state_new() {
-        let state = LibraryState::new();
+        let _state = LibraryState::new();
         assert!(true); // Estado se crea correctamente
     }
 
