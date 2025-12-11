@@ -80,9 +80,155 @@ y este proyecto sigue [Semantic Versioning](https://semver.org/es/).
 **Tests Frontend:** 49 passed (5 archivos)  
 **Tests Backend:** 3 passed (Rust)
 
+##### Base de Datos - 2025-12-11
+- Implementado esquema SQLite con 8 tablas
+  - `tracks`: Metadatos de pistas con índices en artist, album, genre
+  - `playlists`, `playlist_tracks`: Sistema de playlists
+  - `cue_points`, `loops`: Puntos de referencia y loops
+  - `beatgrids`, `settings`, `library_sync`: Análisis y configuración
+- Implementado sistema de conexión con pool
+  - `connection.rs`: Gestión de conexiones con singleton pattern
+  - `models.rs`: Structs con Serialize/Deserialize
+  - `queries.rs`: 10 operaciones CRUD tipificadas
+- Implementadas migraciones versionadas
+  - `migrations.rs`: Sistema de versionado automático con tabla `schema_version`
+  - `V1__initial_schema.sql`: Schema inicial con constraints e índices
+- Agregados tests de base de datos (19 tests)
+  - Tests de conexión, modelos, queries y migraciones
+  - Fixtures con datos de prueba
+  - Tests de unicidad de constraints
+
+**Tests Backend:** 19 passed (database module)
+
+##### CI/CD - 2025-12-11
+- Configurado GitHub Actions workflows
+  - `ci.yml`: Build y tests en Ubuntu y Windows
+    - Checkout, setup Rust/Node.js
+    - Caché de Cargo y npm
+    - Build frontend y backend
+    - Ejecución de tests con cobertura
+    - Matrix strategy (ubuntu-latest, windows-latest)
+  - `release.yml`: Release automatizado con semantic tags
+    - Trigger en tags `v*.*.*`
+    - Build de releases para Windows y Linux
+    - Generación de instaladores y portables
+    - Publicación automática a GitHub Releases
+    - Checksums para verificación
+- Configuradas dependencias del sistema
+  - Ubuntu: libwebkit2gtk-4.1-dev, build-essential, libssl-dev
+  - Windows: WebView2 runtime
+  - Rust 1.70+ stable
+
+### 📋 Milestone 1 - Core Audio (Completado 75%)
+
+#### Agregado - 2025-12-11
+
+##### Backend Audio
+- Implementado módulo de decodificación (`audio/decoder.rs`)
+  - Struct `AudioDecoder` con método estático `decode()`
+  - Soporte para formatos: MP3, FLAC, WAV, OGG, AAC, M4A
+  - Extracción de metadatos: duration, sample_rate, channels, bitrate, codec
+  - Validación de formato con extensiones y magic bytes
+  - Integración con Symphonia 0.5 para probing y decoding
+  - **Tests:** 4 tests (decodificación válida, formato no soportado, archivo inválido, extracción de metadata)
+
+- Implementado reproductor de audio (`audio/player.rs`)
+  - Struct `AudioPlayer` con control completo de reproducción
+  - Métodos: `play()`, `pause()`, `resume()`, `stop()`, `get_state()`, `is_playing()`
+  - Enum `PlaybackState`: Playing, Paused, Stopped
+  - Thread-safety con `Arc<Mutex<AudioOutput>>` (wrapper para Rodio)
+  - Integración con Rodio 0.17 (OutputStream, Sink)
+  - Manejo de errores con `AudioError` custom
+  - **Tests:** 3 tests (reproducción, pausa, stop)
+
+- Implementado generador de waveforms (`audio/waveform.rs`)
+  - Struct `WaveformGenerator` con método `generate()`
+  - Downsampling con cálculo RMS para precisión
+  - Control de resolución (samples por segundo)
+  - Struct `WaveformData` con samples y metadata
+  - Integración con Hound 3.5 para lectura WAV
+  - **Tests:** 3 tests (generación exitosa, archivo inválido, downsampling)
+
+- Implementado sistema de errores (`audio/error.rs`)
+  - Enum `AudioError` con 6 variantes específicas
+  - Type alias `AudioResult<T>` para conveniencia
+  - Trait implementations: Display, Error, From (io, symphonia)
+  - Mensajes de error descriptivos en español
+  - **Tests:** 3 tests (display formatting, error conversion)
+
+##### Comandos Tauri
+- Implementados 6 comandos de audio (`commands/audio.rs`)
+  - `play_track`: Reproduce pista desde path
+  - `pause_playback`: Pausa reproducción actual
+  - `resume_playback`: Resume reproducción pausada
+  - `stop_playback`: Detiene reproducción
+  - `get_playback_state`: Obtiene estado actual
+  - `decode_audio_metadata`: Extrae metadatos de pista
+  - Struct `AudioPlayerState` con `Arc<Mutex<AudioPlayer>>`
+  - Manejo de errores con conversión a String
+  - **Tests:** 3 tests (play, pause, stop commands)
+
+- Actualizado `lib.rs` con integración completa
+  - Módulo `audio` público
+  - Módulo `commands` público
+  - Registro de comandos en `invoke_handler`
+  - Gestión de `AudioPlayerState` global
+
+##### Frontend
+- Implementados tipos TypeScript (`types/audio.ts`)
+  - Interfaces: `AudioMetadata`, `PlaybackState`, `PlaybackStateResponse`, `WaveformData`
+  - Mirror de tipos Rust con nomenclatura TypeScript
+  - Documentación JSDoc completa
+
+- Implementado hook `useAudioPlayer` (`hooks/useAudioPlayer.ts`)
+  - Estado: `isPlaying`, `state`, `currentTrackPath`
+  - Funciones: `play()`, `pause()`, `resume()`, `stop()`, `refreshState()`
+  - Integración con comandos Tauri
+  - Sincronización automática de estado con `useEffect`
+  - Manejo de errores con try/catch
+  - **Tests:** 8 tests (reproducción, pausa, resume, stop, estado, sincronización)
+
+- Implementado componente `AudioPlayer` (`components/AudioPlayer.tsx`)
+  - Props: `trackPath`, `trackTitle`, callbacks (`onPlay`, `onPause`, `onStop`)
+  - Uso de `useAudioPlayer` hook
+  - Renderizado dinámico de botones según estado
+  - Indicador de estado de reproducción
+  - Manejo de errores con mensajes al usuario
+  - Accesibilidad con aria-labels
+  - Estilos con Tailwind CSS (modo oscuro incluido)
+  - **Tests:** 17 tests (renderizado, interacción, estados, callbacks, accesibilidad, errores)
+
+##### Documentación
+- Creado `docs/API.md` con documentación completa
+  - 6 comandos Tauri documentados con firmas TypeScript
+  - Ejemplos de uso con código funcional
+  - Casos de error y manejo
+  - Guía de integración con TanStack Query
+  - Lista de formatos soportados
+  - Notas de implementación y roadmap
+  - Convenciones de nomenclatura
+
+- Actualizado `package.json`
+  - Cambiado script "test" a "vitest run" (no watch mode)
+  - Agregado script "test:watch" para modo watch opcional
+
+##### Dependencias
+- Frontend: Sin cambios adicionales
+- Backend:
+  - `symphonia = { version = "0.5", features = ["default"] }`
+  - `rodio = { version = "0.17", features = ["symphonia-all"] }`
+  - `hound = "3.5"`
+
+**Tests Milestone 1:** 47 passed (16 backend + 31 frontend)  
+**Tests Totales:** 115 passed (35 backend + 80 frontend)  
+**Cobertura Frontend:** 91.75% statements, 88.63% branches ✅, 100% functions, 91.48% lines  
+**Threshold Cumplido:** ✅ 80% en todas las métricas
+
 #### Próximos Pasos
-- ⏳ Implementar esquema SQLite con migraciones
-- ⏳ Configurar GitHub Actions para CI/CD
+- ⏳ Implementar componente WaveformViewer
+- ⏳ Verificar cobertura de tests ≥ 80%
+- ⏳ Documentar lecciones aprendidas en milestone-1-summary.md
+- ⏳ Commit de trabajo completado con conventional commits
 
 ---
 
