@@ -1,0 +1,77 @@
+name: "Copilot Setup Steps"
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+  pull_request:
+    paths:
+      - .github/workflows/copilot-setup-steps.yml
+
+jobs:
+  # El nombre del job DEBE ser `copilot-setup-steps` para que Copilot lo detecte
+  copilot-setup-steps:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # Node.js Setup
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+
+      # Rust Setup
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust dependencies
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: "src-tauri"
+
+      # Install dependencies
+      - name: Install npm dependencies
+        run: npm ci
+
+      # Linting & Type Checking
+      - name: Run ESLint
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Run TypeScript type check
+        run: npm run type-check
+        continue-on-error: true
+
+      - name: Run Rust clippy
+        run: cargo clippy --manifest-path src-tauri/Cargo.toml -- -D warnings
+        continue-on-error: true
+
+      # Testing - Frontend
+      - name: Run frontend tests
+        run: npm test -- --run
+        continue-on-error: true
+
+      - name: Check frontend coverage
+        run: npm run coverage -- --run
+        continue-on-error: true
+
+      # Testing - Backend
+      - name: Run Rust tests
+        run: cargo test --manifest-path src-tauri/Cargo.toml
+        continue-on-error: true
+
+      # Build
+      - name: Build frontend
+        run: npm run build
+        continue-on-error: true
+
+      - name: Build Rust backend
+        run: cargo build --manifest-path src-tauri/Cargo.toml
+        continue-on-error: true
