@@ -17,10 +17,14 @@
     "lint": "echo 'ESLint configurado en futuro milestone'"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.90.12",
     "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-dialog": "^2.4.2",
     "@tauri-apps/plugin-opener": "^2",
+    "@types/react-window": "^1.8.8",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
+    "react-window": "^2.2.3",
     "wavesurfer.js": "^7.12.1"
   },
   "devDependencies": {
