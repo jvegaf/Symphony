@@ -14,6 +14,7 @@ pub enum AudioError {
     /// Error de I/O
     IoError(String),
     /// Error al generar waveform
+    #[allow(dead_code)]
     WaveformGenerationFailed(String),
 }
 

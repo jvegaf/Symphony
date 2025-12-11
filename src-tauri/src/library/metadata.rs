@@ -102,6 +102,7 @@ impl MetadataExtractor {
 
     /// Extrae metadatos de múltiples archivos
     /// Continúa con el siguiente archivo si uno falla
+    #[allow(dead_code)]
     pub fn extract_metadata_batch(&self, paths: &[impl AsRef<Path>]) -> Vec<Result<TrackMetadata>> {
         paths.iter()
             .map(|path| self.extract_metadata(path.as_ref()))

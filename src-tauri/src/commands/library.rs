@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 use std::sync::Arc;
-use tauri::{AppHandle, State, Manager};
+use tauri::{AppHandle, State};
 use tokio::sync::Mutex;
 
 use crate::library::{LibraryImporter, ImportResult};

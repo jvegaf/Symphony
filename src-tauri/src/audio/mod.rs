@@ -10,5 +10,4 @@ mod error;
 
 pub use decoder::{AudioDecoder, AudioMetadata};
 pub use player::{AudioPlayer, PlaybackState};
-pub use waveform::{WaveformGenerator, WaveformData};
 pub use error::{AudioError, AudioResult};

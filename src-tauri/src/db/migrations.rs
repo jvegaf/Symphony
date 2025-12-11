@@ -1,6 +1,7 @@
 use rusqlite::{Connection, Result};
 
 /// Versión actual del esquema
+#[allow(dead_code)]
 const CURRENT_VERSION: i32 = 1;
 
 /// Ejecuta todas las migraciones pendientes

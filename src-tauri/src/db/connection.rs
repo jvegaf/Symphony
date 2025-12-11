@@ -1,6 +1,5 @@
 use rusqlite::{Connection, Result};
 use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
 
 /// Wrapper para la conexión de base de datos SQLite
 pub struct Database {

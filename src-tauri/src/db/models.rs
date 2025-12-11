@@ -24,6 +24,7 @@ pub struct Track {
 }
 
 /// Modelo de waveform
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Waveform {
     pub id: Option<i64>,
@@ -34,6 +35,7 @@ pub struct Waveform {
 }
 
 /// Modelo de beatgrid
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Beatgrid {
     pub id: Option<i64>,
@@ -45,6 +47,7 @@ pub struct Beatgrid {
 }
 
 /// Modelo de cue point
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CuePoint {
     pub id: Option<i64>,
@@ -57,6 +60,7 @@ pub struct CuePoint {
 }
 
 /// Modelo de loop
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Loop {
     pub id: Option<i64>,
@@ -69,6 +73,7 @@ pub struct Loop {
 }
 
 /// Modelo de playlist
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Playlist {
     pub id: Option<i64>,
@@ -79,6 +84,7 @@ pub struct Playlist {
 }
 
 /// Modelo de relación playlist-track
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlaylistTrack {
     pub id: Option<i64>,
@@ -89,6 +95,7 @@ pub struct PlaylistTrack {
 }
 
 /// Modelo de configuración
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Setting {
     pub key: String,

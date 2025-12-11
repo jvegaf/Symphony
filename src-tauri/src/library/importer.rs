@@ -6,7 +6,7 @@ use serde::{Serialize, Deserialize};
 
 use super::scanner::LibraryScanner;
 use super::metadata::MetadataExtractor;
-use super::error::{LibraryError, Result};
+use super::error::Result;
 use crate::db::models::Track;
 
 /// Evento de progreso de importación
@@ -41,6 +41,7 @@ pub struct ImportConfig {
     /// Emitir progreso cada N segundos
     pub progress_time_interval: Duration,
     /// Tamaño del batch para inserción en DB
+    #[allow(dead_code)]
     pub batch_size: usize,
 }
 

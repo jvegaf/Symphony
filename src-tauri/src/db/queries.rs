@@ -1,8 +1,9 @@
 use rusqlite::{Connection, Result, params};
-use crate::db::models::{Track, Playlist, PlaylistTrack, Setting};
+use crate::db::models::{Track, Playlist, Setting};
 
 /// CRUD para tracks
 
+#[allow(dead_code)]
 pub fn insert_track(conn: &Connection, track: &Track) -> Result<i64> {
     conn.execute(
         "INSERT INTO tracks (
@@ -103,6 +104,7 @@ pub fn get_all_tracks(conn: &Connection) -> Result<Vec<Track>> {
     tracks.collect()
 }
 
+#[allow(dead_code)]
 pub fn update_track(conn: &Connection, track: &Track) -> Result<()> {
     conn.execute(
         "UPDATE tracks SET
@@ -136,6 +138,7 @@ pub fn update_track(conn: &Connection, track: &Track) -> Result<()> {
     Ok(())
 }
 
+#[allow(dead_code)]
 pub fn delete_track(conn: &Connection, id: i64) -> Result<()> {
     conn.execute("DELETE FROM tracks WHERE id = ?1", [id])?;
     Ok(())
@@ -187,6 +190,7 @@ pub fn get_track_by_id(conn: &Connection, id: i64) -> Result<Track> {
 
 /// CRUD para playlists
 
+#[allow(dead_code)]
 pub fn insert_playlist(conn: &Connection, playlist: &Playlist) -> Result<i64> {
     conn.execute(
         "INSERT INTO playlists (name, description, date_created, date_modified)
@@ -202,6 +206,7 @@ pub fn insert_playlist(conn: &Connection, playlist: &Playlist) -> Result<i64> {
     Ok(conn.last_insert_rowid())
 }
 
+#[allow(dead_code)]
 pub fn get_playlist(conn: &Connection, id: i64) -> Result<Playlist> {
     conn.query_row(
         "SELECT id, name, description, date_created, date_modified
@@ -219,6 +224,7 @@ pub fn get_playlist(conn: &Connection, id: i64) -> Result<Playlist> {
     )
 }
 
+#[allow(dead_code)]
 pub fn get_all_playlists(conn: &Connection) -> Result<Vec<Playlist>> {
     let mut stmt = conn.prepare(
         "SELECT id, name, description, date_created, date_modified
@@ -238,6 +244,7 @@ pub fn get_all_playlists(conn: &Connection) -> Result<Vec<Playlist>> {
     playlists.collect()
 }
 
+#[allow(dead_code)]
 pub fn delete_playlist(conn: &Connection, id: i64) -> Result<()> {
     conn.execute("DELETE FROM playlists WHERE id = ?1", [id])?;
     Ok(())
@@ -245,6 +252,7 @@ pub fn delete_playlist(conn: &Connection, id: i64) -> Result<()> {
 
 /// CRUD para configuración
 
+#[allow(dead_code)]
 pub fn set_setting(conn: &Connection, key: &str, value: &str, value_type: &str) -> Result<()> {
     conn.execute(
         "INSERT OR REPLACE INTO settings (key, value, value_type)
@@ -254,6 +262,7 @@ pub fn set_setting(conn: &Connection, key: &str, value: &str, value_type: &str) 
     Ok(())
 }
 
+#[allow(dead_code)]
 pub fn get_setting(conn: &Connection, key: &str) -> Result<Setting> {
     conn.query_row(
         "SELECT key, value, value_type FROM settings WHERE key = ?1",

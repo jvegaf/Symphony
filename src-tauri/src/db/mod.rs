@@ -9,7 +9,6 @@ pub mod migrations;
 mod connection;
 
 pub use connection::{Database, get_connection};
-pub use models::*;
 
 use rusqlite::Result;
 

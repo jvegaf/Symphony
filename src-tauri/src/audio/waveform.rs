@@ -1,11 +1,11 @@
 use std::path::Path;
-use std::fs::File;
 use hound::{WavReader, SampleFormat};
 use serde::{Serialize, Deserialize};
 
 use crate::audio::{AudioError, AudioResult};
 
 /// Datos de waveform
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WaveformData {
     pub samples: Vec<f32>,
@@ -14,10 +14,12 @@ pub struct WaveformData {
 }
 
 /// Generador de waveforms
+#[allow(dead_code)]
 pub struct WaveformGenerator;
 
 impl WaveformGenerator {
     /// Genera datos de waveform desde un archivo WAV
+    #[allow(dead_code)]
     pub fn generate(path: &Path, resolution: usize) -> AudioResult<WaveformData> {
         // Validar que el archivo existe
         if !path.exists() {
@@ -61,6 +63,7 @@ impl WaveformGenerator {
     }
 
     /// Reduce la resolución de las muestras
+    #[allow(dead_code)]
     fn downsample(samples: &[f32], target_resolution: usize) -> Vec<f32> {
         if samples.len() <= target_resolution {
             return samples.to_vec();
