@@ -39,9 +39,9 @@ Symphony es una aplicación de escritorio para gestionar bibliotecas musicales p
 
 ## Fase 3: Plan de Implementación por Milestones
 
-### Milestone 0 - Setup Inicial (Semana 1) 🔄 EN PROGRESO
+### Milestone 0 - Setup Inicial (Semana 1) ✅ COMPLETADO
 
-**Estado:** 87.5% completado (7 de 8 tareas)
+**Estado:** 100% completado (8 de 8 tareas)
 
 #### ✅ Completado (11 dic 2025)
 - ✅ **Fase 1: ANALYZE** - Creación de `requirements.md` con requisitos en formato EARS
@@ -93,10 +93,23 @@ Symphony es una aplicación de escritorio para gestionar bibliotecas musicales p
   - 16 tests de base de datos pasando
   - Base de datos inicializada en startup de la aplicación
 
-#### 🔄 Pendiente
-- ⏳ **Tarea 5:** CI/CD con GitHub Actions para builds y releases - SIGUIENTE
+- ✅ **Tarea 5:** CI/CD con GitHub Actions
+  - Workflow CI configurado con 4 jobs:
+    - test-frontend: Tests de TypeScript/React con cobertura
+    - test-backend: Tests de Rust en Ubuntu y Windows
+    - lint: Validación de código
+    - build: Compilación multiplataforma
+  - Workflow Release configurado para tags `v*.*.*`:
+    - Generación automática de releases
+    - Builds para Windows (.msi, .exe)
+    - Builds para Linux (.deb, .AppImage)
+  - Caching configurado para npm y cargo
+  - Upload de artifacts automático
+  - README de workflows con documentación completa
 
-**Próximo paso:** Configurar GitHub Actions para CI/CD con tests automáticos y builds multiplataforma
+**✅ Milestone 0 COMPLETADO (100%)**
+
+**Próximo paso:** Iniciar Milestone 1 - Core Audio (Semanas 2-3)
 
 ### Milestone 1 - Core Audio (Semanas 2-3)
 - Backend: Implementar `audio/decoder`, `audio/player`, `audio/waveform` y comandos Tauri
@@ -142,7 +155,8 @@ Symphony es una aplicación de escritorio para gestionar bibliotecas musicales p
 
 ## Estado Actual del Proyecto (11 dic 2025)
 
-### ✅ Completado
+### ✅ Milestone 0 Completado (11 dic 2025)
+
 1. ✅ Requisitos documentados en formato EARS (requirements.md)
 2. ✅ Arquitectura técnica diseñada (design.md)
 3. ✅ Plan de tareas detallado (tasks.md)
@@ -151,13 +165,16 @@ Symphony es una aplicación de escritorio para gestionar bibliotecas musicales p
 6. ✅ Componentes UI base implementados
 7. ✅ Setup de testing completado (Vitest + cargo test, 100% cobertura)
 8. ✅ Esquema SQLite implementado (8 tablas, migraciones, 16 tests)
+9. ✅ CI/CD con GitHub Actions configurado
 
-### 🔄 En Progreso
-- CI/CD con GitHub Actions
+### 🔄 Siguiente Milestone
+- **Milestone 1 - Core Audio** (Semanas 2-3)
+  - Backend: Decodificación con Symphonia, reproducción con Rodio
+  - Frontend: AudioPlayer y WaveformViewer
 
 ### 📊 Progreso General
-- **Milestone 0:** 87.5% (7/8 tareas)
-- **Proyecto global:** 10.9% (Milestone 0 de 8 milestones totales)
+- **Milestone 0:** 100% ✅ COMPLETADO
+- **Proyecto global:** 12.5% (1 de 8 milestones completados)
 
 ## Próximos pasos inmediatos
 1. ✅ ~~Responder preguntas abiertas en Requisitos~~ (Completado)
