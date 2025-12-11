@@ -41,7 +41,7 @@ Symphony es una aplicación de escritorio para gestionar bibliotecas musicales p
 
 ### Milestone 0 - Setup Inicial (Semana 1) 🔄 EN PROGRESO
 
-**Estado:** 75% completado (6 de 8 tareas)
+**Estado:** 87.5% completado (7 de 8 tareas)
 
 #### ✅ Completado (11 dic 2025)
 - ✅ **Fase 1: ANALYZE** - Creación de `requirements.md` con requisitos en formato EARS
@@ -81,11 +81,22 @@ Symphony es una aplicación de escritorio para gestionar bibliotecas musicales p
   - cargo-tarpaulin instalado para cobertura
   - Scripts de test agregados a package.json
 
-#### 🔄 Pendiente
-- ⏳ **Tarea 4:** Configuración de SQLite y esquemas básicos - SIGUIENTE
-- ⏳ **Tarea 5:** CI/CD con GitHub Actions para builds y releases
+- ✅ **Tarea 4:** Configuración de SQLite y esquemas básicos
+  - rusqlite instalado con feature bundled
+  - Sistema de migraciones implementado con versionado
+  - Esquema completo de 8 tablas creado:
+    - tracks, waveforms, beatgrids, cue_points
+    - loops, playlists, playlist_tracks, settings
+  - Foreign keys habilitadas y validadas
+  - Índices optimizados para queries frecuentes
+  - Queries CRUD completas para tracks, playlists y settings
+  - 16 tests de base de datos pasando
+  - Base de datos inicializada en startup de la aplicación
 
-**Próximo paso:** Implementar esquema SQLite con rusqlite, migraciones y queries básicas
+#### 🔄 Pendiente
+- ⏳ **Tarea 5:** CI/CD con GitHub Actions para builds y releases - SIGUIENTE
+
+**Próximo paso:** Configurar GitHub Actions para CI/CD con tests automáticos y builds multiplataforma
 
 ### Milestone 1 - Core Audio (Semanas 2-3)
 - Backend: Implementar `audio/decoder`, `audio/player`, `audio/waveform` y comandos Tauri
@@ -139,14 +150,14 @@ Symphony es una aplicación de escritorio para gestionar bibliotecas musicales p
 5. ✅ Tailwind CSS configurado con modo oscuro
 6. ✅ Componentes UI base implementados
 7. ✅ Setup de testing completado (Vitest + cargo test, 100% cobertura)
+8. ✅ Esquema SQLite implementado (8 tablas, migraciones, 16 tests)
 
 ### 🔄 En Progreso
-- Esquema SQLite
 - CI/CD con GitHub Actions
 
 ### 📊 Progreso General
-- **Milestone 0:** 75% (6/8 tareas)
-- **Proyecto global:** 7.5% (Milestone 0 de 8 milestones totales)
+- **Milestone 0:** 87.5% (7/8 tareas)
+- **Proyecto global:** 10.9% (Milestone 0 de 8 milestones totales)
 
 ## Próximos pasos inmediatos
 1. ✅ ~~Responder preguntas abiertas en Requisitos~~ (Completado)
