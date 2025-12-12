@@ -95,10 +95,16 @@ export const useGetAllTracks = () => {
   return useQuery<Track[], Error>({
     queryKey: ["tracks", "all"],
     queryFn: async () => {
-      const tracks = await invoke<Track[]>("get_all_tracks");
-      return tracks;
+      try {
+        const tracks = await invoke<Track[]>("get_all_tracks");
+        return tracks;
+      } catch (error) {
+        console.warn("Error fetching tracks:", error);
+        return []; // Retornar array vacío en caso de error
+      }
     },
     staleTime: 5 * 60 * 1000, // 5 minutos
+    retry: false, // No reintentar automáticamente
   });
 };
 
@@ -162,9 +168,22 @@ export const useLibraryStats = () => {
   return useQuery<LibraryStats, Error>({
     queryKey: ["library-stats"],
     queryFn: async () => {
-      const stats = await invoke<LibraryStats>("get_library_stats");
-      return stats;
+      try {
+        const stats = await invoke<LibraryStats>("get_library_stats");
+        return stats;
+      } catch (error) {
+        console.warn("Error fetching library stats:", error);
+        // Retornar estadísticas vacías en caso de error
+        return {
+          totalTracks: 0,
+          totalArtists: 0,
+          totalAlbums: 0,
+          totalDurationHours: 0,
+          totalSizeGb: 0,
+        };
+      }
     },
     staleTime: 5 * 60 * 1000, // 5 minutos
+    retry: false, // No reintentar automáticamente
   });
 };

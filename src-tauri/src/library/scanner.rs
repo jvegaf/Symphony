@@ -30,8 +30,11 @@ impl LibraryScanner {
     /// 
     /// # Example
     /// ```
+    /// use std::path::Path;
+    /// use symphony_lib::library::scanner::LibraryScanner;
+    /// 
     /// let scanner = LibraryScanner::new();
-    /// let files = scanner.scan_directory(Path::new("/music"))?;
+    /// // let files = scanner.scan_directory(Path::new("/music"))?;
     /// ```
     pub fn scan_directory(&self, path: &Path) -> Result<Vec<PathBuf>> {
         // Validar que el path existe

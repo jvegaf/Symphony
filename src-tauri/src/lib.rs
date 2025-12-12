@@ -1,7 +1,7 @@
-mod db;
-mod audio;
-mod library;
-mod commands;
+pub mod db;
+pub mod audio;
+pub mod library;
+pub mod commands;
 
 use commands::audio::AudioPlayerState;
 use commands::library::LibraryState;
@@ -14,13 +14,25 @@ fn greet(name: &str) -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    log::info!("Iniciando Symphony...");
+
     // Inicializar base de datos
     if let Err(e) = db::initialize() {
-        eprintln!("Error inicializando base de datos: {}", e);
+        log::error!("Error inicializando base de datos: {}", e);
+    } else {
+        log::info!("Base de datos inicializada correctamente");
     }
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_log::Builder::new()
+            .target(tauri_plugin_log::Target::new(
+                tauri_plugin_log::TargetKind::LogDir {
+                    file_name: Some("symphony.log".to_string()),
+                },
+            ))
+            .build())
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_dialog::init())
         .manage(AudioPlayerState::new())
         .manage(LibraryState::new())
         .invoke_handler(tauri::generate_handler![

@@ -55,7 +55,7 @@ test: ## Ejecutar todos los tests (frontend + backend)
 	@echo "$(BLUE)Ejecutando tests de frontend...$(NC)"
 	$(NPM) test
 	@echo "$(BLUE)Ejecutando tests de backend...$(NC)"
-	$(CARGO) test
+	cd src-tauri && $(CARGO) test
 	@echo "$(GREEN)✓ Todos los tests completados$(NC)"
 
 test-frontend: ## Ejecutar solo tests de frontend (Vitest)
@@ -64,7 +64,7 @@ test-frontend: ## Ejecutar solo tests de frontend (Vitest)
 
 test-backend: ## Ejecutar solo tests de backend (cargo test)
 	@echo "$(BLUE)Ejecutando tests de backend...$(NC)"
-	$(CARGO) test
+	cd src-tauri && $(CARGO) test
 
 test-watch: ## Ejecutar tests en modo watch (frontend)
 	@echo "$(BLUE)Ejecutando tests en modo watch...$(NC)"

@@ -35,9 +35,9 @@ export const Library = () => {
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
               Biblioteca Musical
             </h1>
-            {stats && (
+            {stats && stats.totalTracks > 0 && (
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {stats.totalTracks} pistas • {stats.totalSizeGb.toFixed(2)} GB
+                {stats.totalTracks} pistas • {stats.totalSizeGb?.toFixed(2) ?? '0.00'} GB
               </p>
             )}
           </div>

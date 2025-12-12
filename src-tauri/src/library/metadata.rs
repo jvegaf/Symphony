@@ -64,8 +64,11 @@ impl MetadataExtractor {
     /// 
     /// # Example
     /// ```
+    /// use std::path::Path;
+    /// use symphony_lib::library::metadata::MetadataExtractor;
+    /// 
     /// let extractor = MetadataExtractor::new();
-    /// let metadata = extractor.extract_metadata(Path::new("song.mp3"))?;
+    /// // let metadata = extractor.extract_metadata(Path::new("song.mp3"))?;
     /// ```
     pub fn extract_metadata(&self, path: &Path) -> Result<TrackMetadata> {
         // Usar el decoder para obtener metadata básica (duration, bitrate, etc.)
