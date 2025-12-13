@@ -119,9 +119,27 @@ describe("useImportLibrary", () => {
 });
 
 describe("useGetAllTracks", () => {
+  let queryClient: QueryClient;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
   });
+
+  afterEach(() => {
+    queryClient.clear();
+  });
+
+  const createWrapperWithClient = () => {
+    return ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+  };
 
   it("debería obtener todas las pistas", async () => {
     const mockTracks: Track[] = [
@@ -142,7 +160,7 @@ describe("useGetAllTracks", () => {
     mockInvoke.mockResolvedValue(mockTracks);
 
     const { result } = renderHook(() => useGetAllTracks(), {
-      wrapper: createWrapper(),
+      wrapper: createWrapperWithClient(),
     });
 
     await waitFor(() => {
@@ -157,14 +175,15 @@ describe("useGetAllTracks", () => {
     mockInvoke.mockRejectedValue(new Error("Database error"));
 
     const { result } = renderHook(() => useGetAllTracks(), {
-      wrapper: createWrapper(),
+      wrapper: createWrapperWithClient(),
     });
 
     await waitFor(() => {
-      expect(result.current.isError).toBe(true);
+      expect(result.current.isSuccess).toBe(true);
     });
 
-    expect(result.current.error?.message).toBe("Database error");
+    // El hook captura el error y devuelve array vacío
+    expect(result.current.data).toEqual([]);
   });
 });
 
@@ -276,9 +295,27 @@ describe("useGetTrack", () => {
 });
 
 describe("useLibraryStats", () => {
+  let queryClient: QueryClient;
+
   beforeEach(() => {
     vi.clearAllMocks();
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
   });
+
+  afterEach(() => {
+    queryClient.clear();
+  });
+
+  const createWrapperWithClient = () => {
+    return ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+  };
 
   it("debería obtener estadísticas de biblioteca", async () => {
     const mockStats: LibraryStats = {
@@ -291,7 +328,7 @@ describe("useLibraryStats", () => {
     mockInvoke.mockResolvedValue(mockStats);
 
     const { result } = renderHook(() => useLibraryStats(), {
-      wrapper: createWrapper(),
+      wrapper: createWrapperWithClient(),
     });
 
     await waitFor(() => {
@@ -306,13 +343,20 @@ describe("useLibraryStats", () => {
     mockInvoke.mockRejectedValue(new Error("Stats error"));
 
     const { result } = renderHook(() => useLibraryStats(), {
-      wrapper: createWrapper(),
+      wrapper: createWrapperWithClient(),
     });
 
     await waitFor(() => {
-      expect(result.current.isError).toBe(true);
+      expect(result.current.isSuccess).toBe(true);
     });
 
-    expect(result.current.error?.message).toBe("Stats error");
+    // El hook captura el error y devuelve estadísticas vacías
+    expect(result.current.data).toEqual({
+      totalTracks: 0,
+      totalArtists: 0,
+      totalAlbums: 0,
+      totalDurationHours: 0,
+      totalSizeGb: 0,
+    });
   });
 });

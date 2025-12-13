@@ -402,6 +402,335 @@ console.log(`Formatos:`, stats.formatDistribution);
 
 ---
 
+## Playlists (Milestone 3)
+
+### get_playlists
+
+Obtiene todas las playlists existentes.
+
+**Parámetros:** Ninguno
+
+**Retorno:**
+```typescript
+interface Playlist {
+  id: number;
+  name: string;
+  description: string | null;
+  track_count: number;
+  created_at: string;
+  updated_at: string;
+}
+
+Playlist[] // Array de playlists
+```
+
+**Ejemplo:**
+```typescript
+const playlists = await invoke<Playlist[]>("get_playlists");
+console.log(`Total de playlists: ${playlists.length}`);
+```
+
+**Errores:**
+- `"DatabaseError"` - Error al consultar base de datos
+
+---
+
+### get_playlist
+
+Obtiene una playlist específica por su ID.
+
+**Parámetros:**
+- `id`: `number` - ID de la playlist
+
+**Retorno:**
+```typescript
+Playlist // Playlist encontrada
+```
+
+**Ejemplo:**
+```typescript
+const playlist = await invoke<Playlist>("get_playlist", { id: 1 });
+console.log(`Nombre: ${playlist.name}`);
+console.log(`Pistas: ${playlist.track_count}`);
+```
+
+**Errores:**
+- `"PlaylistNotFound"` - No se encontró playlist con ese ID
+- `"DatabaseError"` - Error al consultar base de datos
+
+---
+
+### get_playlist_tracks_cmd
+
+Obtiene todas las pistas de una playlist específica.
+
+**Parámetros:**
+- `playlist_id`: `number` - ID de la playlist
+
+**Retorno:**
+```typescript
+interface PlaylistTrack extends Track {
+  position: number;        // Posición en la playlist
+  added_at: string;       // Fecha de agregación
+}
+
+PlaylistTrack[] // Array de pistas ordenadas por posición
+```
+
+**Ejemplo:**
+```typescript
+const tracks = await invoke<PlaylistTrack[]>("get_playlist_tracks_cmd", {
+  playlist_id: 1
+});
+
+tracks.forEach(track => {
+  console.log(`${track.position}: ${track.title} - ${track.artist}`);
+});
+```
+
+**Errores:**
+- `"PlaylistNotFound"` - No se encontró playlist con ese ID
+- `"DatabaseError"` - Error al consultar base de datos
+
+---
+
+### create_playlist
+
+Crea una nueva playlist.
+
+**Parámetros:**
+- `name`: `string` - Nombre de la playlist (requerido)
+- `description`: `string | null` - Descripción opcional
+
+**Retorno:**
+```typescript
+Playlist // Playlist creada con su ID
+```
+
+**Ejemplo:**
+```typescript
+const newPlaylist = await invoke<Playlist>("create_playlist", {
+  name: "Mi Playlist",
+  description: "Las mejores canciones de 2024"
+});
+
+console.log(`Playlist creada con ID: ${newPlaylist.id}`);
+```
+
+**Errores:**
+- `"InvalidInput"` - Nombre vacío o inválido
+- `"DatabaseError"` - Error al guardar en base de datos
+
+---
+
+### update_playlist
+
+Actualiza el nombre y/o descripción de una playlist.
+
+**Parámetros:**
+- `id`: `number` - ID de la playlist a actualizar
+- `name`: `string` - Nuevo nombre (requerido)
+- `description`: `string | null` - Nueva descripción opcional
+
+**Retorno:**
+```typescript
+Playlist // Playlist actualizada
+```
+
+**Ejemplo:**
+```typescript
+const updated = await invoke<Playlist>("update_playlist", {
+  id: 1,
+  name: "Mi Playlist Actualizada",
+  description: "Nueva descripción"
+});
+
+console.log(`Playlist actualizada: ${updated.name}`);
+```
+
+**Errores:**
+- `"PlaylistNotFound"` - No se encontró playlist con ese ID
+- `"InvalidInput"` - Nombre vacío o inválido
+- `"DatabaseError"` - Error al actualizar base de datos
+
+---
+
+### delete_playlist
+
+Elimina una playlist de forma permanente.
+
+**Parámetros:**
+- `id`: `number` - ID de la playlist a eliminar
+
+**Retorno:**
+```typescript
+{ success: boolean } // Confirmación de eliminación
+```
+
+**Ejemplo:**
+```typescript
+const result = await invoke<{ success: boolean }>("delete_playlist", {
+  id: 1
+});
+
+if (result.success) {
+  console.log("Playlist eliminada correctamente");
+}
+```
+
+**Errores:**
+- `"PlaylistNotFound"` - No se encontró playlist con ese ID
+- `"DatabaseError"` - Error al eliminar de base de datos
+
+---
+
+### add_track_to_playlist
+
+Agrega una pista a una playlist.
+
+**Parámetros:**
+- `playlist_id`: `number` - ID de la playlist
+- `track_id`: `number` - ID de la pista a agregar
+
+**Retorno:**
+```typescript
+{ success: boolean } // Confirmación de agregación
+```
+
+**Ejemplo:**
+```typescript
+const result = await invoke<{ success: boolean }>("add_track_to_playlist", {
+  playlist_id: 1,
+  track_id: 42
+});
+
+if (result.success) {
+  console.log("Pista agregada a la playlist");
+}
+```
+
+**Errores:**
+- `"PlaylistNotFound"` - No se encontró playlist con ese ID
+- `"TrackNotFound"` - No se encontró pista con ese ID
+- `"TrackAlreadyInPlaylist"` - La pista ya existe en la playlist
+- `"DatabaseError"` - Error al guardar en base de datos
+
+---
+
+### remove_track_from_playlist
+
+Elimina una pista de una playlist.
+
+**Parámetros:**
+- `playlist_id`: `number` - ID de la playlist
+- `track_id`: `number` - ID de la pista a eliminar
+
+**Retorno:**
+```typescript
+{ success: boolean } // Confirmación de eliminación
+```
+
+**Ejemplo:**
+```typescript
+const result = await invoke<{ success: boolean }>("remove_track_from_playlist", {
+  playlist_id: 1,
+  track_id: 42
+});
+
+if (result.success) {
+  console.log("Pista eliminada de la playlist");
+}
+```
+
+**Errores:**
+- `"PlaylistNotFound"` - No se encontró playlist con ese ID
+- `"TrackNotInPlaylist"` - La pista no está en la playlist
+- `"DatabaseError"` - Error al eliminar de base de datos
+
+---
+
+### reorder_playlist_tracks
+
+Reordena las pistas en una playlist especificando el nuevo orden completo.
+
+**Parámetros:**
+- `playlist_id`: `number` - ID de la playlist
+- `track_ids`: `number[]` - Array con los IDs de las pistas en el nuevo orden
+
+**Retorno:**
+```typescript
+{ success: boolean } // Confirmación de reordenamiento
+```
+
+**Ejemplo:**
+```typescript
+// Mover segunda pista a primera posición
+const currentOrder = [10, 20, 30, 40];
+const newOrder = [20, 10, 30, 40]; // 20 ahora primero
+
+const result = await invoke<{ success: boolean }>("reorder_playlist_tracks", {
+  playlist_id: 1,
+  track_ids: newOrder
+});
+
+if (result.success) {
+  console.log("Playlist reordenada correctamente");
+}
+```
+
+**Errores:**
+- `"PlaylistNotFound"` - No se encontró playlist con ese ID
+- `"InvalidInput"` - El array de IDs está vacío o contiene IDs inválidos
+- `"TrackMismatch"` - Los IDs no coinciden con las pistas de la playlist
+- `"DatabaseError"` - Error al actualizar base de datos
+
+---
+
+### update_track_metadata
+
+Actualiza los metadatos de una pista específica.
+
+**Parámetros:**
+- `track_id`: `number` - ID de la pista a actualizar
+- `metadata`: `object` - Objeto con los campos a actualizar:
+  - `title`: `string` - Título de la pista
+  - `artist`: `string` - Artista
+  - `album`: `string` - Álbum
+  - `year`: `number` - Año de lanzamiento
+  - `genre`: `string` - Género musical
+  - `rating`: `number` - Rating de 0 a 5 estrellas
+
+**Retorno:**
+```typescript
+{ success: boolean } // Confirmación de actualización
+```
+
+**Ejemplo:**
+```typescript
+const result = await invoke<{ success: boolean }>("update_track_metadata", {
+  track_id: 42,
+  metadata: {
+    title: "Nuevo Título",
+    artist: "Nuevo Artista",
+    album: "Nuevo Álbum",
+    year: 2024,
+    genre: "Rock",
+    rating: 5
+  }
+});
+
+if (result.success) {
+  console.log("Metadatos actualizados correctamente");
+}
+```
+
+**Errores:**
+- `"TrackNotFound"` - No se encontró pista con ese ID
+- `"InvalidInput"` - Datos inválidos (ej: rating fuera del rango 0-5)
+- `"DatabaseError"` - Error al actualizar base de datos
+
+---
+
 ## Próximas Funciones (Roadmap)
 
 ### En desarrollo:
@@ -411,11 +740,10 @@ console.log(`Formatos:`, stats.formatDistribution);
 - `generate_waveform` - Generar datos de waveform para visualización
 
 ### Planeadas:
-- `get_playlist` - Gestionar playlists
-- `add_to_playlist` - Agregar pistas a playlist
 - `analyze_beatgrid` - Análisis de BPM y beatgrid
 - `set_cue_point` - Gestionar cue points
+- `generate_waveform` - Generar datos de waveform para visualización avanzada
 
 ---
 
-*Última actualización: Diciembre 2025 (Milestone 2)*
+*Última actualización: Diciembre 2025 (Milestone 3)*

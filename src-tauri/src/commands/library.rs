@@ -113,6 +113,41 @@ pub async fn get_library_stats() -> Result<LibraryStats, String> {
     })
 }
 
+/// Estructura para actualizar metadatos de track
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+pub struct UpdateTrackMetadataRequest {
+    pub id: i64,
+    pub title: Option<String>,
+    pub artist: Option<String>,
+    pub album: Option<String>,
+    pub year: Option<i32>,
+    pub genre: Option<String>,
+    pub bpm: Option<f64>,
+    pub rating: Option<i32>,
+}
+
+/// Actualiza metadatos de una pista
+#[tauri::command]
+pub async fn update_track_metadata(
+    request: UpdateTrackMetadataRequest,
+) -> Result<(), String> {
+    let db = crate::db::get_connection()
+        .map_err(|e| e.to_string())?;
+    
+    queries::update_track_metadata(
+        &db.conn,
+        request.id,
+        request.title.as_deref(),
+        request.artist.as_deref(),
+        request.album.as_deref(),
+        request.year,
+        request.genre.as_deref(),
+        request.bpm,
+        request.rating,
+    )
+    .map_err(|e| e.to_string())
+}
+
 /// Estadísticas de la biblioteca
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct LibraryStats {

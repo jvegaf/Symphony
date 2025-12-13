@@ -1,4 +1,4 @@
-use rusqlite::{Connection, Result, params};
+use rusqlite::{Connection, Result, params, OptionalExtension};
 use crate::db::models::{Track, Playlist, Setting};
 
 /// CRUD para tracks
@@ -194,12 +194,10 @@ pub fn get_track_by_id(conn: &Connection, id: i64) -> Result<Track> {
 pub fn insert_playlist(conn: &Connection, playlist: &Playlist) -> Result<i64> {
     conn.execute(
         "INSERT INTO playlists (name, description, date_created, date_modified)
-         VALUES (?1, ?2, ?3, ?4)",
+         VALUES (?1, ?2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
         params![
             playlist.name,
             playlist.description,
-            playlist.date_created,
-            playlist.date_modified,
         ],
     )?;
 
@@ -247,6 +245,231 @@ pub fn get_all_playlists(conn: &Connection) -> Result<Vec<Playlist>> {
 #[allow(dead_code)]
 pub fn delete_playlist(conn: &Connection, id: i64) -> Result<()> {
     conn.execute("DELETE FROM playlists WHERE id = ?1", [id])?;
+    Ok(())
+}
+
+#[allow(dead_code)]
+pub fn update_playlist(
+    conn: &Connection,
+    id: i64,
+    name: &str,
+    description: Option<&str>,
+) -> Result<()> {
+    conn.execute(
+        "UPDATE playlists SET name = ?1, description = ?2, date_modified = CURRENT_TIMESTAMP WHERE id = ?3",
+        params![name, description, id],
+    )?;
+    Ok(())
+}
+
+#[allow(dead_code)]
+pub fn add_track_to_playlist(
+    conn: &Connection,
+    playlist_id: i64,
+    track_id: i64,
+) -> Result<()> {
+    // Obtener posición más alta actual
+    let max_position: Option<i32> = conn
+        .query_row(
+            "SELECT MAX(position) FROM playlist_tracks WHERE playlist_id = ?1",
+            params![playlist_id],
+            |row| row.get(0),
+        )
+        .optional()?
+        .flatten();
+    
+    let next_position = max_position.unwrap_or(-1) + 1;
+    
+    conn.execute(
+        "INSERT INTO playlist_tracks (playlist_id, track_id, position, date_added)
+         VALUES (?1, ?2, ?3, CURRENT_TIMESTAMP)",
+        params![playlist_id, track_id, next_position],
+    )?;
+    Ok(())
+}
+
+#[allow(dead_code)]
+pub fn remove_track_from_playlist(
+    conn: &Connection,
+    playlist_id: i64,
+    track_id: i64,
+) -> Result<()> {
+    conn.execute(
+        "DELETE FROM playlist_tracks 
+         WHERE playlist_id = ?1 AND track_id = ?2",
+        params![playlist_id, track_id],
+    )?;
+    
+    // Reordenar posiciones
+    reorder_playlist_tracks(conn, playlist_id)?;
+    Ok(())
+}
+
+#[allow(dead_code)]
+pub fn reorder_playlist_tracks(
+    conn: &Connection,
+    playlist_id: i64,
+) -> Result<()> {
+    // Obtener tracks en orden actual
+    let mut stmt = conn.prepare(
+        "SELECT id FROM playlist_tracks 
+         WHERE playlist_id = ?1 
+         ORDER BY position"
+    )?;
+    
+    let track_ids: Vec<i64> = stmt
+        .query_map(params![playlist_id], |row| row.get(0))?
+        .collect::<Result<Vec<_>, _>>()?;
+    
+    // Actualizar posiciones secuencialmente
+    for (idx, id) in track_ids.iter().enumerate() {
+        conn.execute(
+            "UPDATE playlist_tracks SET position = ?1 WHERE id = ?2",
+            params![idx as i32, id],
+        )?;
+    }
+    
+    Ok(())
+}
+
+#[allow(dead_code)]
+pub fn update_playlist_track_order(
+    conn: &mut Connection,
+    playlist_id: i64,
+    track_ids: &[i64],
+) -> Result<()> {
+    let tx = conn.transaction()?;
+    
+    // Eliminar tracks actuales
+    tx.execute(
+        "DELETE FROM playlist_tracks WHERE playlist_id = ?1",
+        params![playlist_id],
+    )?;
+    
+    // Insertar con nuevo orden
+    for (position, track_id) in track_ids.iter().enumerate() {
+        tx.execute(
+            "INSERT INTO playlist_tracks (playlist_id, track_id, position, date_added)
+             VALUES (?1, ?2, ?3, CURRENT_TIMESTAMP)",
+            params![playlist_id, track_id, position as i32],
+        )?;
+    }
+    
+    tx.commit()?;
+    Ok(())
+}
+
+#[allow(dead_code)]
+pub fn get_playlist_tracks(
+    conn: &Connection,
+    playlist_id: i64,
+) -> Result<Vec<Track>> {
+    let mut stmt = conn.prepare(
+        "SELECT t.id, t.path, t.title, t.artist, t.album, t.genre, t.year,
+                t.duration, t.bitrate, t.sample_rate, t.file_size,
+                t.bpm, t.key, t.rating, t.play_count, t.last_played,
+                t.date_added, t.date_modified
+         FROM tracks t
+         INNER JOIN playlist_tracks pt ON t.id = pt.track_id
+         WHERE pt.playlist_id = ?1
+         ORDER BY pt.position"
+    )?;
+    
+    let tracks = stmt.query_map(params![playlist_id], |row| {
+        Ok(Track {
+            id: row.get(0)?,
+            path: row.get(1)?,
+            title: row.get(2)?,
+            artist: row.get(3)?,
+            album: row.get(4)?,
+            genre: row.get(5)?,
+            year: row.get(6)?,
+            duration: row.get(7)?,
+            bitrate: row.get(8)?,
+            sample_rate: row.get(9)?,
+            file_size: row.get(10)?,
+            bpm: row.get(11)?,
+            key: row.get(12)?,
+            rating: row.get(13)?,
+            play_count: row.get(14)?,
+            last_played: row.get(15)?,
+            date_added: row.get(16)?,
+            date_modified: row.get(17)?,
+        })
+    })?;
+    
+    tracks.collect()
+}
+
+/// Actualización parcial de metadatos de track
+#[allow(dead_code)]
+pub fn update_track_metadata(
+    conn: &Connection,
+    id: i64,
+    title: Option<&str>,
+    artist: Option<&str>,
+    album: Option<&str>,
+    year: Option<i32>,
+    genre: Option<&str>,
+    bpm: Option<f64>,
+    rating: Option<i32>,
+) -> Result<()> {
+    // Validar rating (0-5)
+    if let Some(r) = rating {
+        if r < 0 || r > 5 {
+            return Err(rusqlite::Error::InvalidParameterName("Rating must be between 0 and 5".to_string()));
+        }
+    }
+
+    // Construir query dinámica
+    let mut updates = Vec::new();
+    let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+
+    if let Some(t) = title {
+        updates.push("title = ?");
+        params.push(Box::new(t.to_string()));
+    }
+    if let Some(a) = artist {
+        updates.push("artist = ?");
+        params.push(Box::new(a.to_string()));
+    }
+    if let Some(a) = album {
+        updates.push("album = ?");
+        params.push(Box::new(a.to_string()));
+    }
+    if let Some(y) = year {
+        updates.push("year = ?");
+        params.push(Box::new(y));
+    }
+    if let Some(g) = genre {
+        updates.push("genre = ?");
+        params.push(Box::new(g.to_string()));
+    }
+    if let Some(b) = bpm {
+        updates.push("bpm = ?");
+        params.push(Box::new(b));
+    }
+    if let Some(r) = rating {
+        updates.push("rating = ?");
+        params.push(Box::new(r));
+    }
+
+    if updates.is_empty() {
+        return Ok(());
+    }
+
+    // Actualizar date_modified
+    updates.push("date_modified = CURRENT_TIMESTAMP");
+
+    let query = format!(
+        "UPDATE tracks SET {} WHERE id = ?",
+        updates.join(", ")
+    );
+    params.push(Box::new(id));
+
+    let params_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+    conn.execute(&query, params_refs.as_slice())?;
+
     Ok(())
 }
 
@@ -441,6 +664,474 @@ mod tests {
 
         assert_eq!(loaded.name, "My Playlist");
         assert_eq!(loaded.description, Some("Test playlist".to_string()));
+    }
+
+    #[test]
+    fn test_update_playlist() {
+        let db = setup_db();
+
+        let playlist = Playlist {
+            id: None,
+            name: "Original Name".to_string(),
+            description: Some("Original description".to_string()),
+            date_created: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        };
+
+        let id = insert_playlist(&db.conn, &playlist).unwrap();
+        
+        update_playlist(&db.conn, id, "Updated Name", Some("Updated description")).unwrap();
+        
+        let updated = get_playlist(&db.conn, id).unwrap();
+        assert_eq!(updated.name, "Updated Name");
+        assert_eq!(updated.description, Some("Updated description".to_string()));
+    }
+
+    #[test]
+    fn test_get_all_playlists() {
+        let db = setup_db();
+
+        for i in 1..=3 {
+            let playlist = Playlist {
+                id: None,
+                name: format!("Playlist {}", i),
+                description: None,
+                date_created: "2024-01-01".to_string(),
+                date_modified: "2024-01-01".to_string(),
+            };
+            insert_playlist(&db.conn, &playlist).unwrap();
+        }
+
+        let playlists = get_all_playlists(&db.conn).unwrap();
+        assert_eq!(playlists.len(), 3);
+    }
+
+    #[test]
+    fn test_add_track_to_playlist() {
+        let db = setup_db();
+
+        // Crear playlist
+        let playlist = Playlist {
+            id: None,
+            name: "Test Playlist".to_string(),
+            description: None,
+            date_created: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        };
+        let playlist_id = insert_playlist(&db.conn, &playlist).unwrap();
+
+        // Crear track
+        let track = Track {
+            id: None,
+            path: "/music/test.mp3".to_string(),
+            title: "Test Track".to_string(),
+            artist: "Test Artist".to_string(),
+            album: None,
+            genre: None,
+            year: None,
+            duration: 180.0,
+            bitrate: 320,
+            sample_rate: 44100,
+            file_size: 8388608,
+            bpm: None,
+            key: None,
+            rating: None,
+            play_count: 0,
+            last_played: None,
+            date_added: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        };
+        let track_id = insert_track(&db.conn, &track).unwrap();
+
+        // Agregar track a playlist
+        add_track_to_playlist(&db.conn, playlist_id, track_id).unwrap();
+
+        // Verificar
+        let tracks = get_playlist_tracks(&db.conn, playlist_id).unwrap();
+        assert_eq!(tracks.len(), 1);
+        assert_eq!(tracks[0].id, Some(track_id));
+    }
+
+    #[test]
+    fn test_add_multiple_tracks_to_playlist() {
+        let db = setup_db();
+
+        let playlist_id = insert_playlist(&db.conn, &Playlist {
+            id: None,
+            name: "Test Playlist".to_string(),
+            description: None,
+            date_created: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        }).unwrap();
+
+        // Agregar 3 tracks
+        for i in 1..=3 {
+            let track = Track {
+                id: None,
+                path: format!("/music/test{}.mp3", i),
+                title: format!("Track {}", i),
+                artist: "Artist".to_string(),
+                album: None,
+                genre: None,
+                year: None,
+                duration: 180.0,
+                bitrate: 320,
+                sample_rate: 44100,
+                file_size: 8388608,
+                bpm: None,
+                key: None,
+                rating: None,
+                play_count: 0,
+                last_played: None,
+                date_added: "2024-01-01".to_string(),
+                date_modified: "2024-01-01".to_string(),
+            };
+            let track_id = insert_track(&db.conn, &track).unwrap();
+            add_track_to_playlist(&db.conn, playlist_id, track_id).unwrap();
+        }
+
+        let tracks = get_playlist_tracks(&db.conn, playlist_id).unwrap();
+        assert_eq!(tracks.len(), 3);
+        // Verificar orden
+        assert_eq!(tracks[0].title, "Track 1");
+        assert_eq!(tracks[1].title, "Track 2");
+        assert_eq!(tracks[2].title, "Track 3");
+    }
+
+    #[test]
+    fn test_remove_track_from_playlist() {
+        let db = setup_db();
+
+        let playlist_id = insert_playlist(&db.conn, &Playlist {
+            id: None,
+            name: "Test Playlist".to_string(),
+            description: None,
+            date_created: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        }).unwrap();
+
+        // Agregar 3 tracks
+        let mut track_ids = Vec::new();
+        for i in 1..=3 {
+            let track = Track {
+                id: None,
+                path: format!("/music/test{}.mp3", i),
+                title: format!("Track {}", i),
+                artist: "Artist".to_string(),
+                album: None,
+                genre: None,
+                year: None,
+                duration: 180.0,
+                bitrate: 320,
+                sample_rate: 44100,
+                file_size: 8388608,
+                bpm: None,
+                key: None,
+                rating: None,
+                play_count: 0,
+                last_played: None,
+                date_added: "2024-01-01".to_string(),
+                date_modified: "2024-01-01".to_string(),
+            };
+            let track_id = insert_track(&db.conn, &track).unwrap();
+            add_track_to_playlist(&db.conn, playlist_id, track_id).unwrap();
+            track_ids.push(track_id);
+        }
+
+        // Eliminar el track del medio
+        remove_track_from_playlist(&db.conn, playlist_id, track_ids[1]).unwrap();
+
+        let tracks = get_playlist_tracks(&db.conn, playlist_id).unwrap();
+        assert_eq!(tracks.len(), 2);
+        assert_eq!(tracks[0].title, "Track 1");
+        assert_eq!(tracks[1].title, "Track 3");
+    }
+
+    #[test]
+    fn test_reorder_playlist_tracks() {
+        let db = setup_db();
+
+        let playlist_id = insert_playlist(&db.conn, &Playlist {
+            id: None,
+            name: "Test Playlist".to_string(),
+            description: None,
+            date_created: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        }).unwrap();
+
+        // Agregar 3 tracks
+        let mut track_ids = Vec::new();
+        for i in 1..=3 {
+            let track = Track {
+                id: None,
+                path: format!("/music/test{}.mp3", i),
+                title: format!("Track {}", i),
+                artist: "Artist".to_string(),
+                album: None,
+                genre: None,
+                year: None,
+                duration: 180.0,
+                bitrate: 320,
+                sample_rate: 44100,
+                file_size: 8388608,
+                bpm: None,
+                key: None,
+                rating: None,
+                play_count: 0,
+                last_played: None,
+                date_added: "2024-01-01".to_string(),
+                date_modified: "2024-01-01".to_string(),
+            };
+            let track_id = insert_track(&db.conn, &track).unwrap();
+            add_track_to_playlist(&db.conn, playlist_id, track_id).unwrap();
+            track_ids.push(track_id);
+        }
+
+        // Reordenar: [3, 1, 2]
+        let new_order = vec![track_ids[2], track_ids[0], track_ids[1]];
+        // Necesitamos hacer el conn mutable para transacciones
+        let mut conn = db.conn;
+        update_playlist_track_order(&mut conn, playlist_id, &new_order).unwrap();
+
+        let tracks = get_playlist_tracks(&conn, playlist_id).unwrap();
+        assert_eq!(tracks.len(), 3);
+        assert_eq!(tracks[0].title, "Track 3");
+        assert_eq!(tracks[1].title, "Track 1");
+        assert_eq!(tracks[2].title, "Track 2");
+    }
+
+    #[test]
+    fn test_delete_playlist_cascade() {
+        let db = setup_db();
+
+        let playlist_id = insert_playlist(&db.conn, &Playlist {
+            id: None,
+            name: "Test Playlist".to_string(),
+            description: None,
+            date_created: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        }).unwrap();
+
+        let track = Track {
+            id: None,
+            path: "/music/test.mp3".to_string(),
+            title: "Test Track".to_string(),
+            artist: "Artist".to_string(),
+            album: None,
+            genre: None,
+            year: None,
+            duration: 180.0,
+            bitrate: 320,
+            sample_rate: 44100,
+            file_size: 8388608,
+            bpm: None,
+            key: None,
+            rating: None,
+            play_count: 0,
+            last_played: None,
+            date_added: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        };
+        let track_id = insert_track(&db.conn, &track).unwrap();
+        add_track_to_playlist(&db.conn, playlist_id, track_id).unwrap();
+
+        // Eliminar playlist
+        delete_playlist(&db.conn, playlist_id).unwrap();
+
+        // Verificar que playlist_tracks también se eliminó (CASCADE)
+        let tracks = get_playlist_tracks(&db.conn, playlist_id).unwrap();
+        assert_eq!(tracks.len(), 0);
+
+        // Track original debe seguir existiendo
+        let track_exists = get_track(&db.conn, track_id);
+        assert!(track_exists.is_ok());
+    }
+
+    #[test]
+    fn test_update_track_metadata() {
+        let db = setup_db();
+
+        let track = Track {
+            id: None,
+            path: "/music/test.mp3".to_string(),
+            title: "Original Title".to_string(),
+            artist: "Original Artist".to_string(),
+            album: None,
+            genre: None,
+            year: None,
+            duration: 180.0,
+            bitrate: 320,
+            sample_rate: 44100,
+            file_size: 8388608,
+            bpm: None,
+            key: None,
+            rating: None,
+            play_count: 0,
+            last_played: None,
+            date_added: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        };
+
+        let id = insert_track(&db.conn, &track).unwrap();
+
+        // Actualizar solo título y rating
+        update_track_metadata(
+            &db.conn,
+            id,
+            Some("New Title"),
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(4),
+        ).unwrap();
+
+        let updated = get_track(&db.conn, id).unwrap();
+        assert_eq!(updated.title, "New Title");
+        assert_eq!(updated.artist, "Original Artist"); // No cambió
+        assert_eq!(updated.rating, Some(4));
+    }
+
+    #[test]
+    fn test_update_track_metadata_all_fields() {
+        let db = setup_db();
+
+        let track = Track {
+            id: None,
+            path: "/music/test.mp3".to_string(),
+            title: "Original".to_string(),
+            artist: "Artist".to_string(),
+            album: None,
+            genre: None,
+            year: None,
+            duration: 180.0,
+            bitrate: 320,
+            sample_rate: 44100,
+            file_size: 8388608,
+            bpm: None,
+            key: None,
+            rating: None,
+            play_count: 0,
+            last_played: None,
+            date_added: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        };
+
+        let id = insert_track(&db.conn, &track).unwrap();
+
+        // Actualizar todos los campos
+        update_track_metadata(
+            &db.conn,
+            id,
+            Some("New Title"),
+            Some("New Artist"),
+            Some("New Album"),
+            Some(2024),
+            Some("Electronic"),
+            Some(128.0),
+            Some(5),
+        ).unwrap();
+
+        let updated = get_track(&db.conn, id).unwrap();
+        assert_eq!(updated.title, "New Title");
+        assert_eq!(updated.artist, "New Artist");
+        assert_eq!(updated.album, Some("New Album".to_string()));
+        assert_eq!(updated.year, Some(2024));
+        assert_eq!(updated.genre, Some("Electronic".to_string()));
+        assert_eq!(updated.bpm, Some(128.0));
+        assert_eq!(updated.rating, Some(5));
+    }
+
+    #[test]
+    fn test_update_track_metadata_invalid_rating() {
+        let db = setup_db();
+
+        let track = Track {
+            id: None,
+            path: "/music/test.mp3".to_string(),
+            title: "Test".to_string(),
+            artist: "Artist".to_string(),
+            album: None,
+            genre: None,
+            year: None,
+            duration: 180.0,
+            bitrate: 320,
+            sample_rate: 44100,
+            file_size: 8388608,
+            bpm: None,
+            key: None,
+            rating: None,
+            play_count: 0,
+            last_played: None,
+            date_added: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        };
+
+        let id = insert_track(&db.conn, &track).unwrap();
+
+        // Intentar actualizar con rating inválido
+        let result = update_track_metadata(
+            &db.conn,
+            id,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            Some(10), // Invalid: debe ser 0-5
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_update_track_metadata_no_changes() {
+        let db = setup_db();
+
+        let track = Track {
+            id: None,
+            path: "/music/test.mp3".to_string(),
+            title: "Test".to_string(),
+            artist: "Artist".to_string(),
+            album: None,
+            genre: None,
+            year: None,
+            duration: 180.0,
+            bitrate: 320,
+            sample_rate: 44100,
+            file_size: 8388608,
+            bpm: None,
+            key: None,
+            rating: None,
+            play_count: 0,
+            last_played: None,
+            date_added: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        };
+
+        let id = insert_track(&db.conn, &track).unwrap();
+
+        // Llamar sin cambios (todos None)
+        let result = update_track_metadata(
+            &db.conn,
+            id,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+            None,
+        );
+
+        assert!(result.is_ok());
+
+        // Track debe seguir igual
+        let unchanged = get_track(&db.conn, id).unwrap();
+        assert_eq!(unchanged.title, "Test");
+        assert_eq!(unchanged.artist, "Artist");
     }
 
     #[test]
