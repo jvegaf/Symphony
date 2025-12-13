@@ -346,6 +346,7 @@ Symphony es una aplicación de escritorio para gestionar bibliotecas musicales p
 6. ✅ Componente ImportDialog - 13 tests
 7. ✅ Componente TrackList - 23 tests
 8. ✅ Documentación completa (API.md, CHANGELOG.md, milestone-2-summary.md)
+9. ✅ Fixes post-milestone: Metadata extraction, UI dates, DB insertion.
 
 **Tests:** 222 totales (153 frontend + 69 backend)
 **Tests nuevos:** +140 (104 frontend + 36 backend)

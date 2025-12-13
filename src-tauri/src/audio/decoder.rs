@@ -18,6 +18,11 @@ pub struct AudioMetadata {
     pub channels: u16,
     pub bitrate: Option<u32>,
     pub codec: String,
+    pub title: Option<String>,
+    pub artist: Option<String>,
+    pub album: Option<String>,
+    pub year: Option<i32>,
+    pub genre: Option<String>,
 }
 
 /// Decodificador de audio
@@ -54,8 +59,8 @@ impl AudioDecoder {
             &MetadataOptions::default(),
         )?;
 
-        let format = probe_result.format;
-        
+        let mut format = probe_result.format;
+
         // Obtener primer track
         let track = format
             .tracks()
@@ -65,10 +70,10 @@ impl AudioDecoder {
 
         // Extraer metadatos
         let codec_params = &track.codec_params;
-        
+
         let sample_rate = codec_params.sample_rate
             .ok_or_else(|| AudioError::DecodingFailed("Sample rate not found".to_string()))?;
-        
+
         let channels = codec_params.channels
             .ok_or_else(|| AudioError::DecodingFailed("Channels not found".to_string()))?
             .count() as u16;
@@ -93,12 +98,47 @@ impl AudioDecoder {
 
         let codec = codec_params.codec.to_string();
 
+        // Extraer tags de metadatos
+        let mut title = None;
+        let mut artist = None;
+        let mut album = None;
+        let mut year = None;
+        let mut genre = None;
+
+        if let Some(metadata) = format.metadata().current() {
+            for tag in metadata.tags() {
+                match tag.std_key {
+                    Some(symphonia::core::meta::StandardTagKey::TrackTitle) => title = Some(tag.value.to_string()),
+                    Some(symphonia::core::meta::StandardTagKey::Artist) => artist = Some(tag.value.to_string()),
+                    Some(symphonia::core::meta::StandardTagKey::Album) => album = Some(tag.value.to_string()),
+                    Some(symphonia::core::meta::StandardTagKey::Date) => {
+                        // Intentar parsear el año (puede venir como "2024" o "2024-01-01")
+                        let val = tag.value.to_string();
+                        if let Ok(y) = val.parse::<i32>() {
+                            year = Some(y);
+                        } else if val.len() >= 4 {
+                            if let Ok(y) = val[0..4].parse::<i32>() {
+                                year = Some(y);
+                            }
+                        }
+                    },
+                    Some(symphonia::core::meta::StandardTagKey::Genre) => genre = Some(tag.value.to_string()),
+                    _ => {},
+                }
+            }
+        }
+
         Ok(AudioMetadata {
             duration,
             sample_rate,
             channels,
             bitrate,
             codec,
+            title,
+            artist,
+            album,
+            year,
+            genre,
         })
     }
 

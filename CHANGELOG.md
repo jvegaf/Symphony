@@ -362,6 +362,14 @@ y este proyecto sigue [Semantic Versioning](https://semver.org/es/).
   - Casos de error específicos
   - Guía de hooks personalizados
 
+#### Corregido - 2025-12-13
+- **UI**: Corregido formato de fecha "NaN" en `TrackTable` y mejorada visibilidad de texto en modo oscuro.
+- **Backend**: Implementada extracción real de metadatos (Título, Artista, Álbum, Año, Género) usando Symphonia.
+- **Backend**: Corregida inicialización de `AudioMetadata` y mutabilidad en `decoder.rs`.
+- **Backend**: Actualizados modelos `Track` y `Playlist` para usar serialización `camelCase` compatible con frontend.
+- **Infraestructura**: Actualizado `Makefile` para incluir tests de backend en target `test`.
+- **Importación**: Implementada inserción en base de datos en `importer.rs` (previamente TODO).
+
 **Tests Milestone 2 Backend:** +34 tests (10 scanner + 11 metadata + 7 importer + 4 error + 2 commands)  
 **Tests Milestone 2 Frontend:** +50 tests (14 useLibrary + 13 ImportDialog + 23 TrackList)  
 **Tests Totales:** 187 passed (69 backend + 118 frontend)  

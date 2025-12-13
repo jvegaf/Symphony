@@ -8,6 +8,7 @@ use super::scanner::LibraryScanner;
 use super::metadata::MetadataExtractor;
 use super::error::Result;
 use crate::db::models::Track;
+use crate::db::{get_connection, queries};
 
 /// Evento de progreso de importación
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -107,6 +108,9 @@ impl LibraryImporter {
         let audio_files = self.scanner.scan_directory(library_path)?;
         let total_files = audio_files.len();
 
+        // Obtener conexión a DB
+        let db = get_connection().map_err(|e| super::error::LibraryError::DatabaseError(e.to_string()))?;
+
         // Fase 2: Importar archivos
         let mut imported = 0;
         let mut failed = 0;
@@ -118,9 +122,14 @@ impl LibraryImporter {
                 Ok(metadata) => {
                     // Convertir a modelo Track
                     match self.metadata_to_track(&metadata, file_path) {
-                        Ok(_track) => {
-                            // TODO: Insertar en DB (siguiente commit)
-                            imported += 1;
+                        Ok(track) => {
+                            // Insertar en DB
+                            if let Err(e) = queries::insert_track(&db.conn, &track) {
+                                log::error!("Error insertando pista {}: {}", track.path, e);
+                                failed += 1;
+                            } else {
+                                imported += 1;
+                            }
                         }
                         Err(_) => {
                             failed += 1;

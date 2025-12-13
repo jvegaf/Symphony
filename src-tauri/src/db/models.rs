@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 /// Modelo de pista musical
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct Track {
     pub id: Option<i64>,
     pub path: String,
@@ -75,6 +76,7 @@ pub struct Loop {
 /// Modelo de playlist
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Playlist {
     pub id: Option<i64>,
     pub name: String,

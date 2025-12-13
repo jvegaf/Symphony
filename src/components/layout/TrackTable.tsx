@@ -15,10 +15,14 @@ const formatDuration = (seconds: number): string => {
 };
 
 const formatDate = (dateString: string): string => {
+  if (!dateString) return "-";
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) return "-";
+  
   const day = date.getDate().toString().padStart(2, "0");
   const month = (date.getMonth() + 1).toString().padStart(2, "0");
-  return `${day}/${month}...`;
+  const year = date.getFullYear();
+  return `${day}/${month}/${year}`;
 };
 
 const Rating = ({ rating }: { rating: number }) => {
@@ -97,7 +101,7 @@ export const TrackTable = ({
                   ${
                     isSelected
                       ? "bg-primary/10 dark:bg-primary/20 hover:bg-primary/20 dark:hover:bg-primary/30"
-                      : "hover:bg-gray-100/50 dark:hover:bg-gray-800/50"
+                      : "hover:bg-gray-100/50 dark:hover:bg-gray-800/50 text-gray-700 dark:text-gray-300"
                   }
                 `}
               >
