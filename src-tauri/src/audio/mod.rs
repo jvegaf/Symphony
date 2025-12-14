@@ -6,8 +6,10 @@
 pub mod decoder;
 pub mod player;
 pub mod waveform;
+pub mod beatgrid_detector;
 mod error;
 
-pub use decoder::{AudioDecoder, AudioMetadata};
+pub use decoder::{AudioDecoder, AudioMetadata, DecodedAudio};
 pub use player::{AudioPlayer, PlaybackState};
+pub use beatgrid_detector::{BeatgridDetector, BeatgridAnalysis};
 pub use error::{AudioError, AudioResult};

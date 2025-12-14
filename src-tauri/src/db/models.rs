@@ -36,41 +36,42 @@ pub struct Waveform {
 }
 
 /// Modelo de beatgrid
-#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Beatgrid {
     pub id: Option<i64>,
     pub track_id: i64,
     pub bpm: f64,
-    pub first_beat: f64,
-    pub beat_data: String,
-    pub date_analyzed: String,
+    pub offset: f64,  // Offset del primer beat en segundos
+    pub confidence: Option<f64>,  // Confidence score del análisis (0-100)
+    pub analyzed_at: String,
 }
 
 /// Modelo de cue point
-#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct CuePoint {
     pub id: Option<i64>,
     pub track_id: i64,
     pub position: f64,
     pub label: String,
     pub color: String,
-    pub cue_type: String,
-    pub date_created: String,
+    pub cue_type: String,  // intro, outro, drop, break, custom
+    pub hotkey: Option<i32>,  // 1-8 para hot cues
+    pub created_at: String,
 }
 
 /// Modelo de loop
-#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Loop {
     pub id: Option<i64>,
     pub track_id: i64,
-    pub start_position: f64,
-    pub end_position: f64,
     pub label: String,
+    pub loop_start: f64,
+    pub loop_end: f64,
     pub is_active: bool,
-    pub date_created: String,
+    pub created_at: String,
 }
 
 /// Modelo de playlist

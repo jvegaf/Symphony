@@ -5,6 +5,35 @@ Todos los cambios notables de Symphony se documentan aquí.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/),
 y este proyecto sigue [Semantic Versioning](https://semver.org/es/).
 
+## [0.4.0] - 2024-12-14
+
+### Agregado
+- **Análisis de Beatgrids**: Detección automática de BPM con algoritmo de autocorrelación (60-200 BPM)
+- **Cue Points**: Sistema completo de marcadores con 7 tipos (cue, intro, outro, drop, vocal, break, custom)
+- **Loops**: Gestión de regiones de loop con duración mínima de 100ms
+- **11 Comandos Tauri** para análisis avanzado:
+  - `analyze_beatgrid`: Detección automática de BPM
+  - `get_beatgrid`, `update_beatgrid_offset`, `delete_beatgrid`
+  - `create_cue_point`, `get_cue_points`, `update_cue_point`, `delete_cue_point`
+  - `create_loop`, `get_loops`, `update_loop`
+- **Componentes Visuales**:
+  - `BeatgridOverlay`: Grid visual de beats sobre waveform
+  - `CuePointEditor`: Editor visual de cue points con hotkeys
+  - `LoopEditor`: Editor visual de regiones de loop
+- **Validaciones**:
+  - Máximo 64 cue points por pista
+  - Hotkeys 1-8 para acceso rápido
+  - BPM range 60-200
+  - Loop mínimo 100ms
+- **Base de Datos**: Migration 002 con 3 tablas nuevas (beatgrids, cue_points, loops)
+
+### Técnico
+- **Backend**: 109 tests passing, >85% coverage en código M4
+- **Frontend**: 270 tests passing, 90.21% coverage total
+- **Algoritmo BPM**: Onset detection + autocorrelation con confidence scoring
+- **TypeScript Types**: Sincronización completa Rust ↔ TS con camelCase
+- **TanStack Query**: 11 hooks con cache management y invalidación automática
+
 ## [Unreleased]
 
 ### 📋 Milestone 0 - Setup Inicial (En Progreso)

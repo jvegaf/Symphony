@@ -1,8 +1,7 @@
 use rusqlite::{Connection, Result};
 
 /// Versión actual del esquema
-#[allow(dead_code)]
-const CURRENT_VERSION: i32 = 1;
+const CURRENT_VERSION: i32 = 2;
 
 /// Ejecuta todas las migraciones pendientes
 pub fn run_migrations(conn: &Connection) -> Result<()> {
@@ -20,6 +19,11 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
     if current_version < 1 {
         migration_001_initial_schema(conn)?;
         update_version(conn, 1)?;
+    }
+
+    if current_version < 2 {
+        migration_002_update_analysis_tables(conn)?;
+        update_version(conn, 2)?;
     }
 
     Ok(())
@@ -170,6 +174,73 @@ fn migration_001_initial_schema(conn: &Connection) -> Result<()> {
     Ok(())
 }
 
+/// Migración 002: Actualizar tablas de análisis (beatgrids, cue_points, loops)
+fn migration_002_update_analysis_tables(conn: &Connection) -> Result<()> {
+    // Drop y recrear tabla beatgrids con nuevos campos
+    conn.execute_batch(
+        "
+        DROP TABLE IF EXISTS beatgrids;
+        
+        CREATE TABLE beatgrids (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            track_id INTEGER NOT NULL UNIQUE,
+            bpm REAL NOT NULL,
+            offset REAL NOT NULL,
+            confidence REAL,
+            analyzed_at TEXT NOT NULL,
+            FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX idx_beatgrids_track ON beatgrids(track_id);
+        "
+    )?;
+
+    // Drop y recrear tabla cue_points con nuevos campos
+    conn.execute_batch(
+        "
+        DROP TABLE IF EXISTS cue_points;
+        
+        CREATE TABLE cue_points (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            track_id INTEGER NOT NULL,
+            position REAL NOT NULL,
+            label TEXT NOT NULL,
+            color TEXT NOT NULL,
+            type TEXT NOT NULL,
+            hotkey INTEGER CHECK(hotkey BETWEEN 1 AND 8),
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX idx_cue_points_track ON cue_points(track_id);
+        CREATE INDEX idx_cue_points_position ON cue_points(position);
+        "
+    )?;
+
+    // Drop y recrear tabla loops con nuevos campos
+    conn.execute_batch(
+        "
+        DROP TABLE IF EXISTS loops;
+        
+        CREATE TABLE loops (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            track_id INTEGER NOT NULL,
+            label TEXT NOT NULL,
+            loop_start REAL NOT NULL,
+            loop_end REAL NOT NULL,
+            is_active INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX idx_loops_track ON loops(track_id);
+        CREATE INDEX idx_loops_start ON loops(loop_start);
+        "
+    )?;
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -188,7 +259,7 @@ mod tests {
         run_migrations(&db.conn).unwrap();
         
         let version = get_current_version(&db.conn).unwrap();
-        assert_eq!(version, 1);
+        assert_eq!(version, 2);
     }
 
     #[test]

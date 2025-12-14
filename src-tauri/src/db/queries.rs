@@ -1,5 +1,5 @@
 use rusqlite::{Connection, Result, params, OptionalExtension};
-use crate::db::models::{Track, Playlist, Setting};
+use crate::db::models::{Track, Playlist, Setting, Beatgrid, CuePoint, Loop};
 
 /// CRUD para tracks
 
@@ -500,6 +500,351 @@ pub fn get_setting(conn: &Connection, key: &str) -> Result<Setting> {
     )
 }
 
+/// CRUD para beatgrids
+
+/// Inserta o actualiza beatgrid analizado para una pista
+pub fn upsert_beatgrid(
+    conn: &Connection,
+    track_id: i64,
+    bpm: f64,
+    offset: f64,
+    confidence: Option<f64>,
+) -> Result<i64> {
+    conn.execute(
+        "INSERT INTO beatgrids (track_id, bpm, offset, confidence, analyzed_at)
+         VALUES (?1, ?2, ?3, ?4, datetime('now'))
+         ON CONFLICT(track_id) DO UPDATE SET
+            bpm = ?2,
+            offset = ?3,
+            confidence = ?4,
+            analyzed_at = datetime('now')",
+        params![track_id, bpm, offset, confidence],
+    )?;
+    
+    Ok(conn.last_insert_rowid())
+}
+
+/// Obtiene beatgrid de una pista
+pub fn get_beatgrid(
+    conn: &Connection,
+    track_id: i64,
+) -> Result<Option<Beatgrid>> {
+    conn.query_row(
+        "SELECT id, track_id, bpm, offset, confidence, analyzed_at
+         FROM beatgrids
+         WHERE track_id = ?1",
+        params![track_id],
+        |row| {
+            Ok(Beatgrid {
+                id: row.get(0)?,
+                track_id: row.get(1)?,
+                bpm: row.get(2)?,
+                offset: row.get(3)?,
+                confidence: row.get(4)?,
+                analyzed_at: row.get(5)?,
+            })
+        },
+    )
+    .optional()
+}
+
+/// Actualiza solo el offset del beatgrid (ajuste fino manual)
+pub fn update_beatgrid_offset(
+    conn: &Connection,
+    track_id: i64,
+    offset: f64,
+) -> Result<()> {
+    conn.execute(
+        "UPDATE beatgrids SET offset = ?1 WHERE track_id = ?2",
+        params![offset, track_id],
+    )?;
+    Ok(())
+}
+
+/// Elimina beatgrid de una pista
+pub fn delete_beatgrid(
+    conn: &Connection,
+    track_id: i64,
+) -> Result<()> {
+    conn.execute(
+        "DELETE FROM beatgrids WHERE track_id = ?1",
+        params![track_id],
+    )?;
+    Ok(())
+}
+
+/// CRUD para cue points
+
+/// Inserta nuevo cue point
+pub fn insert_cue_point(
+    conn: &Connection,
+    track_id: i64,
+    position: f64,
+    label: &str,
+    color: &str,
+    cue_type: &str,
+    hotkey: Option<i32>,
+) -> Result<i64> {
+    // Validar límite de 64 cue points por pista
+    let count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM cue_points WHERE track_id = ?1",
+        params![track_id],
+        |row| row.get(0),
+    )?;
+    
+    if count >= 64 {
+        return Err(rusqlite::Error::InvalidParameterName(
+            "Máximo 64 cue points por pista".to_string()
+        ));
+    }
+    
+    // Validar hotkey (1-8)
+    if let Some(hk) = hotkey {
+        if hk < 1 || hk > 8 {
+            return Err(rusqlite::Error::InvalidParameterName(
+                "Hotkey debe estar entre 1 y 8".to_string()
+            ));
+        }
+    }
+    
+    conn.execute(
+        "INSERT INTO cue_points (track_id, position, label, color, type, hotkey, created_at)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, datetime('now'))",
+        params![track_id, position, label, color, cue_type, hotkey],
+    )?;
+    
+    Ok(conn.last_insert_rowid())
+}
+
+/// Obtiene todos los cue points de una pista ordenados por posición
+pub fn get_cue_points(
+    conn: &Connection,
+    track_id: i64,
+) -> Result<Vec<CuePoint>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, track_id, position, label, color, type, hotkey, created_at
+         FROM cue_points
+         WHERE track_id = ?1
+         ORDER BY position ASC",
+    )?;
+    
+    let cue_points = stmt.query_map(params![track_id], |row| {
+        Ok(CuePoint {
+            id: row.get(0)?,
+            track_id: row.get(1)?,
+            position: row.get(2)?,
+            label: row.get(3)?,
+            color: row.get(4)?,
+            cue_type: row.get(5)?,
+            hotkey: row.get(6)?,
+            created_at: row.get(7)?,
+        })
+    })?;
+    
+    cue_points.collect()
+}
+
+/// Actualiza cue point existente
+pub fn update_cue_point(
+    conn: &Connection,
+    id: i64,
+    position: Option<f64>,
+    label: Option<&str>,
+    color: Option<&str>,
+    cue_type: Option<&str>,
+    hotkey: Option<Option<i32>>,
+) -> Result<()> {
+    // Validar hotkey si se proporciona
+    if let Some(Some(hk)) = hotkey {
+        if hk < 1 || hk > 8 {
+            return Err(rusqlite::Error::InvalidParameterName(
+                "Hotkey debe estar entre 1 y 8".to_string()
+            ));
+        }
+    }
+    
+    // Construir query dinámicamente
+    let mut updates = Vec::new();
+    let mut params_vec: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+    
+    if let Some(pos) = position {
+        updates.push("position = ?");
+        params_vec.push(Box::new(pos));
+    }
+    if let Some(lbl) = label {
+        updates.push("label = ?");
+        params_vec.push(Box::new(lbl.to_string()));
+    }
+    if let Some(clr) = color {
+        updates.push("color = ?");
+        params_vec.push(Box::new(clr.to_string()));
+    }
+    if let Some(typ) = cue_type {
+        updates.push("type = ?");
+        params_vec.push(Box::new(typ.to_string()));
+    }
+    if let Some(hk) = hotkey {
+        updates.push("hotkey = ?");
+        params_vec.push(Box::new(hk));
+    }
+    
+    if updates.is_empty() {
+        return Ok(());
+    }
+    
+    let query = format!("UPDATE cue_points SET {} WHERE id = ?", updates.join(", "));
+    params_vec.push(Box::new(id));
+    
+    let params_refs: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|p| p.as_ref()).collect();
+    conn.execute(&query, params_refs.as_slice())?;
+    
+    Ok(())
+}
+
+/// Elimina cue point
+pub fn delete_cue_point(
+    conn: &Connection,
+    id: i64,
+) -> Result<()> {
+    conn.execute(
+        "DELETE FROM cue_points WHERE id = ?1",
+        params![id],
+    )?;
+    Ok(())
+}
+
+/// CRUD para loops
+
+/// Inserta nuevo loop
+pub fn insert_loop(
+    conn: &Connection,
+    track_id: i64,
+    label: &str,
+    loop_start: f64,
+    loop_end: f64,
+) -> Result<i64> {
+    // Validación: loop_end > loop_start + 0.1 (100ms mínimo)
+    // Usamos epsilon para evitar problemas de precisión de punto flotante
+    const EPSILON: f64 = 0.001;
+    if loop_end < loop_start + 0.1 - EPSILON {
+        return Err(rusqlite::Error::InvalidParameterName(
+            "Loop debe tener duración mínima de 100ms".to_string()
+        ));
+    }
+    
+    conn.execute(
+        "INSERT INTO loops (track_id, label, loop_start, loop_end, is_active, created_at)
+         VALUES (?1, ?2, ?3, ?4, 0, datetime('now'))",
+        params![track_id, label, loop_start, loop_end],
+    )?;
+    
+    Ok(conn.last_insert_rowid())
+}
+
+/// Obtiene todos los loops de una pista ordenados por posición
+pub fn get_loops(
+    conn: &Connection,
+    track_id: i64,
+) -> Result<Vec<Loop>> {
+    let mut stmt = conn.prepare(
+        "SELECT id, track_id, label, loop_start, loop_end, is_active, created_at
+         FROM loops
+         WHERE track_id = ?1
+         ORDER BY loop_start ASC",
+    )?;
+    
+    let loops = stmt.query_map(params![track_id], |row| {
+        Ok(Loop {
+            id: row.get(0)?,
+            track_id: row.get(1)?,
+            label: row.get(2)?,
+            loop_start: row.get(3)?,
+            loop_end: row.get(4)?,
+            is_active: row.get::<_, i32>(5)? == 1,
+            created_at: row.get(6)?,
+        })
+    })?;
+    
+    loops.collect()
+}
+
+/// Actualiza loop existente
+pub fn update_loop(
+    conn: &Connection,
+    id: i64,
+    label: Option<&str>,
+    loop_start: Option<f64>,
+    loop_end: Option<f64>,
+    is_active: Option<bool>,
+) -> Result<()> {
+    // Si se actualizan start o end, validar duración mínima
+    // Primero obtener valores actuales si es necesario
+    if loop_start.is_some() || loop_end.is_some() {
+        let current: (f64, f64) = conn.query_row(
+            "SELECT loop_start, loop_end FROM loops WHERE id = ?1",
+            params![id],
+            |row| Ok((row.get(0)?, row.get(1)?)),
+        )?;
+        
+        let final_start = loop_start.unwrap_or(current.0);
+        let final_end = loop_end.unwrap_or(current.1);
+        
+        // Usamos epsilon para evitar problemas de precisión de punto flotante
+        const EPSILON: f64 = 0.001;
+        if final_end < final_start + 0.1 - EPSILON {
+            return Err(rusqlite::Error::InvalidParameterName(
+                "Loop debe tener duración mínima de 100ms".to_string()
+            ));
+        }
+    }
+    
+    // Construir query dinámicamente
+    let mut updates = Vec::new();
+    let mut params_vec: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+    
+    if let Some(lbl) = label {
+        updates.push("label = ?");
+        params_vec.push(Box::new(lbl.to_string()));
+    }
+    if let Some(start) = loop_start {
+        updates.push("loop_start = ?");
+        params_vec.push(Box::new(start));
+    }
+    if let Some(end) = loop_end {
+        updates.push("loop_end = ?");
+        params_vec.push(Box::new(end));
+    }
+    if let Some(active) = is_active {
+        let active_int = if active { 1 } else { 0 };
+        updates.push("is_active = ?");
+        params_vec.push(Box::new(active_int));
+    }
+    
+    if updates.is_empty() {
+        return Ok(());
+    }
+    
+    let query = format!("UPDATE loops SET {} WHERE id = ?", updates.join(", "));
+    params_vec.push(Box::new(id));
+    
+    let params_refs: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|p| p.as_ref()).collect();
+    conn.execute(&query, params_refs.as_slice())?;
+    
+    Ok(())
+}
+
+/// Elimina loop
+pub fn delete_loop(
+    conn: &Connection,
+    id: i64,
+) -> Result<()> {
+    conn.execute(
+        "DELETE FROM loops WHERE id = ?1",
+        params![id],
+    )?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -510,6 +855,8 @@ mod tests {
         migrations::run_migrations(&db.conn).unwrap();
         db
     }
+
+    // ==================== TESTS DE TRACKS ====================
 
     #[test]
     fn test_insert_and_get_track() {
@@ -1144,5 +1491,625 @@ mod tests {
         assert_eq!(setting.key, "theme");
         assert_eq!(setting.value, "dark");
         assert_eq!(setting.value_type, "string");
+    }
+
+    // ==================== TESTS DE BEATGRIDS ====================
+
+    #[test]
+    fn test_upsert_beatgrid() {
+        let db = setup_db();
+
+        // Crear track primero
+        let track = Track {
+            id: None,
+            path: "/music/test.mp3".to_string(),
+            title: "Test Track".to_string(),
+            artist: "Artist".to_string(),
+            album: None,
+            genre: None,
+            year: None,
+            duration: 180.0,
+            bitrate: 320,
+            sample_rate: 44100,
+            file_size: 8388608,
+            bpm: None,
+            key: None,
+            rating: None,
+            play_count: 0,
+            last_played: None,
+            date_added: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        };
+        let track_id = insert_track(&db.conn, &track).unwrap();
+
+        // Insertar beatgrid
+        let id = upsert_beatgrid(&db.conn, track_id, 128.0, 0.5, Some(95.0)).unwrap();
+        assert!(id > 0);
+
+        // Obtener y verificar
+        let beatgrid = get_beatgrid(&db.conn, track_id).unwrap().unwrap();
+        assert_eq!(beatgrid.bpm, 128.0);
+        assert_eq!(beatgrid.offset, 0.5);
+        assert_eq!(beatgrid.confidence, Some(95.0));
+    }
+
+    #[test]
+    fn test_get_beatgrid_nonexistent() {
+        let db = setup_db();
+        
+        let result = get_beatgrid(&db.conn, 999).unwrap();
+        assert!(result.is_none());
+    }
+
+    #[test]
+    fn test_update_beatgrid_offset() {
+        let db = setup_db();
+
+        let track = Track {
+            id: None,
+            path: "/music/test.mp3".to_string(),
+            title: "Test".to_string(),
+            artist: "Artist".to_string(),
+            album: None,
+            genre: None,
+            year: None,
+            duration: 180.0,
+            bitrate: 320,
+            sample_rate: 44100,
+            file_size: 8388608,
+            bpm: None,
+            key: None,
+            rating: None,
+            play_count: 0,
+            last_played: None,
+            date_added: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        };
+        let track_id = insert_track(&db.conn, &track).unwrap();
+
+        upsert_beatgrid(&db.conn, track_id, 128.0, 0.5, Some(90.0)).unwrap();
+
+        // Actualizar solo offset
+        update_beatgrid_offset(&db.conn, track_id, 0.75).unwrap();
+
+        let beatgrid = get_beatgrid(&db.conn, track_id).unwrap().unwrap();
+        assert_eq!(beatgrid.offset, 0.75);
+        assert_eq!(beatgrid.bpm, 128.0); // BPM no cambió
+    }
+
+    #[test]
+    fn test_delete_beatgrid() {
+        let db = setup_db();
+
+        let track = Track {
+            id: None,
+            path: "/music/test.mp3".to_string(),
+            title: "Test".to_string(),
+            artist: "Artist".to_string(),
+            album: None,
+            genre: None,
+            year: None,
+            duration: 180.0,
+            bitrate: 320,
+            sample_rate: 44100,
+            file_size: 8388608,
+            bpm: None,
+            key: None,
+            rating: None,
+            play_count: 0,
+            last_played: None,
+            date_added: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        };
+        let track_id = insert_track(&db.conn, &track).unwrap();
+
+        upsert_beatgrid(&db.conn, track_id, 128.0, 0.5, None).unwrap();
+        delete_beatgrid(&db.conn, track_id).unwrap();
+
+        let result = get_beatgrid(&db.conn, track_id).unwrap();
+        assert!(result.is_none());
+    }
+
+    // ==================== TESTS DE CUE POINTS ====================
+
+    #[test]
+    fn test_insert_and_get_cue_points() {
+        let db = setup_db();
+
+        let track = Track {
+            id: None,
+            path: "/music/test.mp3".to_string(),
+            title: "Test".to_string(),
+            artist: "Artist".to_string(),
+            album: None,
+            genre: None,
+            year: None,
+            duration: 180.0,
+            bitrate: 320,
+            sample_rate: 44100,
+            file_size: 8388608,
+            bpm: None,
+            key: None,
+            rating: None,
+            play_count: 0,
+            last_played: None,
+            date_added: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        };
+        let track_id = insert_track(&db.conn, &track).unwrap();
+
+        // Insertar cue point
+        let id = insert_cue_point(
+            &db.conn,
+            track_id,
+            30.0,
+            "Intro",
+            "#FF0000",
+            "intro",
+            Some(1),
+        )
+        .unwrap();
+        assert!(id > 0);
+
+        // Obtener y verificar
+        let cues = get_cue_points(&db.conn, track_id).unwrap();
+        assert_eq!(cues.len(), 1);
+        assert_eq!(cues[0].position, 30.0);
+        assert_eq!(cues[0].label, "Intro");
+        assert_eq!(cues[0].hotkey, Some(1));
+    }
+
+    #[test]
+    fn test_get_cue_points_ordered() {
+        let db = setup_db();
+
+        let track = Track {
+            id: None,
+            path: "/music/test.mp3".to_string(),
+            title: "Test".to_string(),
+            artist: "Artist".to_string(),
+            album: None,
+            genre: None,
+            year: None,
+            duration: 180.0,
+            bitrate: 320,
+            sample_rate: 44100,
+            file_size: 8388608,
+            bpm: None,
+            key: None,
+            rating: None,
+            play_count: 0,
+            last_played: None,
+            date_added: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        };
+        let track_id = insert_track(&db.conn, &track).unwrap();
+
+        // Insertar en orden no secuencial
+        insert_cue_point(&db.conn, track_id, 90.0, "Outro", "#00FF00", "outro", None).unwrap();
+        insert_cue_point(&db.conn, track_id, 30.0, "Intro", "#FF0000", "intro", None).unwrap();
+        insert_cue_point(&db.conn, track_id, 60.0, "Drop", "#0000FF", "drop", None).unwrap();
+
+        // Deben retornar ordenados por posición
+        let cues = get_cue_points(&db.conn, track_id).unwrap();
+        assert_eq!(cues.len(), 3);
+        assert_eq!(cues[0].position, 30.0);
+        assert_eq!(cues[1].position, 60.0);
+        assert_eq!(cues[2].position, 90.0);
+    }
+
+    #[test]
+    fn test_cue_point_limit_64() {
+        let db = setup_db();
+
+        let track = Track {
+            id: None,
+            path: "/music/test.mp3".to_string(),
+            title: "Test".to_string(),
+            artist: "Artist".to_string(),
+            album: None,
+            genre: None,
+            year: None,
+            duration: 180.0,
+            bitrate: 320,
+            sample_rate: 44100,
+            file_size: 8388608,
+            bpm: None,
+            key: None,
+            rating: None,
+            play_count: 0,
+            last_played: None,
+            date_added: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        };
+        let track_id = insert_track(&db.conn, &track).unwrap();
+
+        // Insertar 64 cue points
+        for i in 0..64 {
+            insert_cue_point(
+                &db.conn,
+                track_id,
+                i as f64,
+                &format!("Cue {}", i),
+                "#FFFFFF",
+                "custom",
+                None,
+            )
+            .unwrap();
+        }
+
+        // Intentar insertar el 65
+        let result = insert_cue_point(
+            &db.conn,
+            track_id,
+            100.0,
+            "Extra",
+            "#000000",
+            "custom",
+            None,
+        );
+
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_update_cue_point() {
+        let db = setup_db();
+
+        let track = Track {
+            id: None,
+            path: "/music/test.mp3".to_string(),
+            title: "Test".to_string(),
+            artist: "Artist".to_string(),
+            album: None,
+            genre: None,
+            year: None,
+            duration: 180.0,
+            bitrate: 320,
+            sample_rate: 44100,
+            file_size: 8388608,
+            bpm: None,
+            key: None,
+            rating: None,
+            play_count: 0,
+            last_played: None,
+            date_added: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        };
+        let track_id = insert_track(&db.conn, &track).unwrap();
+
+        let cue_id = insert_cue_point(
+            &db.conn,
+            track_id,
+            30.0,
+            "Original",
+            "#FF0000",
+            "intro",
+            None,
+        )
+        .unwrap();
+
+        // Actualizar label y hotkey
+        update_cue_point(
+            &db.conn,
+            cue_id,
+            None,
+            Some("Updated"),
+            None,
+            None,
+            Some(Some(2)),
+        )
+        .unwrap();
+
+        let cues = get_cue_points(&db.conn, track_id).unwrap();
+        assert_eq!(cues[0].label, "Updated");
+        assert_eq!(cues[0].hotkey, Some(2));
+        assert_eq!(cues[0].position, 30.0); // No cambió
+    }
+
+    #[test]
+    fn test_delete_cue_point() {
+        let db = setup_db();
+
+        let track = Track {
+            id: None,
+            path: "/music/test.mp3".to_string(),
+            title: "Test".to_string(),
+            artist: "Artist".to_string(),
+            album: None,
+            genre: None,
+            year: None,
+            duration: 180.0,
+            bitrate: 320,
+            sample_rate: 44100,
+            file_size: 8388608,
+            bpm: None,
+            key: None,
+            rating: None,
+            play_count: 0,
+            last_played: None,
+            date_added: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        };
+        let track_id = insert_track(&db.conn, &track).unwrap();
+
+        let cue_id = insert_cue_point(
+            &db.conn,
+            track_id,
+            30.0,
+            "Test",
+            "#FF0000",
+            "intro",
+            None,
+        )
+        .unwrap();
+
+        delete_cue_point(&db.conn, cue_id).unwrap();
+
+        let cues = get_cue_points(&db.conn, track_id).unwrap();
+        assert_eq!(cues.len(), 0);
+    }
+
+    #[test]
+    fn test_cue_point_invalid_hotkey() {
+        let db = setup_db();
+
+        let track = Track {
+            id: None,
+            path: "/music/test.mp3".to_string(),
+            title: "Test".to_string(),
+            artist: "Artist".to_string(),
+            album: None,
+            genre: None,
+            year: None,
+            duration: 180.0,
+            bitrate: 320,
+            sample_rate: 44100,
+            file_size: 8388608,
+            bpm: None,
+            key: None,
+            rating: None,
+            play_count: 0,
+            last_played: None,
+            date_added: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        };
+        let track_id = insert_track(&db.conn, &track).unwrap();
+
+        // Hotkey inválido (> 8)
+        let result = insert_cue_point(
+            &db.conn,
+            track_id,
+            30.0,
+            "Test",
+            "#FF0000",
+            "intro",
+            Some(10),
+        );
+
+        assert!(result.is_err());
+    }
+
+    // ==================== TESTS DE LOOPS ====================
+
+    #[test]
+    fn test_insert_and_get_loops() {
+        let db = setup_db();
+
+        let track = Track {
+            id: None,
+            path: "/music/test.mp3".to_string(),
+            title: "Test".to_string(),
+            artist: "Artist".to_string(),
+            album: None,
+            genre: None,
+            year: None,
+            duration: 180.0,
+            bitrate: 320,
+            sample_rate: 44100,
+            file_size: 8388608,
+            bpm: None,
+            key: None,
+            rating: None,
+            play_count: 0,
+            last_played: None,
+            date_added: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        };
+        let track_id = insert_track(&db.conn, &track).unwrap();
+
+        // Insertar loop
+        let id = insert_loop(&db.conn, track_id, "Loop 1", 30.0, 60.0).unwrap();
+        assert!(id > 0);
+
+        // Obtener y verificar
+        let loops = get_loops(&db.conn, track_id).unwrap();
+        assert_eq!(loops.len(), 1);
+        assert_eq!(loops[0].label, "Loop 1");
+        assert_eq!(loops[0].loop_start, 30.0);
+        assert_eq!(loops[0].loop_end, 60.0);
+        assert!(!loops[0].is_active);
+    }
+
+    #[test]
+    fn test_get_loops_ordered() {
+        let db = setup_db();
+
+        let track = Track {
+            id: None,
+            path: "/music/test.mp3".to_string(),
+            title: "Test".to_string(),
+            artist: "Artist".to_string(),
+            album: None,
+            genre: None,
+            year: None,
+            duration: 180.0,
+            bitrate: 320,
+            sample_rate: 44100,
+            file_size: 8388608,
+            bpm: None,
+            key: None,
+            rating: None,
+            play_count: 0,
+            last_played: None,
+            date_added: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        };
+        let track_id = insert_track(&db.conn, &track).unwrap();
+
+        // Insertar en orden no secuencial
+        insert_loop(&db.conn, track_id, "Loop 2", 60.0, 90.0).unwrap();
+        insert_loop(&db.conn, track_id, "Loop 1", 30.0, 60.0).unwrap();
+        insert_loop(&db.conn, track_id, "Loop 3", 90.0, 120.0).unwrap();
+
+        // Deben retornar ordenados por loop_start
+        let loops = get_loops(&db.conn, track_id).unwrap();
+        assert_eq!(loops.len(), 3);
+        assert_eq!(loops[0].loop_start, 30.0);
+        assert_eq!(loops[1].loop_start, 60.0);
+        assert_eq!(loops[2].loop_start, 90.0);
+    }
+
+    #[test]
+    fn test_loop_duration_validation() {
+        let db = setup_db();
+
+        let track = Track {
+            id: None,
+            path: "/music/test.mp3".to_string(),
+            title: "Test".to_string(),
+            artist: "Artist".to_string(),
+            album: None,
+            genre: None,
+            year: None,
+            duration: 180.0,
+            bitrate: 320,
+            sample_rate: 44100,
+            file_size: 8388608,
+            bpm: None,
+            key: None,
+            rating: None,
+            play_count: 0,
+            last_played: None,
+            date_added: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        };
+        let track_id = insert_track(&db.conn, &track).unwrap();
+
+        // Loop demasiado corto (< 100ms)
+        let result = insert_loop(&db.conn, track_id, "Invalid", 30.0, 30.05);
+        assert!(result.is_err());
+
+        // Loop válido (>= 100ms)
+        let result = insert_loop(&db.conn, track_id, "Valid", 30.0, 30.1);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_update_loop() {
+        let db = setup_db();
+
+        let track = Track {
+            id: None,
+            path: "/music/test.mp3".to_string(),
+            title: "Test".to_string(),
+            artist: "Artist".to_string(),
+            album: None,
+            genre: None,
+            year: None,
+            duration: 180.0,
+            bitrate: 320,
+            sample_rate: 44100,
+            file_size: 8388608,
+            bpm: None,
+            key: None,
+            rating: None,
+            play_count: 0,
+            last_played: None,
+            date_added: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        };
+        let track_id = insert_track(&db.conn, &track).unwrap();
+
+        let loop_id = insert_loop(&db.conn, track_id, "Original", 30.0, 60.0).unwrap();
+
+        // Actualizar label e is_active
+        update_loop(&db.conn, loop_id, Some("Updated"), None, None, Some(true)).unwrap();
+
+        let loops = get_loops(&db.conn, track_id).unwrap();
+        assert_eq!(loops[0].label, "Updated");
+        assert!(loops[0].is_active);
+        assert_eq!(loops[0].loop_start, 30.0); // No cambió
+    }
+
+    #[test]
+    fn test_update_loop_duration_validation() {
+        let db = setup_db();
+
+        let track = Track {
+            id: None,
+            path: "/music/test.mp3".to_string(),
+            title: "Test".to_string(),
+            artist: "Artist".to_string(),
+            album: None,
+            genre: None,
+            year: None,
+            duration: 180.0,
+            bitrate: 320,
+            sample_rate: 44100,
+            file_size: 8388608,
+            bpm: None,
+            key: None,
+            rating: None,
+            play_count: 0,
+            last_played: None,
+            date_added: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        };
+        let track_id = insert_track(&db.conn, &track).unwrap();
+
+        let loop_id = insert_loop(&db.conn, track_id, "Test", 30.0, 60.0).unwrap();
+
+        // Intentar actualizar con duración inválida
+        let result = update_loop(&db.conn, loop_id, None, Some(50.0), Some(50.05), None);
+        assert!(result.is_err());
+
+        // Actualizar con duración válida
+        let result = update_loop(&db.conn, loop_id, None, Some(50.0), Some(70.0), None);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_delete_loop() {
+        let db = setup_db();
+
+        let track = Track {
+            id: None,
+            path: "/music/test.mp3".to_string(),
+            title: "Test".to_string(),
+            artist: "Artist".to_string(),
+            album: None,
+            genre: None,
+            year: None,
+            duration: 180.0,
+            bitrate: 320,
+            sample_rate: 44100,
+            file_size: 8388608,
+            bpm: None,
+            key: None,
+            rating: None,
+            play_count: 0,
+            last_played: None,
+            date_added: "2024-01-01".to_string(),
+            date_modified: "2024-01-01".to_string(),
+        };
+        let track_id = insert_track(&db.conn, &track).unwrap();
+
+        let loop_id = insert_loop(&db.conn, track_id, "Test", 30.0, 60.0).unwrap();
+
+        delete_loop(&db.conn, loop_id).unwrap();
+
+        let loops = get_loops(&db.conn, track_id).unwrap();
+        assert_eq!(loops.len(), 0);
     }
 }

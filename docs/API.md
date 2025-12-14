@@ -731,19 +731,342 @@ if (result.success) {
 
 ---
 
-## Próximas Funciones (Roadmap)
+## Análisis Avanzado (Milestone 4)
 
-### En desarrollo:
-- `seek` - Saltar a una posición específica en la pista
-- `get_position` - Obtener posición actual de reproducción
-- `set_volume` - Ajustar volumen de reproducción
-- `generate_waveform` - Generar datos de waveform para visualización
+### analyze_beatgrid
 
-### Planeadas:
-- `analyze_beatgrid` - Análisis de BPM y beatgrid
-- `set_cue_point` - Gestionar cue points
-- `generate_waveform` - Generar datos de waveform para visualización avanzada
+Analiza una pista de audio para detectar automáticamente el BPM y generar un beatgrid.
+
+**Parámetros:**
+- `track_path`: `string` - Ruta absoluta al archivo de audio
+- `params`: `AnalyzeBeatgridParams` (opcional)
+  - `min_bpm`: `number` - BPM mínimo (default: 60)
+  - `max_bpm`: `number` - BPM máximo (default: 200)
+
+**Retorno:**
+```typescript
+interface Beatgrid {
+  trackId: string;
+  bpm: number;           // BPM detectado
+  offset: number;        // Offset del primer beat (segundos)
+  confidence: number;    // Confianza del análisis (0-100)
+  analyzedAt: string;    // Timestamp ISO 8601
+}
+```
+
+**Ejemplo:**
+```typescript
+const beatgrid = await invoke<Beatgrid>("analyze_beatgrid", {
+  trackPath: "/home/user/music/track.mp3",
+  params: { minBpm: 80, maxBpm: 180 }
+});
+
+console.log(`BPM: ${beatgrid.bpm}, Confidence: ${beatgrid.confidence}%`);
+```
+
+**Errores:**
+- `"Archivo no encontrado"` - El archivo no existe
+- `"Error al decodificar"` - No se pudo decodificar el audio
+- `"Análisis fallido"` - No se pudo detectar BPM
 
 ---
 
-*Última actualización: Diciembre 2025 (Milestone 3)*
+### get_beatgrid
+
+Obtiene el beatgrid analizado de una pista.
+
+**Parámetros:**
+- `track_id`: `string` - ID de la pista
+
+**Retorno:**
+- `Promise<Beatgrid | null>` - Beatgrid si existe, null si no ha sido analizada
+
+**Ejemplo:**
+```typescript
+const beatgrid = await invoke<Beatgrid | null>("get_beatgrid", {
+  trackId: "track-123"
+});
+
+if (beatgrid) {
+  console.log(`BPM: ${beatgrid.bpm}`);
+} else {
+  console.log("Pista no analizada");
+}
+```
+
+---
+
+### update_beatgrid_offset
+
+Actualiza el offset de un beatgrid (ajuste manual).
+
+**Parámetros:**
+- `track_id`: `string` - ID de la pista
+- `offset`: `number` - Nuevo offset en segundos (≥0)
+
+**Retorno:**
+- `Promise<Beatgrid>` - Beatgrid actualizado
+
+**Ejemplo:**
+```typescript
+const updated = await invoke<Beatgrid>("update_beatgrid_offset", {
+  trackId: "track-123",
+  offset: 0.5 // Ajustar 500ms
+});
+```
+
+---
+
+### delete_beatgrid
+
+Elimina el beatgrid de una pista.
+
+**Parámetros:**
+- `track_id`: `string` - ID de la pista
+
+**Retorno:**
+- `Promise<void>`
+
+**Ejemplo:**
+```typescript
+await invoke("delete_beatgrid", { trackId: "track-123" });
+```
+
+---
+
+### create_cue_point
+
+Crea un nuevo cue point en una pista.
+
+**Parámetros:**
+```typescript
+interface CreateCuePointRequest {
+  trackId: string;
+  position: number;      // Posición en segundos (≥0)
+  label?: string;
+  color?: string;        // Hex color (ej: "#ff0000")
+  type: CuePointType;    // 'cue' | 'intro' | 'outro' | 'drop' | 'vocal' | 'break' | 'custom'
+  hotkey?: number;       // 1-8 (opcional)
+}
+```
+
+**Retorno:**
+- `Promise<number>` - ID del cue point creado
+
+**Ejemplo:**
+```typescript
+const cuePointId = await invoke<number>("create_cue_point", {
+  trackId: "track-123",
+  position: 30.5,
+  label: "Drop",
+  type: "drop",
+  hotkey: 1
+});
+```
+
+**Validaciones:**
+- position ≥ 0
+- hotkey entre 1-8 (si se especifica)
+- Máximo 64 cue points por pista
+
+---
+
+### get_cue_points
+
+Obtiene todos los cue points de una pista.
+
+**Parámetros:**
+- `track_id`: `string` - ID de la pista
+
+**Retorno:**
+```typescript
+interface CuePoint {
+  id: number;
+  trackId: string;
+  position: number;
+  label: string | null;
+  color: string | null;
+  type: CuePointType;
+  hotkey: number | null;
+  createdAt: string;
+}
+
+Promise<CuePoint[]>
+```
+
+**Ejemplo:**
+```typescript
+const cuePoints = await invoke<CuePoint[]>("get_cue_points", {
+  trackId: "track-123"
+});
+
+cuePoints.forEach(cue => {
+  console.log(`${cue.label} @ ${cue.position}s (hotkey: ${cue.hotkey})`);
+});
+```
+
+---
+
+### update_cue_point
+
+Actualiza un cue point existente.
+
+**Parámetros:**
+- `id`: `number` - ID del cue point
+- `request`: `UpdateCuePointRequest`
+  - `position`: `number` (opcional)
+  - `label`: `string | null` (opcional)
+  - `color`: `string | null` (opcional)
+  - `type`: `CuePointType` (opcional)
+  - `hotkey`: `number | null` (opcional)
+
+**Retorno:**
+- `Promise<CuePoint>` - Cue point actualizado
+
+**Ejemplo:**
+```typescript
+const updated = await invoke<CuePoint>("update_cue_point", {
+  id: 42,
+  request: {
+    label: "Nuevo Label",
+    hotkey: 2
+  }
+});
+```
+
+---
+
+### delete_cue_point
+
+Elimina un cue point.
+
+**Parámetros:**
+- `id`: `number` - ID del cue point
+
+**Retorno:**
+- `Promise<void>`
+
+**Ejemplo:**
+```typescript
+await invoke("delete_cue_point", { id: 42 });
+```
+
+---
+
+### create_loop
+
+Crea un nuevo loop en una pista.
+
+**Parámetros:**
+```typescript
+interface CreateLoopRequest {
+  trackId: string;
+  label?: string;
+  loopStart: number;     // Inicio en segundos (≥0)
+  loopEnd: number;       // Fin en segundos (> loopStart)
+  isActive?: boolean;    // Default: false
+}
+```
+
+**Retorno:**
+- `Promise<number>` - ID del loop creado
+
+**Ejemplo:**
+```typescript
+const loopId = await invoke<number>("create_loop", {
+  trackId: "track-123",
+  label: "Chorus",
+  loopStart: 60.0,
+  loopEnd: 90.0,
+  isActive: true
+});
+```
+
+**Validaciones:**
+- loopStart ≥ 0
+- loopEnd > loopStart
+- (loopEnd - loopStart) ≥ 0.1 (mínimo 100ms)
+
+---
+
+### get_loops
+
+Obtiene todos los loops de una pista.
+
+**Parámetros:**
+- `track_id`: `string` - ID de la pista
+
+**Retorno:**
+```typescript
+interface Loop {
+  id: number;
+  trackId: string;
+  label: string | null;
+  loopStart: number;
+  loopEnd: number;
+  isActive: boolean;
+  createdAt: string;
+}
+
+Promise<Loop[]>
+```
+
+**Ejemplo:**
+```typescript
+const loops = await invoke<Loop[]>("get_loops", {
+  trackId: "track-123"
+});
+
+loops.forEach(loop => {
+  const duration = loop.loopEnd - loop.loopStart;
+  console.log(`${loop.label}: ${duration.toFixed(2)}s`);
+});
+```
+
+---
+
+### update_loop
+
+Actualiza un loop existente.
+
+**Parámetros:**
+- `id`: `number` - ID del loop
+- `request`: `UpdateLoopRequest`
+  - `label`: `string | null` (opcional)
+  - `loopStart`: `number` (opcional)
+  - `loopEnd`: `number` (opcional)
+  - `isActive`: `boolean` (opcional)
+
+**Retorno:**
+- `Promise<Loop>` - Loop actualizado
+
+**Ejemplo:**
+```typescript
+const updated = await invoke<Loop>("update_loop", {
+  id: 10,
+  request: {
+    isActive: true,
+    loopEnd: 95.0  // Extender loop
+  }
+});
+```
+
+**Validación:** Si se actualizan loopStart o loopEnd, se valida que la duración sea ≥100ms
+
+---
+
+## Próximas Funciones (Roadmap)
+
+### En desarrollo (Milestone 5):
+- `seek` - Saltar a una posición específica en la pista
+- `get_position` - Obtener posición actual de reproducción
+- `set_volume` - Ajustar volumen de reproducción
+
+### Planeadas (Milestone 6):
+- `convert_to_mp3` - Conversión de formato de audio
+- `normalize_audio` - Normalización de volumen
+- `export_playlist_m3u` - Exportar playlist a formato M3U
+
+---
+
+*Última actualización: Diciembre 2025 (Milestone 4)*

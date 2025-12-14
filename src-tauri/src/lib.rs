@@ -61,6 +61,19 @@ pub fn run() {
             commands::playlists::remove_track_from_playlist,
             commands::playlists::reorder_playlist_tracks,
             commands::playlists::get_playlist_tracks_cmd,
+            // Analysis commands
+            commands::analysis::analyze_beatgrid,
+            commands::analysis::get_beatgrid,
+            commands::analysis::update_beatgrid_offset,
+            commands::analysis::delete_beatgrid,
+            commands::analysis::create_cue_point,
+            commands::analysis::get_cue_points,
+            commands::analysis::update_cue_point,
+            commands::analysis::delete_cue_point,
+            commands::analysis::create_loop,
+            commands::analysis::get_loops,
+            commands::analysis::update_loop,
+            commands::analysis::delete_loop,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

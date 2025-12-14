@@ -16,6 +16,8 @@ pub enum AudioError {
     /// Error al generar waveform
     #[allow(dead_code)]
     WaveformGenerationFailed(String),
+    /// Error en análisis de audio (BPM, beatgrid, etc.)
+    AnalysisError(String),
 }
 
 impl fmt::Display for AudioError {
@@ -27,6 +29,7 @@ impl fmt::Display for AudioError {
             AudioError::PlaybackFailed(msg) => write!(f, "Error de reproducción: {}", msg),
             AudioError::IoError(msg) => write!(f, "Error de I/O: {}", msg),
             AudioError::WaveformGenerationFailed(msg) => write!(f, "Error generando waveform: {}", msg),
+            AudioError::AnalysisError(msg) => write!(f, "Error en análisis: {}", msg),
         }
     }
 }

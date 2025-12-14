@@ -25,10 +25,114 @@ pub struct AudioMetadata {
     pub genre: Option<String>,
 }
 
+/// Audio decodificado con samples
+#[derive(Debug, Clone)]
+pub struct DecodedAudio {
+    pub samples: Vec<f32>,
+    pub sample_rate: u32,
+    pub channels: u16,
+    pub duration: f64,
+}
+
 /// Decodificador de audio
 pub struct AudioDecoder;
 
 impl AudioDecoder {
+    /// Decodifica un archivo de audio y extrae muestras
+    /// 
+    /// Este método es para análisis que requieren acceso a samples (BPM detection, waveform, etc.)
+    pub fn decode_samples(path: &Path) -> AudioResult<DecodedAudio> {
+        use symphonia::core::audio::SampleBuffer;
+        use symphonia::core::codecs::DecoderOptions;
+        use symphonia::default::get_codecs;
+        
+        // Validar que el archivo existe
+        if !path.exists() {
+            return Err(AudioError::FileNotFound(path.display().to_string()));
+        }
+
+        // Validar extensión soportada
+        Self::validate_format(path)?;
+
+        // Abrir archivo
+        let file = File::open(path)?;
+        let mss = MediaSourceStream::new(Box::new(file), Default::default());
+
+        // Crear hint de formato desde extensión
+        let mut hint = Hint::new();
+        if let Some(ext) = path.extension() {
+            if let Some(ext_str) = ext.to_str() {
+                hint.with_extension(ext_str);
+            }
+        }
+
+        // Probe del formato
+        let probe_result = get_probe().format(
+            &hint,
+            mss,
+            &FormatOptions::default(),
+            &MetadataOptions::default(),
+        )?;
+
+        let mut format = probe_result.format;
+
+        // Obtener primer track
+        let track = format
+            .tracks()
+            .iter()
+            .find(|t| t.codec_params.codec != CODEC_TYPE_NULL)
+            .ok_or_else(|| AudioError::DecodingFailed("No audio tracks found".to_string()))?;
+
+        // Crear decoder
+        let track_id = track.id;
+        let codec_params = track.codec_params.clone();
+        let mut decoder = get_codecs()
+            .make(&codec_params, &DecoderOptions::default())?;
+
+        let sample_rate = codec_params.sample_rate
+            .ok_or_else(|| AudioError::DecodingFailed("Sample rate not found".to_string()))?;
+
+        let channels = codec_params.channels
+            .ok_or_else(|| AudioError::DecodingFailed("Channels not found".to_string()))?
+            .count() as u16;
+
+        // Decodificar todos los packets y extraer samples
+        let mut samples = Vec::new();
+        
+        while let Ok(packet) = format.next_packet() {
+            // Solo procesar packets del track de audio
+            if packet.track_id() != track_id {
+                continue;
+            }
+
+            // Decodificar packet
+            match decoder.decode(&packet) {
+                Ok(decoded) => {
+                    // Crear buffer para convertir samples a f32
+                    let mut sample_buf = SampleBuffer::<f32>::new(
+                        decoded.capacity() as u64,
+                        *decoded.spec(),
+                    );
+                    
+                    sample_buf.copy_interleaved_ref(decoded);
+                    samples.extend_from_slice(sample_buf.samples());
+                }
+                Err(_) => continue, // Ignorar errores de decodificación de packets individuales
+            }
+        }
+
+        // Calcular duración
+        let total_samples = samples.len() / channels as usize;
+        let duration = total_samples as f64 / sample_rate as f64;
+
+        Ok(DecodedAudio {
+            samples,
+            sample_rate,
+            channels,
+            duration,
+        })
+    }
+    
     /// Decodifica un archivo de audio y extrae metadatos
     pub fn decode(path: &Path) -> AudioResult<AudioMetadata> {
         // Validar que el archivo existe
