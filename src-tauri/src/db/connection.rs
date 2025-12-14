@@ -9,7 +9,7 @@ pub struct Database {
 impl Database {
     /// Crea una nueva conexión a la base de datos
     /// 
-    /// La base de datos se crea en el directorio de datos de la aplicación.
+    /// La base de datos se crea en el directorio de configuración de la aplicación.
     /// Para tests, usa conexión en memoria.
     pub fn new() -> Result<Self> {
         let db_path = Self::get_db_path();
@@ -38,12 +38,12 @@ impl Database {
         
         #[cfg(not(test))]
         {
-            let data_dir = dirs::data_dir()
+            let config_dir = dirs::config_dir()
                 .unwrap_or_else(|| PathBuf::from("."))
                 .join("symphony");
             
-            std::fs::create_dir_all(&data_dir).ok();
-            data_dir.join("symphony.db")
+            std::fs::create_dir_all(&config_dir).ok();
+            config_dir.join("symphony.db")
         }
     }
 }
