@@ -4,6 +4,7 @@ import { Button } from "../components/ui/Button";
 import { ImportDialog } from "../components/ImportDialog";
 import { TrackList } from "../components/TrackList";
 import { useGetAllTracks, useLibraryStats } from "../hooks/useLibrary";
+import { useAudioPlayer } from "../hooks/useAudioPlayer";
 import type { Track } from "../types/library";
 
 export const Library = () => {
@@ -12,6 +13,7 @@ export const Library = () => {
   
   const { data: tracks = [], isLoading } = useGetAllTracks();
   const { data: stats } = useLibraryStats();
+  const { play, isPlaying, currentTrackPath } = useAudioPlayer();
 
   const handleImportComplete = () => {
     setShowImportDialog(false);
@@ -21,9 +23,13 @@ export const Library = () => {
     setSelectedTrack(track);
   };
 
-  const handleTrackDoubleClick = (track: Track) => {
-    console.log("Reproducir pista:", track);
-    // TODO: Integrar con AudioPlayer
+  const handleTrackDoubleClick = async (track: Track) => {
+    try {
+      await play(track.path);
+      console.log("Reproduciendo:", track.title);
+    } catch (error) {
+      console.error("Error al reproducir pista:", error);
+    }
   };
 
   return (
@@ -103,8 +109,9 @@ export const Library = () => {
             <Button
               variant="primary"
               onClick={() => handleTrackDoubleClick(selectedTrack)}
+              disabled={isPlaying && currentTrackPath === selectedTrack.path}
             >
-              ▶️ Reproducir
+              {isPlaying && currentTrackPath === selectedTrack.path ? "⏸️ Reproduciendo..." : "▶️ Reproducir"}
             </Button>
           </div>
         </div>

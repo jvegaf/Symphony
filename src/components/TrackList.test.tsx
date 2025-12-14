@@ -381,4 +381,68 @@ describe("TrackList", () => {
     const rowText = rows[0].textContent;
     expect(rowText).toContain("-");
   });
+
+  it("debería mostrar rating con estrellas", () => {
+    const tracksWithRating: Track[] = [
+      {
+        ...mockTracks[0],
+        rating: 5,
+      },
+      {
+        ...mockTracks[1],
+        rating: 3,
+      },
+    ];
+
+    render(<TrackList tracks={tracksWithRating} />, {
+      wrapper: createWrapper(),
+    });
+
+    const rows = screen.getAllByRole("row");
+    expect(rows[0]).toHaveTextContent("⭐⭐⭐⭐⭐"); // 5 estrellas
+    expect(rows[1]).toHaveTextContent("⭐⭐⭐"); // 3 estrellas
+  });
+
+  it("debería mostrar '-' cuando no hay rating", () => {
+    const tracksWithoutRating: Track[] = [
+      {
+        ...mockTracks[0],
+        rating: undefined,
+      },
+    ];
+
+    render(<TrackList tracks={tracksWithoutRating} />, {
+      wrapper: createWrapper(),
+    });
+
+    const rows = screen.getAllByRole("row");
+    // Debería mostrar "-" para rating vacío
+    expect(rows[0]).toHaveTextContent("-");
+  });
+
+  it("debería permitir ordenar por rating", async () => {
+    const tracksWithRating: Track[] = [
+      { ...mockTracks[0], title: "Track A", rating: 2 },
+      { ...mockTracks[1], title: "Track B", rating: 5 },
+      { ...mockTracks[2], title: "Track C", rating: 3 },
+    ];
+
+    render(<TrackList tracks={tracksWithRating} />, {
+      wrapper: createWrapper(),
+    });
+
+    const ratingButton = screen.getByText("Rating");
+    
+    // Click para ordenar por rating (ascendente)
+    await userEvent.click(ratingButton);
+    
+    const rows = screen.getAllByRole("row");
+    // Verificar que se ordenó por rating (2, 3, 5)
+    expect(rows[0]).toHaveTextContent("Track A");
+    expect(rows[0]).toHaveTextContent("⭐⭐");
+    expect(rows[1]).toHaveTextContent("Track C");
+    expect(rows[1]).toHaveTextContent("⭐⭐⭐");
+    expect(rows[2]).toHaveTextContent("Track B");
+    expect(rows[2]).toHaveTextContent("⭐⭐⭐⭐⭐");
+  });
 });

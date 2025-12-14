@@ -10,7 +10,7 @@ export interface TrackListProps {
   loading?: boolean;
 }
 
-type SortColumn = "title" | "artist" | "album" | "duration" | "bpm";
+type SortColumn = "title" | "artist" | "album" | "duration" | "bpm" | "rating";
 type SortOrder = "asc" | "desc";
 
 const formatDuration = (seconds: number): string => {
@@ -19,6 +19,11 @@ const formatDuration = (seconds: number): string => {
   return `${mins.toString().padStart(2, "0")}:${secs
     .toString()
     .padStart(2, "0")}`;
+};
+
+const renderRating = (rating: number | null | undefined): string => {
+  if (!rating || rating === 0) return "-";
+  return "⭐".repeat(Math.min(Math.max(rating, 0), 5));
 };
 
 export const TrackList: React.FC<TrackListProps> = ({
@@ -118,6 +123,9 @@ export const TrackList: React.FC<TrackListProps> = ({
         <div className="w-16 text-right text-gray-400">
           {track.bpm?.toFixed(0) || "-"}
         </div>
+        <div className="w-24 text-center text-yellow-500">
+          {renderRating(track.rating)}
+        </div>
       </div>
     );
   };
@@ -201,6 +209,7 @@ export const TrackList: React.FC<TrackListProps> = ({
         <SortButton column="album" label="Álbum" width="w-48" />
         <SortButton column="duration" label="Duración" width="w-20" />
         <SortButton column="bpm" label="BPM" width="w-16" />
+        <SortButton column="rating" label="Rating" width="w-24" />
       </div>
 
       <div 
