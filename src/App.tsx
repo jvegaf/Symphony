@@ -1,13 +1,17 @@
 import { useState } from "react";
-import { ErrorBoundary } from "./components/ErrorBoundary";
-import { Header, Sidebar, PlayerSection, TrackTable } from "./components/layout";
-import { useGetAllTracks, useImportLibrary } from "./hooks/useLibrary";
-import type { Track, ImportProgress } from "./types/library";
+
 import { open } from "@tauri-apps/plugin-dialog";
-import { invoke } from "@tauri-apps/api/core";
+
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import { Header, PlayerSection, Sidebar, TrackTable } from "./components/layout";
+import { useAudioPlayer } from "./hooks/useAudioPlayer";
+import { useGetAllTracks, useImportLibrary } from "./hooks/useLibrary";
+import { BenchmarkPage } from "./pages/Benchmark";
+import type { ImportProgress, Track } from "./types/library";
+import { logger } from "./utils/logger";
 
 function App() {
-  const [activeTab, setActiveTab] = useState<"library" | "settings" | "import" | "export" | "tools">("library");
+  const [activeTab, setActiveTab] = useState<"library" | "settings" | "import" | "export" | "tools" | "benchmark">("library");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
   const [isImporting, setIsImporting] = useState(false);
@@ -19,6 +23,7 @@ function App() {
 
   const { data: tracks = [], isLoading } = useGetAllTracks();
   const importMutation = useImportLibrary();
+  const { play } = useAudioPlayer();
 
   const handleImport = async () => {
     try {
@@ -63,11 +68,25 @@ function App() {
   };
 
   const handleTrackDoubleClick = async (track: Track) => {
+    const timestamp = new Date().toISOString();
+    console.log(`%c[${timestamp}] ========== APP.TSX DOUBLE CLICK ==========`, 'background: #ff0000; color: #fff; font-weight: bold; padding: 4px;');
+    console.log(`%c[${timestamp}] Track: ${track.title}`, 'background: #0088ff; color: #fff; padding: 2px;');
+    console.log(`%c[${timestamp}] Path: ${track.path}`, 'background: #0088ff; color: #fff; padding: 2px;');
+    
+    await logger.info(`[${timestamp}] ========== APP.TSX DOUBLE CLICK ==========`);
+    await logger.info(`[${timestamp}] Track: ${track.title}`);
+    await logger.info(`[${timestamp}] Path: ${track.path}`);
+    
     try {
-      // Play track
-      await invoke("play_track", { trackId: track.id });
+      console.log(`%c[${timestamp}] Calling play() with path: ${track.path}`, 'background: #00ff00; color: #000; padding: 2px;');
+      await logger.info(`[${timestamp}] Calling play() with path: ${track.path}`);
+      await play(track.path);
       setSelectedTrack(track);
+      console.log(`%c[${timestamp}] ✅ Play successful`, 'background: #00ff00; color: #000; font-weight: bold; padding: 4px;');
+      await logger.info(`[${timestamp}] ✅ Play successful`);
     } catch (error) {
+      console.error(`%c[${timestamp}] ❌ Play failed: ${JSON.stringify(error)}`, 'background: #ff0000; color: #fff; font-weight: bold; padding: 4px;');
+      await logger.error(`[${timestamp}] ❌ Play failed: ${JSON.stringify(error)}`);
       console.error("Error al reproducir:", error);
     }
   };
@@ -84,7 +103,12 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <div className="h-screen bg-background-dark flex flex-col overflow-hidden">
+      <div className="h-screen bg-background-dark flex flex-col overflow-hidden relative">
+        {/* Indicador de versión nueva */}
+        <div className="absolute top-2 right-2 z-50 bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
+          🔴 CÓDIGO NUEVO v2.0
+        </div>
+        
         <Header
           activeTab={activeTab}
           onTabChange={setActiveTab}
@@ -93,25 +117,29 @@ function App() {
           progress={importProgress}
         />
         
-        <div className="flex flex-1 overflow-hidden">
-          <Sidebar
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            totalTracks={tracks.length}
-          />
-          
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <PlayerSection track={selectedTrack} />
-            
-            <TrackTable
-              tracks={filteredTracks}
-              selectedTrack={selectedTrack}
-              onTrackSelect={handleTrackSelect}
-              onTrackDoubleClick={handleTrackDoubleClick}
-              isLoading={isLoading}
+        {activeTab === "benchmark" ? (
+          <BenchmarkPage />
+        ) : (
+          <div className="flex flex-1 overflow-hidden">
+            <Sidebar
+              searchQuery={searchQuery}
+              onSearchChange={setSearchQuery}
+              totalTracks={tracks.length}
             />
+            
+            <div className="flex-1 flex flex-col overflow-hidden">
+              <PlayerSection track={selectedTrack} />
+              
+              <TrackTable
+                tracks={filteredTracks}
+                selectedTrack={selectedTrack}
+                onTrackSelect={handleTrackSelect}
+                onTrackDoubleClick={handleTrackDoubleClick}
+                isLoading={isLoading}
+              />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </ErrorBoundary>
   );

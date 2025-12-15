@@ -28,7 +28,6 @@ describe("AudioPlayer", () => {
       pause: mockPause,
       resume: mockResume,
       stop: mockStop,
-      refreshState: mockRefreshState,
     });
   });
 
@@ -55,7 +54,6 @@ describe("AudioPlayer", () => {
       pause: mockPause,
       resume: mockResume,
       stop: mockStop,
-      refreshState: mockRefreshState,
     });
 
     render(<AudioPlayer trackPath="/test/song.mp3" trackTitle="Mi Canción" />);
@@ -85,7 +83,6 @@ describe("AudioPlayer", () => {
       pause: mockPause,
       resume: mockResume,
       stop: mockStop,
-      refreshState: mockRefreshState,
     });
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
@@ -103,7 +100,6 @@ describe("AudioPlayer", () => {
       pause: mockPause,
       resume: mockResume,
       stop: mockStop,
-      refreshState: mockRefreshState,
     });
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
@@ -150,7 +146,6 @@ describe("AudioPlayer", () => {
       pause: mockPause,
       resume: mockResume,
       stop: mockStop,
-      refreshState: mockRefreshState,
     });
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
@@ -172,7 +167,6 @@ describe("AudioPlayer", () => {
       pause: mockPause,
       resume: mockResume,
       stop: mockStop,
-      refreshState: mockRefreshState,
     });
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
@@ -194,7 +188,6 @@ describe("AudioPlayer", () => {
       pause: mockPause,
       resume: mockResume,
       stop: mockStop,
-      refreshState: mockRefreshState,
     });
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
@@ -241,7 +234,6 @@ describe("AudioPlayer", () => {
       pause: mockPause,
       resume: mockResume,
       stop: mockStop,
-      refreshState: mockRefreshState,
     });
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
@@ -266,7 +258,6 @@ describe("AudioPlayer", () => {
       pause: mockPause,
       resume: mockResume,
       stop: mockStop,
-      refreshState: mockRefreshState,
     });
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
@@ -291,7 +282,6 @@ describe("AudioPlayer", () => {
       pause: mockPause,
       resume: mockResume,
       stop: mockStop,
-      refreshState: mockRefreshState,
     });
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
@@ -316,7 +306,6 @@ describe("AudioPlayer", () => {
       pause: mockPause,
       resume: mockResume,
       stop: mockStop,
-      refreshState: mockRefreshState,
     });
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
@@ -356,7 +345,6 @@ describe("AudioPlayer", () => {
       pause: mockPause,
       resume: mockResume,
       stop: mockStop,
-      refreshState: mockRefreshState,
     });
 
     render(<AudioPlayer trackPath="/test/song.mp3" onPause={onPause} />);
@@ -381,7 +369,6 @@ describe("AudioPlayer", () => {
       pause: mockPause,
       resume: mockResume,
       stop: mockStop,
-      refreshState: mockRefreshState,
     });
 
     render(<AudioPlayer trackPath="/test/song.mp3" onStop={onStop} />);

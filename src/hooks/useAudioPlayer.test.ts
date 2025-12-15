@@ -139,24 +139,8 @@ describe("useAudioPlayer", () => {
     expect(result.current.currentTrackPath).toBeNull();
   });
 
-  it("debería refrescar el estado desde el backend", async () => {
-    (invoke as ReturnType<typeof vi.fn>).mockResolvedValue({
-      state: "playing",
-      is_playing: true,
-    });
-
-    const { result } = renderHook(() => useAudioPlayer());
-
-    await act(async () => {
-      await result.current.refreshState();
-    });
-
-    await waitFor(() => {
-      expect(invoke).toHaveBeenCalledWith("get_playback_state");
-      expect(result.current.state).toBe("playing");
-      expect(result.current.isPlaying).toBe(true);
-    });
-  });
+  // AIDEV-NOTE: Test removido - refreshState() ya no existe porque el estado
+  // se actualiza automáticamente via eventos Tauri (audio:state, audio:timestamp)
 
   it("debería manejar errores al reproducir", async () => {
     const mockError = new Error("Archivo no encontrado");

@@ -5,6 +5,8 @@ pub mod commands;
 
 use commands::audio::AudioPlayerState;
 use commands::library::LibraryState;
+use std::sync::{Arc, Mutex};
+use db::Database;
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -14,14 +16,27 @@ fn greet(name: &str) -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // Configurar logger y mostrar ruta del archivo de log
+    if let Some(log_dir) = dirs::data_local_dir() {
+        let log_path = log_dir.join("symphony").join("symphony.log");
+        eprintln!("🔍 LOG FILE: {:?}", log_path);
+        eprintln!("Para ver los logs en tiempo real: tail -f {:?}", log_path);
+    }
+    
+    log::info!("==================== SYMPHONY STARTING ====================");
     log::info!("Iniciando Symphony...");
 
     // Inicializar base de datos
-    if let Err(e) = db::initialize() {
-        log::error!("Error inicializando base de datos: {}", e);
-    } else {
-        log::info!("Base de datos inicializada correctamente");
-    }
+    let db = match Database::new() {
+        Ok(database) => {
+            log::info!("Base de datos inicializada correctamente");
+            Arc::new(Mutex::new(database))
+        }
+        Err(e) => {
+            log::error!("Error inicializando base de datos: {}", e);
+            panic!("Cannot start without database: {}", e);
+        }
+    };
 
     tauri::Builder::default()
         .plugin(tauri_plugin_log::Builder::new()
@@ -33,8 +48,10 @@ pub fn run() {
             .build())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())
-        .manage(AudioPlayerState::new())
+        .plugin(tauri_plugin_fs::init())
+        .manage(AudioPlayerState::new()) // AudioPlayer se inicializa lazy al primer play
         .manage(LibraryState::new())
+        .manage(db)
         .invoke_handler(tauri::generate_handler![
             greet,
             // Audio commands
@@ -43,7 +60,18 @@ pub fn run() {
             commands::audio::resume_playback,
             commands::audio::stop_playback,
             commands::audio::get_playback_state,
+            commands::audio::get_playback_position,
+            commands::audio::set_playback_volume,
+            commands::audio::get_audio_devices,
+            commands::audio::set_audio_device,
+            commands::audio::seek_to_position,
+            commands::audio::generate_waveform_data,
+            commands::audio::get_cached_waveform,
+            commands::audio::generate_and_cache_waveform,
             commands::audio::decode_audio_metadata,
+            commands::audio::read_audio_file,
+            commands::audio::allow_asset_file,
+            commands::audio::allow_asset_directory,
             // Library commands
             commands::library::import_library,
             commands::library::get_all_tracks,

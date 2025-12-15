@@ -1,6 +1,6 @@
 import type { ImportProgress } from "../../types/library";
 
-type Tab = "library" | "settings" | "import" | "export" | "tools";
+type Tab = "library" | "settings" | "import" | "export" | "tools" | "benchmark";
 
 interface HeaderProps {
   activeTab: Tab;
@@ -19,6 +19,7 @@ export const Header = ({
 }: HeaderProps) => {
   const tabs: { id: Tab; label: string }[] = [
     { id: "library", label: "Library" },
+    { id: "benchmark", label: "🔬 Benchmark" },
     { id: "settings", label: "Settings" },
     { id: "import", label: "Import" },
     { id: "export", label: "Export" },

@@ -1,7 +1,7 @@
 # Estado del Proyecto Symphony
 
-**Última actualización:** 11 de diciembre, 2025  
-**Commit:** 3b6669c - feat(milestone-0): setup inicial del proyecto
+**Última actualización:** 14 de diciembre, 2025  
+**Commit:** [Current] - feat: benchmark de waveform Rust vs WaveSurfer.js
 
 ---
 
@@ -10,11 +10,11 @@
 ```
 Proyecto Symphony v1.0.0
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-█████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  6.25%
+█████████░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░  15%
 
 Milestones:
-[████████████░░░░░░░] Milestone 0: Setup Inicial           62.5%
-[░░░░░░░░░░░░░░░░░░░] Milestone 1: Core Audio               0%
+[████████████████░░░] Milestone 0: Setup Inicial           85%
+[██████░░░░░░░░░░░░░] Milestone 1: Core Audio              35%
 [░░░░░░░░░░░░░░░░░░░] Milestone 2: Importación             0%
 [░░░░░░░░░░░░░░░░░░░] Milestone 3: Playlists               0%
 [░░░░░░░░░░░░░░░░░░░] Milestone 4: Análisis Avanzado       0%
@@ -24,7 +24,32 @@ Milestones:
 
 ---
 
-## ✅ Milestone 0: Setup Inicial (62.5%)
+## 🆕 Última Actualización: Benchmark de Waveform
+
+### ✅ Nueva Funcionalidad Agregada
+
+#### 🔬 Benchmark: Rust vs WaveSurfer.js
+
+**Componentes creados:**
+- ✅ `WaveformBenchmark.tsx` - Comparación de performance
+- ✅ `Benchmark.tsx` - Página de interfaz
+- ✅ Integración en Header con pestaña "🔬 Benchmark"
+
+**Métricas evaluadas:**
+- ⏱️ Tiempo de generación (ms)
+- 🔢 Número de samples generados
+- 💾 Uso de memoria (aproximado)
+
+**Documentación:**
+- 📄 `docs/benchmark-waveform.md` - Guía completa
+- 📊 `docs/benchmark-results.md` - Template de resultados
+- 📋 `docs/benchmark-summary.md` - Resumen ejecutivo
+
+**Estado:** ✅ Implementado, pendiente de ejecución
+
+---
+
+## ✅ Milestone 0: Setup Inicial (85%)
 
 ### Completado (5 de 8 tareas)
 

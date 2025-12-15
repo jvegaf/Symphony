@@ -7,6 +7,22 @@
     "core:default",
     "opener:default",
     "dialog:default",
-    "dialog:allow-open"
+    "dialog:allow-open",
+    "log:default",
+    "log:allow-log",
+    "fs:default",
+    "fs:allow-read-file",
+    "fs:allow-exists",
+    "fs:allow-home-read-recursive",
+    "fs:allow-audio-read-recursive",
+    {
+      "identifier": "fs:scope",
+      "allow": [
+        { "path": "$HOME/**" },
+        { "path": "$AUDIO/**" },
+        { "path": "/home/**" },
+        { "path": "/tmp/**" }
+      ]
+    }
   ]
 }

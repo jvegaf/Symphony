@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 use std::sync::Arc;
-use tauri::{AppHandle, State};
+use tauri::{AppHandle, Manager, State};
 use tokio::sync::Mutex;
 
 use crate::library::{LibraryImporter, ImportResult};
@@ -43,6 +43,16 @@ pub async fn import_library(
 
     if !library_path.is_dir() {
         return Err(format!("La ruta no es un directorio: {}", path));
+    }
+
+    // ✅ IMPORTANTE: Añadir el directorio al scope del asset protocol
+    // Esto permite que el frontend use convertFileSrc() para cargar archivos de audio
+    let asset_scope = app_handle.asset_protocol_scope();
+    if let Err(e) = asset_scope.allow_directory(&library_path, true) {
+        log::warn!("No se pudo añadir directorio al asset scope: {}", e);
+        // No fallamos, continuamos con la importación
+    } else {
+        log::info!("Directorio añadido al asset protocol scope: {:?}", library_path);
     }
 
     // Obtener importador

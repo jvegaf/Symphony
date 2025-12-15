@@ -5,6 +5,7 @@ import { ImportDialog } from "../components/ImportDialog";
 import { TrackList } from "../components/TrackList";
 import { useGetAllTracks, useLibraryStats } from "../hooks/useLibrary";
 import { useAudioPlayer } from "../hooks/useAudioPlayer";
+import { logger } from "../utils/logger";
 import type { Track } from "../types/library";
 
 export const Library = () => {
@@ -24,11 +25,18 @@ export const Library = () => {
   };
 
   const handleTrackDoubleClick = async (track: Track) => {
+    const timestamp = new Date().toISOString();
+    await logger.info(`[${timestamp}] ============ DOUBLE CLICK ============`);
+    await logger.info(`[${timestamp}] Track: ${track.title}`);
+    await logger.info(`[${timestamp}] Path: ${track.path}`);
+    await logger.info(`[${timestamp}] Calling play()...`);
+    
     try {
       await play(track.path);
-      console.log("Reproduciendo:", track.title);
+      await logger.info(`[${timestamp}] ✅ Play successful for: ${track.title}`);
     } catch (error) {
-      console.error("Error al reproducir pista:", error);
+      await logger.error(`[${timestamp}] ❌ Play failed: ${JSON.stringify(error)}`);
+      console.error("❌ Error al reproducir pista:", error);
     }
   };
 
@@ -39,7 +47,7 @@ export const Library = () => {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">
-              Biblioteca Musical
+              🔴 NUEVA VERSIÓN - Biblioteca Musical
             </h1>
             {stats && stats.totalTracks > 0 && (
               <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">

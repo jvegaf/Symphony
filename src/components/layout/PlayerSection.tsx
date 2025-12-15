@@ -1,4 +1,8 @@
+import { useEffect, useRef } from "react";
+
 import type { Track } from "../../types/library";
+import { useAudioPlayer } from "../../hooks/useAudioPlayer";
+import { Toast } from "../Toast";
 
 interface PlayerSectionProps {
   track: Track | null;
@@ -11,6 +15,77 @@ const formatDuration = (seconds: number): string => {
 };
 
 export const PlayerSection = ({ track }: PlayerSectionProps) => {
+  const { play, pause, resume, stop, seek, isPlaying, position, duration, error, state } = useAudioPlayer();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  const handlePlayPause = async () => {
+    if (!track) return;
+
+    try {
+      if (isPlaying) {
+        await pause();
+      } else if (state === "paused") {
+        await resume();
+      } else {
+        await play(track.path);
+      }
+    } catch (error) {
+      console.error("Error al controlar reproducción:", error);
+    }
+  };
+
+  // Dibujar barra de progreso simple
+  useEffect(() => {
+    if (!canvasRef.current || !track) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const width = rect.width;
+    const height = rect.height;
+
+    if (width === 0 || height === 0) return;
+
+    canvas.width = width * window.devicePixelRatio;
+    canvas.height = height * window.devicePixelRatio;
+    ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+
+    ctx.clearRect(0, 0, width, height);
+
+    const centerY = height / 2;
+    const totalDuration = duration || track.duration;
+    const progressRatio = totalDuration > 0 ? position / totalDuration : 0;
+    const progressWidth = width * progressRatio;
+
+    // Barra de fondo
+    ctx.fillStyle = "#9ca3af";
+    ctx.fillRect(0, centerY - 3, width, 6);
+
+    // Barra de progreso
+    ctx.fillStyle = "#3b82f6";
+    ctx.fillRect(0, centerY - 3, progressWidth, 6);
+  }, [position, duration, track]);
+
+  // Click en canvas para seek
+  const handleCanvasClick = async (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!canvasRef.current || !track || !duration) return;
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const clickPercent = x / rect.width;
+    const newTime = clickPercent * duration;
+
+    console.log("🎯 Seeking to:", newTime);
+    try {
+      await seek(newTime);
+      console.log("✅ Seek instantáneo completado");
+    } catch (error) {
+      console.error("❌ Error en seek:", error);
+    }
+  };
+
   if (!track) {
     return (
       <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
@@ -26,6 +101,18 @@ export const PlayerSection = ({ track }: PlayerSectionProps) => {
 
   return (
     <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
+      {/* Error Toast */}
+      {error && (
+        <Toast
+          message={error}
+          type="error"
+          duration={5000}
+          onClose={() => {
+            /* Error will be cleared on next action */
+          }}
+        />
+      )}
+
       {/* Track Info */}
       <div className="flex items-start">
         {/* Album Art */}
@@ -43,16 +130,26 @@ export const PlayerSection = ({ track }: PlayerSectionProps) => {
 
         {/* Controls */}
         <div className="flex items-center space-x-2 text-gray-500 dark:text-gray-400">
-          <button className="p-2 rounded-full hover:bg-gray-200/50 dark:hover:bg-gray-700/50">
-            <span className="material-icons">play_arrow</span>
+          <button 
+            type="button"
+            onClick={handlePlayPause}
+            className="p-2 rounded-full hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors"
+          >
+            <span className="material-icons">
+              {isPlaying ? "pause" : "play_arrow"}
+            </span>
           </button>
-          <button className="p-2 rounded-full hover:bg-gray-200/50 dark:hover:bg-gray-700/50">
-            <span className="material-icons">fast_rewind</span>
+          <button 
+            type="button"
+            onClick={() => stop()}
+            className="p-2 rounded-full hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors"
+          >
+            <span className="material-icons">stop</span>
           </button>
-          <button className="p-2 rounded-full hover:bg-gray-200/50 dark:hover:bg-gray-700/50">
-            <span className="material-icons">fast_forward</span>
-          </button>
-          <button className="p-2 rounded-full hover:bg-gray-200/50 dark:hover:bg-gray-700/50">
+          <button 
+            type="button"
+            className="p-2 rounded-full hover:bg-gray-200/50 dark:hover:bg-gray-700/50"
+          >
             <span className="material-icons">info_outline</span>
           </button>
         </div>
@@ -82,42 +179,39 @@ export const PlayerSection = ({ track }: PlayerSectionProps) => {
         )}
       </div>
 
-      {/* Waveform Placeholder */}
-      <div className="mt-3 flex items-center space-x-2">
-        <span className="material-icons text-primary text-xl">play_circle_filled</span>
-        <div className="relative flex-1 h-16 bg-gray-200 dark:bg-gray-800 rounded overflow-hidden">
-          {/* Waveform placeholder */}
-          <div className="absolute inset-0 flex items-center justify-center text-gray-400 dark:text-gray-600">
-            <span className="material-icons">graphic_eq</span>
-          </div>
-          {/* Progress */}
-          <div
-            className="absolute top-0 left-0 h-full bg-primary/30"
-            style={{ width: "0%" }}
-          />
-        </div>
-        <div className="flex items-center space-x-1 text-gray-500 dark:text-gray-400 text-xs">
-          <span className="material-icons text-lg">remove_circle_outline</span>
-          <span className="material-icons text-lg">add_circle_outline</span>
+      {/* Canvas de progreso */}
+      <div className="mt-3">
+        <canvas
+          ref={canvasRef}
+          onClick={handleCanvasClick}
+          style={{ display: "block" }}
+          className="w-full h-16 bg-gray-100 dark:bg-gray-900 rounded-lg border border-gray-300 dark:border-gray-700 cursor-pointer hover:border-blue-500 transition-colors"
+        />
+        <div className="text-center text-xs text-green-600 dark:text-green-400 mt-1">
+          ✨ HTMLAudioElement - Seeking instantáneo
         </div>
       </div>
 
       {/* Time */}
       <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
-        <span>0:00</span>
-        <span>{formatDuration(track.duration)}</span>
+        <span className="font-mono font-bold text-blue-600">{formatDuration(position)}</span>
+        <span className="font-mono">{formatDuration(duration > 0 ? duration : track.duration)}</span>
       </div>
 
       {/* Cue Points */}
       <div className="mt-2 flex items-center justify-between">
         <div className="flex space-x-2">
-          <button className="bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1 rounded text-sm flex items-center">
+          <button 
+            type="button"
+            className="bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1 rounded text-sm flex items-center"
+          >
             Cues
             <span className="material-icons text-base ml-1">arrow_drop_down</span>
           </button>
           {[1, 2, 3, 4].map((i) => (
             <button
               key={i}
+              type="button"
               className="bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 w-20 py-1 rounded text-sm"
             >
               <span className="material-icons text-base">add</span>
