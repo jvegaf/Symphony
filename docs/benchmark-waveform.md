@@ -189,7 +189,7 @@ Basado en resultados del benchmark:
 ### Opción B: Migrar a WaveSurfer
 1. Migrar playback a `HTMLAudioElement`
 2. Usar WaveSurfer para waveform
-3. Eliminar `rodio`, `hound` de Cargo.toml
+3. Eliminar `rodio`, `hound` de Cargo.toml (ahora usamos cpal + rb para audio)
 4. Simplificar IPC commands
 
 ### Opción C: Híbrido

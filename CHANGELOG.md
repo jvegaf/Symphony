@@ -245,7 +245,8 @@ y este proyecto sigue [Semantic Versioning](https://semver.org/es/).
 - Frontend: Sin cambios adicionales
 - Backend:
   - `symphonia = { version = "0.5", features = ["default"] }`
-  - `rodio = { version = "0.17", features = ["symphonia-all"] }`
+  - `cpal = "0.15.3"`, `rb = "0.4.1"` (reemplazo total de rodio)
+  - (Eliminado) `rodio = { version = "0.17", features = ["symphonia-all"] }`
   - `hound = "3.5"`
 
 **Tests Milestone 1:** 47 passed (16 backend + 31 frontend)  

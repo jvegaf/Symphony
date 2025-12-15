@@ -1,5 +1,47 @@
 # Plan de Reemplazo de Arquitectura de Audio
 
+## Resumen de Migración y Mejoras
+
+La migración de rodio a cpal + rb (ringbuf) ha sido completada. Ahora Symphony utiliza un pipeline de audio moderno, desacoplado y eficiente, inspirado en Musicat, que permite:
+- **Seeking instantáneo** (sin re-decodificación)
+- **Latencia mínima** y control preciso de posición
+- **Eventos push** al frontend (sin polling)
+- **Persistencia de volumen/dispositivo**
+- **Un solo sistema de audio** (sin duplicidad)
+
+### Decisión arquitectónica
+
+Rodio fue descartado porque:
+- No permite control preciso de buffer ni seeking eficiente
+- No soporta ring buffer SPSC nativo
+- El seeking forzaba re-decodificar desde el inicio, causando latencias de varios segundos
+
+Con cpal + rb:
+- El thread de decodificación escribe en un ring buffer desacoplado
+- El thread de audio lee y reproduce en tiempo real
+- El control (seek, volumen, dispositivo) es inmediato y atómico
+
+---
+
+## Diagrama de Arquitectura (Mermaid)
+
+```mermaid
+flowchart LR
+    FE[Frontend React]
+    CMD[Tauri Commands]
+    DEC[Decode Thread\nSymphonia]
+    RB[Ring Buffer\n(rb)]
+    AO[Audio Output\n(cpal)]
+    FE -- invoke/play_track --> CMD
+    CMD -- StreamFile --> DEC
+    DEC -- PCM frames --> RB
+    AO -- read frames --> RB
+    AO -- emit events --> FE
+    FE -- listen(events) --> FE
+```
+
+---
+
 > **Fecha**: 15 Diciembre 2025  
 > **Estado**: En Progreso  
 > **Objetivo**: Reemplazar completamente el sistema de audio basado en rodio por una arquitectura estilo Musicat usando cpal + rb + atomic-wait

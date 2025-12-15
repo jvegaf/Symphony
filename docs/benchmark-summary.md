@@ -132,7 +132,7 @@
 **Próximos pasos:**
 - [ ] Migrar playback a HTMLAudioElement
 - [ ] Usar WaveSurfer para visualización
-- [ ] Eliminar rodio/hound de Cargo.toml
+- [x] Eliminar rodio/hound de Cargo.toml (migrado a cpal + rb)
 - [ ] Actualizar IPC commands
 
 ---

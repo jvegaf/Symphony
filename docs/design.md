@@ -203,6 +203,36 @@ src-tauri/
 
 #### Audio Module
 
+##### Nueva Arquitectura de Audio (cpal + rb)
+
+```mermaid
+flowchart TD
+    FE[Frontend]
+    CMD[Tauri Commands]
+    DEC[Decode Thread\nSymphonia]
+    RB[Ring Buffer\n(rb)]
+    AO[Audio Output\n(cpal)]
+    FE -- invoke/play_track --> CMD
+    CMD -- StreamFile --> DEC
+    DEC -- PCM frames --> RB
+    AO -- read frames --> RB
+    AO -- emit events --> FE
+```
+
+- **Ventajas:**
+  - Seeking instantáneo (sin re-decodificación)
+  - Latencia mínima
+  - Control preciso de volumen/dispositivo
+  - Eventos push (sin polling)
+
+- **Decisión:**
+  - Rodio fue reemplazado por cpal + rb para permitir control total del pipeline de audio y eliminar la latencia de seek.
+
+- **Frontend:**
+  - Usar siempre el hook `useAudioPlayer` para controlar el player y escuchar eventos.
+
+---
+
 ```rust
 // audio/decoder.rs
 pub struct AudioDecoder {

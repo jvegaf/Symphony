@@ -4,6 +4,44 @@ Esta documentación describe todos los comandos Tauri disponibles para interactu
 
 ## Audio
 
+### Especificación de Eventos Tauri (Audio)
+
+Todos los eventos emitidos por el backend de audio:
+
+- `audio:timestamp` → `{ position: number, duration: number }`
+- `audio:state` → `{ is_playing: boolean }`
+- `audio:end_of_track` → `{}`
+- `audio:error` → `{ message: string, is_critical: boolean }`
+- `audio:device_changed` → `{ device_name: string }`
+
+Ejemplo de suscripción en React:
+```typescript
+import { listen } from '@tauri-apps/api/event';
+
+useEffect(() => {
+  const unlisten = await listen<{ position: number, duration: number }>('audio:timestamp', (event) => {
+    setPosition(event.payload.position);
+  });
+  return () => { unlisten(); };
+}, []);
+```
+
+---
+
+### Nuevo uso recomendado: useAudioPlayer
+
+Todos los componentes deben usar el hook `useAudioPlayer` para controlar la reproducción y escuchar eventos:
+
+```typescript
+import { useAudioPlayer } from '@/hooks/useAudioPlayer';
+
+const player = useAudioPlayer();
+
+// player.play(path), player.pause(), player.seek(time), etc.
+```
+
+---
+
 ### play_track
 
 Inicia la reproducción de una pista de audio.
