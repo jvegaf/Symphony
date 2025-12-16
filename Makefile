@@ -150,11 +150,84 @@ db-migrate: ## Ejecutar migraciones de base de datos
 	$(CARGO) run --bin migrate
 	@echo "$(GREEN)✓ Migraciones completadas$(NC)"
 
-db-reset: ## Resetear base de datos (CUIDADO: elimina todos los datos)
-	@echo "$(RED)¿Estás seguro de resetear la base de datos? [y/N]$(NC)" && read ans && [ $${ans:-N} = y ]
-	@echo "$(YELLOW)Eliminando base de datos...$(NC)"
-	rm -f src-tauri/symphony.db
-	@echo "$(GREEN)✓ Base de datos eliminada$(NC)"
+db-clean: ## Limpiar SOLO base de datos de desarrollo (src-tauri/symphony.db)
+	@echo "$(YELLOW)Limpiando base de datos de desarrollo...$(NC)"
+	@if [ -f src-tauri/symphony.db ]; then \
+		rm -f src-tauri/symphony.db; \
+		echo "$(GREEN)✓ Base de datos de desarrollo eliminada$(NC)"; \
+	else \
+		echo "$(YELLOW)⚠ No existe base de datos de desarrollo$(NC)"; \
+	fi
+
+db-clean-user: ## Limpiar base de datos del usuario (~/.local/share/symphony/)
+	@echo "$(YELLOW)Limpiando base de datos del usuario...$(NC)"
+	@if [ -f ~/.local/share/symphony/symphony.db ]; then \
+		rm -f ~/.local/share/symphony/symphony.db; \
+		echo "$(GREEN)✓ Base de datos del usuario eliminada$(NC)"; \
+	else \
+		echo "$(YELLOW)⚠ No existe base de datos del usuario$(NC)"; \
+	fi
+	@if [ -f ~/.local/share/symphony/symphony.log ]; then \
+		rm -f ~/.local/share/symphony/symphony.log; \
+		echo "$(GREEN)✓ Log del usuario eliminado$(NC)"; \
+	fi
+
+db-clean-all: ## Limpiar TODAS las bases de datos (desarrollo + usuario) [CUIDADO]
+	@echo "$(RED)¿Estás seguro de eliminar TODAS las bases de datos? [y/N]$(NC)" && read ans && [ $${ans:-N} = y ]
+	@echo "$(YELLOW)Limpiando todas las bases de datos...$(NC)"
+	@$(MAKE) db-clean
+	@$(MAKE) db-clean-user
+	@echo "$(GREEN)✓ Todas las bases de datos eliminadas$(NC)"
+
+db-backup: ## Crear backup de la base de datos del usuario
+	@echo "$(BLUE)Creando backup de base de datos...$(NC)"
+	@mkdir -p backups
+	@if [ -f ~/.local/share/symphony/symphony.db ]; then \
+		BACKUP_FILE="backups/symphony_$$(date +%Y%m%d_%H%M%S).db"; \
+		cp ~/.local/share/symphony/symphony.db $$BACKUP_FILE; \
+		echo "$(GREEN)✓ Backup creado: $$BACKUP_FILE$(NC)"; \
+	else \
+		echo "$(YELLOW)⚠ No existe base de datos del usuario para hacer backup$(NC)"; \
+	fi
+
+db-restore: ## Restaurar último backup de base de datos
+	@echo "$(BLUE)Restaurando último backup...$(NC)"
+	@LATEST_BACKUP=$$(ls -t backups/symphony_*.db 2>/dev/null | head -n1); \
+	if [ -n "$$LATEST_BACKUP" ]; then \
+		mkdir -p ~/.local/share/symphony; \
+		cp $$LATEST_BACKUP ~/.local/share/symphony/symphony.db; \
+		echo "$(GREEN)✓ Base de datos restaurada desde: $$LATEST_BACKUP$(NC)"; \
+	else \
+		echo "$(RED)⚠ No se encontraron backups$(NC)"; \
+	fi
+
+db-info: ## Mostrar información de las bases de datos
+	@echo "$(BLUE)=== Base de datos - Información ===$(NC)"
+	@echo ""
+	@echo "$(YELLOW)Desarrollo (src-tauri/symphony.db):$(NC)"
+	@if [ -f src-tauri/symphony.db ]; then \
+		echo "  Tamaño: $$(du -h src-tauri/symphony.db | cut -f1)"; \
+		echo "  Modificado: $$(stat -c %y src-tauri/symphony.db 2>/dev/null || stat -f %Sm src-tauri/symphony.db 2>/dev/null)"; \
+	else \
+		echo "  $(RED)No existe$(NC)"; \
+	fi
+	@echo ""
+	@echo "$(YELLOW)Usuario (~/.local/share/symphony/symphony.db):$(NC)"
+	@if [ -f ~/.local/share/symphony/symphony.db ]; then \
+		echo "  Tamaño: $$(du -h ~/.local/share/symphony/symphony.db | cut -f1)"; \
+		echo "  Modificado: $$(stat -c %y ~/.local/share/symphony/symphony.db 2>/dev/null || stat -f %Sm ~/.local/share/symphony/symphony.db 2>/dev/null)"; \
+	else \
+		echo "  $(RED)No existe$(NC)"; \
+	fi
+	@echo ""
+	@echo "$(YELLOW)Backups (backups/):$(NC)"
+	@if [ -d backups ] && [ -n "$$(ls -A backups/symphony_*.db 2>/dev/null)" ]; then \
+		ls -lh backups/symphony_*.db | awk '{print "  " $$9 " - " $$5}'; \
+	else \
+		echo "  $(RED)No hay backups$(NC)"; \
+	fi
+
+db-reset: db-clean-all ## Resetear base de datos (CUIDADO: elimina todos los datos) [Alias de db-clean-all]
 
 ##@ Clean
 

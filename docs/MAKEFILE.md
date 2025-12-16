@@ -55,8 +55,16 @@ make build
 - `make build-linux` - Build para Linux (.deb + .AppImage)
 
 ### 🗄️ Database
+- `make db-info` - Mostrar información de todas las bases de datos
+- `make db-clean` - Limpiar SOLO base de datos de desarrollo
+- `make db-clean-user` - Limpiar SOLO base de datos del usuario
+- `make db-clean-all` - Limpiar TODAS las bases de datos (⚠️ requiere confirmación)
+- `make db-backup` - Crear backup de la base de datos del usuario
+- `make db-restore` - Restaurar último backup disponible
 - `make db-migrate` - Ejecutar migraciones de base de datos
-- `make db-reset` - Resetear base de datos (⚠️ elimina todos los datos)
+- `make db-reset` - Alias de `db-clean-all` (⚠️ elimina todos los datos)
+
+**📖 Documentación completa**: Ver [database-management.md](./database-management.md)
 
 ### 🧹 Clean
 - `make clean` - Limpiar archivos generados y dependencias
@@ -87,6 +95,13 @@ make setup
 make dev
 ```
 
+### Reiniciar con base de datos limpia
+```bash
+make db-backup         # Backup de seguridad
+make db-clean          # Solo desarrollo
+make dev
+```
+
 ### Antes de hacer commit
 ```bash
 make check
@@ -103,6 +118,14 @@ git push origin v1.0.0
 ```bash
 make clean
 make setup
+```
+
+### Reset completo (desarrollo + datos)
+```bash
+make db-backup         # Siempre hacer backup primero
+make db-clean-all      # Limpia todas las DBs
+make clean             # Limpia builds
+make setup             # Reinstala
 ```
 
 ### Ver cobertura de tests
@@ -157,4 +180,4 @@ Al agregar nuevos comandos al Makefile:
 
 ---
 
-*Última actualización: 13 dic 2025*
+*Última actualización: 16 dic 2025*

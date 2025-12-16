@@ -20,6 +20,9 @@ interface UpdateTrackMetadataRequest {
     year: number;
     genre: string;
     rating: number;
+    bpm?: number;
+    key?: string;
+    comment?: string;
   };
 }
 
@@ -36,6 +39,9 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId }) => {
   const [year, setYear] = useState<number>(0);
   const [genre, setGenre] = useState("");
   const [rating, setRating] = useState(0);
+  const [bpm, setBpm] = useState<number>(0);
+  const [key, setKey] = useState("");
+  const [comment, setComment] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
 
   // Query para obtener el track
@@ -60,6 +66,9 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId }) => {
       setYear(track.year || 0);
       setGenre(track.genre || "");
       setRating(track.rating || 0);
+      setBpm(track.bpm || 0);
+      setKey(track.key || "");
+      setComment(""); // Comment not in Track interface yet
     }
   }, [track]);
 
@@ -87,6 +96,9 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId }) => {
       year,
       genre,
       rating,
+      bpm: bpm > 0 ? bpm : undefined,
+      key: key || undefined,
+      comment: comment || undefined,
     });
   };
 
@@ -102,6 +114,9 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId }) => {
       year,
       genre,
       rating: clampedRating,
+      bpm: bpm > 0 ? bpm : undefined,
+      key: key || undefined,
+      comment: comment || undefined,
     });
   };
 
@@ -218,11 +233,60 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId }) => {
             </div>
           </div>
 
+          {/* BPM y Key en fila */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label
+                htmlFor="bpm"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
+                BPM
+              </label>
+              <Input
+                id="bpm"
+                type="number"
+                value={bpm || ""}
+                onChange={(e) => setBpm(parseFloat(e.target.value) || 0)}
+                placeholder="BPM"
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="key"
+                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+              >
+                Tonalidad
+              </label>
+              <Input
+                id="key"
+                value={key}
+                onChange={(e) => setKey(e.target.value)}
+                placeholder="Ej: Am, C#m"
+              />
+            </div>
+          </div>
+
+          {/* Comentario */}
+          <div>
+            <label
+              htmlFor="comment"
+              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+            >
+              Comentario
+            </label>
+            <Input
+              id="comment"
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Comentarios adicionales"
+            />
+          </div>
+
           {/* Rating con estrellas */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
               Rating
-            </label>
+            </div>
             <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map((star) => (
                 <button

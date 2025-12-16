@@ -1,9 +1,10 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tauri::{AppHandle, Manager, State};
 use tokio::sync::Mutex;
 
-use crate::library::{LibraryImporter, ImportResult};
+use crate::library::{LibraryImporter, ImportResult, MetadataExtractor};
+use crate::library::metadata::TrackMetadata;
 use crate::db::queries;
 use crate::db::models::Track;
 
@@ -124,7 +125,9 @@ pub async fn get_library_stats() -> Result<LibraryStats, String> {
 }
 
 /// Estructura para actualizar metadatos de track
+/// AIDEV-NOTE: Agregado 'key' y 'comment' para full compatibility con SongUpdater de Python
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct UpdateTrackMetadataRequest {
     pub id: String,
     pub title: Option<String>,
@@ -133,10 +136,16 @@ pub struct UpdateTrackMetadataRequest {
     pub year: Option<i32>,
     pub genre: Option<String>,
     pub bpm: Option<f64>,
+    pub key: Option<String>,      // Tonalidad musical (ej: "Am", "C#m")
     pub rating: Option<i32>,
+    pub comment: Option<String>,  // Comentarios del usuario
 }
 
 /// Actualiza metadatos de una pista
+/// 
+/// AIDEV-NOTE: Ahora escribe tags físicamente al archivo usando lofty (como SongUpdater.update_song_from_tag en Python)
+/// 1. Actualiza la base de datos SQLite
+/// 2. Escribe tags ID3v2/MP4/Vorbis al archivo físico
 #[tauri::command]
 pub async fn update_track_metadata(
     request: UpdateTrackMetadataRequest,
@@ -144,6 +153,11 @@ pub async fn update_track_metadata(
     let db = crate::db::get_connection()
         .map_err(|e| e.to_string())?;
     
+    // Paso 1: Obtener el track actual para conocer su ruta
+    let track = queries::get_track(&db.conn, &request.id)
+        .map_err(|e| format!("Track not found: {}", e))?;
+    
+    // Paso 2: Actualizar base de datos
     queries::update_track_metadata(
         &db.conn,
         &request.id,
@@ -155,7 +169,42 @@ pub async fn update_track_metadata(
         request.bpm,
         request.rating,
     )
-    .map_err(|e| e.to_string())
+    .map_err(|e| e.to_string())?;
+    
+    // Paso 3: Escribir tags físicamente al archivo (nuevo comportamiento)
+    let extractor = MetadataExtractor::new();
+    let file_path = Path::new(&track.path);
+    
+    // Crear TrackMetadata con los valores actualizados (merge con valores existentes)
+    let metadata_to_write = TrackMetadata {
+        path: track.path.clone(),
+        title: request.title.or(Some(track.title)),
+        artist: request.artist.or(Some(track.artist)),
+        album: request.album.or(track.album),
+        year: request.year.or(track.year),
+        genre: request.genre.or(track.genre),
+        bpm: request.bpm.map(|b| b as i32).or(track.bpm.map(|b| b as i32)),
+        key: request.key.or(track.key),
+        rating: request.rating.or(track.rating),
+        comment: request.comment,
+        // Campos técnicos no cambian
+        duration: track.duration,
+        bitrate: track.bitrate,
+        sample_rate: track.sample_rate as u32,
+        channels: 2, // Asumimos stereo, no lo tenemos en DB
+        format: file_path.extension()
+            .and_then(|e| e.to_str())
+            .unwrap_or("unknown")
+            .to_lowercase(),
+        artwork: None,
+    };
+    
+    // Escribir tags al archivo físico
+    extractor.write_metadata(file_path, &metadata_to_write)
+        .map_err(|e| format!("Failed to write tags to file: {}", e))?;
+    
+    log::info!("Metadatos actualizados en DB y archivo físico para track {}", request.id);
+    Ok(())
 }
 
 /// Estadísticas de la biblioteca

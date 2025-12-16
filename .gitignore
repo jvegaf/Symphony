@@ -16,6 +16,9 @@ dist-ssr
 coverage
 *.lcov
 
+# Database backups
+backups/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

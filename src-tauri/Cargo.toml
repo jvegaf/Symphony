@@ -1,6 +1,6 @@
 [package]
 name = "symphony"
-version = "0.2.0"
+version = "0.3.0"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
@@ -43,6 +43,10 @@ rubato = "0.15"           # Sample rate conversion (resampling)
 hound = "3.5"
 tauri-plugin-log = "2.7.1"
 log = "0.4.29"
+
+# Metadata dependencies
+# AIDEV-NOTE: lofty para lectura/escritura de tags ID3v2, ID3v1, APEv2, Vorbis Comments, MP4
+lofty = "0.22"           # Equivalente Rust de mutagen (lectura + escritura de metadatos)
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }

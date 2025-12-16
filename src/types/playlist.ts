@@ -34,6 +34,8 @@ export interface UpdatePlaylistRequest {
 
 /**
  * Request para actualizar metadatos de pista
+ * AIDEV-NOTE: Sincronizado con UpdateTrackMetadataRequest en Rust (commands/library.rs)
+ * Ahora escribe tags físicamente al archivo usando lofty
  */
 export interface UpdateTrackMetadataRequest {
   id: string;
@@ -43,8 +45,9 @@ export interface UpdateTrackMetadataRequest {
   genre?: string;
   year?: number;
   bpm?: number;
-  key?: string;
-  rating?: number; // 0-5
+  key?: string;      // Tonalidad musical (ej: "Am", "C#m")
+  rating?: number;   // 0-5 estrellas
+  comment?: string;  // Comentarios del usuario
 }
 
 /**
