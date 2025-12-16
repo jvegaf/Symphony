@@ -68,9 +68,15 @@ jobs:
         run: |
           cd src-tauri/target/release/bundle
           mkdir -p /tmp/artifacts
-          cp -v deb/*.deb /tmp/artifacts/ || echo "No .deb files found"
-          cp -v appimage/*.AppImage /tmp/artifacts/ || echo "No .AppImage files found"
+          # Try both lowercase and uppercase directory names
+          cp -v deb/*.deb /tmp/artifacts/ 2>/dev/null || echo "No .deb files found"
+          cp -v appimage/*.AppImage /tmp/artifacts/ 2>/dev/null || cp -v AppImage/*.AppImage /tmp/artifacts/ 2>/dev/null || echo "No .AppImage files found"
           ls -lah /tmp/artifacts
+          # Verify at least some files were copied
+          if [ -z "$(ls -A /tmp/artifacts)" ]; then
+            echo "Error: No artifacts were created"
+            exit 1
+          fi
 
       - name: Prepare release artifacts (Windows)
         if: matrix.os == 'windows-latest'
@@ -78,16 +84,21 @@ jobs:
         run: |
           cd src-tauri/target/release/bundle
           mkdir -p /tmp/artifacts
-          cp -v msi/*.msi /tmp/artifacts/ || echo "No .msi files found"
-          cp -v nsis/*.exe /tmp/artifacts/ || echo "No .exe files found"
+          cp -v msi/*.msi /tmp/artifacts/ 2>/dev/null || echo "No .msi files found"
+          cp -v nsis/*.exe /tmp/artifacts/ 2>/dev/null || echo "No .exe files found"
           ls -lah /tmp/artifacts
+          # Verify at least some files were copied
+          if [ -z "$(ls -A /tmp/artifacts)" ]; then
+            echo "Error: No artifacts were created"
+            exit 1
+          fi
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
           name: symphony-${{ matrix.platform }}
           path: /tmp/artifacts/*
-          if-no-files-found: error
+          if-no-files-found: warn
 
   create-release:
     name: Create Release
