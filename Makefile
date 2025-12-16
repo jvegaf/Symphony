@@ -156,15 +156,15 @@ db-view:
 
 db-clean:
 	@echo "$(YELLOW)Limpiando base de datos$(NC)"
-	@rm -rf $HOME/.config/symphony/symphony.db
+	@rm -rf ~/.config/symphony/symphony.db
 	@echo "$(GREEN)✓ Linmpieza completada$(NC)"
 
 db-backup: ## Crear backup de la base de datos del usuario
 	@echo "$(BLUE)Creando backup de base de datos...$(NC)"
 	@mkdir -p backups
-	@if [ -f ~/.local/share/symphony/symphony.db ]; then \
+	@if [ -f ~/.config/symphony/symphony.db ]; then \
 		BACKUP_FILE="backups/symphony_$$(date +%Y%m%d_%H%M%S).db"; \
-		cp ~/.local/share/symphony/symphony.db $$BACKUP_FILE; \
+		cp ~/.config/symphony/symphony.db $$BACKUP_FILE; \
 		echo "$(GREEN)✓ Backup creado: $$BACKUP_FILE$(NC)"; \
 	else \
 		echo "$(YELLOW)⚠ No existe base de datos del usuario para hacer backup$(NC)"; \
@@ -174,8 +174,8 @@ db-restore: ## Restaurar último backup de base de datos
 	@echo "$(BLUE)Restaurando último backup...$(NC)"
 	@LATEST_BACKUP=$$(ls -t backups/symphony_*.db 2>/dev/null | head -n1); \
 	if [ -n "$$LATEST_BACKUP" ]; then \
-		mkdir -p ~/.local/share/symphony; \
-		cp $$LATEST_BACKUP ~/.local/share/symphony/symphony.db; \
+		mkdir -p ~/.config/symphony; \
+		cp $$LATEST_BACKUP ~/.config/symphony/symphony.db; \
 		echo "$(GREEN)✓ Base de datos restaurada desde: $$LATEST_BACKUP$(NC)"; \
 	else \
 		echo "$(RED)⚠ No se encontraron backups$(NC)"; \
@@ -192,10 +192,10 @@ db-info: ## Mostrar información de las bases de datos
 		echo "  $(RED)No existe$(NC)"; \
 	fi
 	@echo ""
-	@echo "$(YELLOW)Usuario (~/.local/share/symphony/symphony.db):$(NC)"
-	@if [ -f ~/.local/share/symphony/symphony.db ]; then \
-		echo "  Tamaño: $$(du -h ~/.local/share/symphony/symphony.db | cut -f1)"; \
-		echo "  Modificado: $$(stat -c %y ~/.local/share/symphony/symphony.db 2>/dev/null || stat -f %Sm ~/.local/share/symphony/symphony.db 2>/dev/null)"; \
+	@echo "$(YELLOW)Usuario (~/.config/symphony/symphony.db):$(NC)"
+	@if [ -f ~/.config/symphony/symphony.db ]; then \
+		echo "  Tamaño: $$(du -h ~/.config/symphony/symphony.db | cut -f1)"; \
+		echo "  Modificado: $$(stat -c %y ~/.config/symphony/symphony.db 2>/dev/null || stat -f %Sm ~/.config/symphony/symphony.db 2>/dev/null)"; \
 	else \
 		echo "  $(RED)No existe$(NC)"; \
 	fi
