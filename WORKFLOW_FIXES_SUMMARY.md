@@ -5,6 +5,7 @@ Los workflows de CI y Release estaban fallando por múltiples razones:
 1. Paquete `libwebkit2gtk-4.0-dev` no existe en Ubuntu 24.04
 2. Tests de audio fallando en Windows CI con STATUS_ACCESS_VIOLATION
 3. GitHub Actions deprecadas en Release workflow
+4. **Vulnerabilidad de seguridad en `actions/download-artifact@v4`** (CVE: Arbitrary File Write)
 
 ## Soluciones implementadas
 
@@ -48,12 +49,29 @@ Los workflows de CI y Release estaban fallando por múltiples razones:
   - Verificación explícita de que se crearon artifacts
   - Manejo consistente de errores
 
+### 4. Vulnerabilidades de Seguridad (`.github/workflows/*.yml`)
+
+**Problema:** `actions/download-artifact@v4` tiene vulnerabilidad de Arbitrary File Write (CVE)
+
+**Solución:**
+- Actualizado `actions/download-artifact@v4` → `@v4.1.3` (versión parchada)
+- Actualizado `actions/upload-artifact@v4` → `@v4.4.3` (versión estable y segura)
+- Aplicado en CI workflow (2 ubicaciones)
+- Aplicado en Release workflow (1 ubicación)
+
 ## Archivos modificados
 
-1. `.github/workflows/ci.yml` - Actualizado paquete webkit
-2. `.github/workflows/release.yml` - Modernizado con nuevas GitHub Actions
+1. `.github/workflows/ci.yml` - Actualizado paquete webkit + versiones seguras de actions
+2. `.github/workflows/release.yml` - Modernizado con nuevas GitHub Actions + versiones seguras
 3. `src-tauri/src/audio/output.rs` - Skip tests de audio en Windows + cleanup
 4. `src-tauri/Cargo.lock` - Actualización automática de dependencias
+
+## Verificación de Seguridad
+
+### Vulnerabilidades corregidas:
+- ✅ `actions/download-artifact@v4` → `@v4.1.3` (CVE: Arbitrary File Write)
+- ✅ `actions/upload-artifact@v4` → `@v4.4.3` (versión estable)
+- ✅ Eliminadas GitHub Actions deprecadas (`create-release@v1`, `upload-release-asset@v1`)
 
 ## Verificación
 
