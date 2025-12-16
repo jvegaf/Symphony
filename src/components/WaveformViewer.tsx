@@ -1,73 +1,114 @@
-import { useEffect, useRef, useState } from "react";
-import WaveSurfer from "wavesurfer.js";
-import { Card } from "./ui/Card";
-import { Button } from "./ui/Button";
+/**
+ * WaveformViewer con streaming progresivo estilo Musicat
+ * 
+ * AIDEV-NOTE: Reescrito para sistema de waveform con eventos:
+ * - Usa useWaveform hook para obtener peaks con cache + streaming
+ * - Carga peaks sin audio: wavesurfer.load("", [peaks], duration)
+ * - Solo visualización + seek (sin playback propio)
+ * - Muestra progreso durante generación
+ * - Simple, < 500 líneas
+ */
+
+import { useEffect, useRef } from 'react';
+
+import WaveSurfer from 'wavesurfer.js';
+
+import { useWaveform } from '../hooks/useWaveform';
 
 /**
  * Props del componente WaveformViewer
  */
 export interface WaveformViewerProps {
-  /** Ruta de la pista a visualizar */
-  audioPath: string;
+  /** UUID de la pista */
+  trackId?: string;
+  /** Ruta completa al archivo de audio */
+  trackPath?: string;
+  /** Duración en segundos (del metadata) */
+  duration?: number;
+  /** Posición actual de reproducción en segundos */
+  currentTime?: number;
   /** Altura del waveform en píxeles */
   height?: number;
   /** Color del waveform */
   waveColor?: string;
   /** Color del progreso */
   progressColor?: string;
-  /** Callback cuando se hace click en el waveform */
+  /** Callback cuando se hace click en el waveform para seek */
   onSeek?: (time: number) => void;
   /** Callback cuando se carga el waveform */
   onReady?: () => void;
-  /** Callback cuando hay un error */
-  onError?: (error: string) => void;
+  /** Si debe generar el waveform (true cuando se reproduce) */
+  shouldGenerate?: boolean;
 }
 
 /**
- * Componente de visualización de waveforms
+ * Componente de visualización de waveforms con streaming progresivo
  * 
- * Utiliza WaveSurfer.js para renderizar y permitir navegación
- * sobre la forma de onda del audio.
+ * Utiliza WaveSurfer.js para renderizar peaks pre-generados.
+ * No carga el audio, solo visualiza los peaks desde cache/streaming.
  * 
  * @component
  * @example
  * ```tsx
  * <WaveformViewer
- *   audioPath="/music/song.mp3"
- *   height={128}
- *   onSeek={(time) => console.log('Seek to:', time)}
+ *   trackId="uuid-123"
+ *   trackPath="/music/song.mp3"
+ *   duration={180.5}
+ *   onSeek={(time) => playerSeekTo(time)}
  * />
  * ```
  */
 export function WaveformViewer({
-  audioPath,
+  trackId,
+  trackPath,
+  duration,
+  currentTime = 0,
   height = 128,
-  waveColor = "#3b82f6",
-  progressColor = "#1e40af",
+  waveColor = '#3b82f6',
+  progressColor = '#1e40af',
   onSeek,
   onReady,
-  onError,
+  shouldGenerate = false, // Por defecto NO genera
 }: WaveformViewerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [zoom, setZoom] = useState(1);
-
-  // Inicializar WaveSurfer
+  
+  // AIDEV-NOTE: Use refs for callbacks to avoid re-renders
+  const onSeekRef = useRef(onSeek);
+  const onReadyRef = useRef(onReady);
+  
   useEffect(() => {
-    if (!containerRef.current || !audioPath) return;
+    onSeekRef.current = onSeek;
+    onReadyRef.current = onReady;
+  }, [onSeek, onReady]);
+
+  // AIDEV-NOTE: Solo obtener waveform si shouldGenerate es true
+  // Esto evita generar al seleccionar, solo al reproducir
+  const { peaks, error } = useWaveform(
+    shouldGenerate ? trackId : undefined,
+    shouldGenerate ? trackPath : undefined,
+    shouldGenerate ? duration : undefined
+  );
+
+  // Inicializar WaveSurfer cuando tengamos peaks
+  // AIDEV-NOTE: Se actualiza cada vez que cambien los peaks (streaming progresivo!)
+  // Usa `duration` prop directamente, no del hook (puede ser undefined si shouldGenerate=false)
+  useEffect(() => {
+    // AIDEV-NOTE: Solo loguear cuando hay cambios relevantes
+    if (peaks && duration) {
+      console.log('🔍 WaveformViewer effect - ready to render:', {
+        hasContainer: !!containerRef.current,
+        peaksLength: peaks.length,
+        duration,
+      });
+    }
+    
+    if (!containerRef.current || !peaks || !duration) return;
 
     // Limpiar instancia anterior
     if (wavesurferRef.current) {
       wavesurferRef.current.destroy();
     }
-
-    setIsLoading(true);
-    setError(null);
 
     try {
       const wavesurfer = WaveSurfer.create({
@@ -75,55 +116,40 @@ export function WaveformViewer({
         height,
         waveColor,
         progressColor,
-        cursorColor: "#60a5fa",
+        cursorColor: '#60a5fa',
+        cursorWidth: 2,
         barWidth: 2,
         barGap: 1,
         normalize: true,
+        interact: true, // Permitir click para seek
+        // AIDEV-NOTE: Activar hover para resaltar posición bajo el cursor
+        hideScrollbar: true,
+        autoScroll: false,
+        autoCenter: false,
       });
 
-      // Event listeners
-      wavesurfer.on("ready", () => {
-        setIsLoading(false);
-        setDuration(wavesurfer.getDuration());
-        onReady?.();
+      // Evento de ready
+      wavesurfer.on('ready', () => {
+        onReadyRef.current?.();
       });
 
-      wavesurfer.on("error", (err) => {
-        const errorMessage = err instanceof Error ? err.message : "Error al cargar waveform";
-        setError(errorMessage);
-        setIsLoading(false);
-        onError?.(errorMessage);
+      // Evento de click para seek
+      wavesurfer.on('interaction', (time) => {
+        onSeekRef.current?.(time);
       });
 
-      wavesurfer.on("timeupdate", (time) => {
-        setCurrentTime(time);
-      });
-
-      wavesurfer.on("play", () => {
-        setIsPlaying(true);
-      });
-
-      wavesurfer.on("pause", () => {
-        setIsPlaying(false);
-      });
-
-      wavesurfer.on("seeking", (time) => {
-        setCurrentTime(time);
-      });
-
-      wavesurfer.on("interaction", (time) => {
-        onSeek?.(time);
-      });
-
-      // Cargar audio
-      wavesurfer.load(audioPath);
+      // AIDEV-NOTE: Cargar SOLO peaks sin audio (estilo Musicat)
+      // wavesurfer.load(url, peaks, duration)
+      // url = "" → no carga audio
+      // peaks = [Float32Array] → datos de waveform
+      // duration = segundos → longitud total
+      // Se llama cada vez que `peaks` cambia, permitiendo streaming progresivo
+      console.log('📊 Loading waveform with', peaks.length, 'peaks, duration:', duration);
+      wavesurfer.load('', [peaks], duration);
 
       wavesurferRef.current = wavesurfer;
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Error al inicializar waveform";
-      setError(errorMessage);
-      setIsLoading(false);
-      onError?.(errorMessage);
+      console.error('Error inicializando WaveSurfer:', err);
     }
 
     // Cleanup
@@ -133,126 +159,72 @@ export function WaveformViewer({
         wavesurferRef.current = null;
       }
     };
-  }, [audioPath, height, waveColor, progressColor, onSeek, onReady, onError]);
+    // AIDEV-NOTE: onSeek/onReady handled via refs, not in deps
+  }, [peaks, duration, height, waveColor, progressColor]);
 
-  // Aplicar zoom
+  // AIDEV-NOTE: Actualizar posición de reproducción en el waveform
   useEffect(() => {
-    if (wavesurferRef.current) {
-      wavesurferRef.current.zoom(zoom);
+    if (wavesurferRef.current && currentTime !== undefined) {
+      console.log('⏱️ Actualizando posición waveform:', currentTime, 'segundos');
+      wavesurferRef.current.setTime(currentTime);
     }
-  }, [zoom]);
+  }, [currentTime]);
 
-  const handlePlayPause = () => {
-    if (wavesurferRef.current) {
-      wavesurferRef.current.playPause();
-    }
-  };
-
-  const handleZoomIn = () => {
-    setZoom((prev) => Math.min(prev + 10, 100));
-  };
-
-  const handleZoomOut = () => {
-    setZoom((prev) => Math.max(prev - 10, 1));
-  };
-
-  const handleZoomReset = () => {
-    setZoom(1);
-  };
-
-  const formatTime = (seconds: number): string => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
+  // Detectar si es un error de codec no soportado
+  const isUnsupportedCodec = error?.includes('unsupported codec') || error?.includes('unsupported feature');
 
   return (
-    <Card title="Visualización de Waveform">
-      <div className="space-y-4">
-        {/* Waveform Container */}
+    <div className="space-y-2" style={{ minHeight: '96px' }}>
+      {/* Waveform Container - ALTURA FIJA para evitar saltos de layout */}
+      {/* AIDEV-NOTE: Usar height fija (no minHeight) para que el layout no cambie
+          cuando aparece/desaparece el waveform. Esto evita que las filas de la tabla
+          se muevan al hacer doble click. 
+          Contenedor padre tiene minHeight=96px para incluir canvas + mensajes. */}
+      <div
+        ref={containerRef}
+        className="w-full bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 waveform-container"
+        style={{ height: `${height}px` }}
+        data-testid="waveform-container"
+      />
+
+      {/* Estilos CSS para el hover del waveform */}
+      <style>{`
+        .waveform-container {
+          cursor: pointer;
+        }
+        .waveform-container:hover wave {
+          opacity: 0.8;
+        }
+      `}</style>
+
+      {/* Error Message - Codec no soportado */}
+      {error && isUnsupportedCodec && (
         <div
-          ref={containerRef}
-          className="w-full bg-gray-100 dark:bg-gray-800 rounded"
-          data-testid="waveform-container"
-        />
+          className="text-center text-xs text-yellow-600 dark:text-yellow-400"
+          data-testid="error-message"
+          style={{ minHeight: '24px' }}
+        >
+          ⚠️ Formato de audio no soportado para waveform (M4A/AAC)
+        </div>
+      )}
 
-        {/* Loading State */}
-        {isLoading && (
-          <div
-            className="text-center text-gray-600 dark:text-gray-400"
-            data-testid="loading-indicator"
-          >
-            Cargando waveform...
-          </div>
-        )}
-
-        {/* Error Message */}
-        {error && (
-          <div
-            className="p-3 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded text-red-700 dark:text-red-300"
-            data-testid="error-message"
-            role="alert"
-          >
-            {error}
-          </div>
-        )}
-
-        {/* Controls */}
-        {!isLoading && !error && (
-          <>
-            {/* Time Display */}
-            <div
-              className="flex justify-between text-sm text-gray-600 dark:text-gray-400"
-              data-testid="time-display"
-            >
-              <span>{formatTime(currentTime)}</span>
-              <span>{formatTime(duration)}</span>
-            </div>
-
-            {/* Buttons */}
-            <div className="flex gap-2">
-              <Button
-                onClick={handlePlayPause}
-                data-testid="play-pause-button"
-                aria-label={isPlaying ? "Pausar" : "Reproducir"}
-              >
-                {isPlaying ? "⏸ Pausar" : "▶ Reproducir"}
-              </Button>
-
-              <div className="flex gap-1">
-                <Button
-                  onClick={handleZoomOut}
-                  variant="secondary"
-                  disabled={zoom <= 1}
-                  data-testid="zoom-out-button"
-                  aria-label="Alejar zoom"
-                >
-                  -
-                </Button>
-                <Button
-                  onClick={handleZoomReset}
-                  variant="secondary"
-                  data-testid="zoom-reset-button"
-                  aria-label="Resetear zoom"
-                >
-                  {zoom}x
-                </Button>
-                <Button
-                  onClick={handleZoomIn}
-                  variant="secondary"
-                  disabled={zoom >= 100}
-                  data-testid="zoom-in-button"
-                  aria-label="Acercar zoom"
-                >
-                  +
-                </Button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
-    </Card>
+      {/* Error Message - Otros errores */}
+      {error && !isUnsupportedCodec && !error.includes('Cancelled') && (
+        <div
+          className="text-center text-xs text-red-600 dark:text-red-400"
+          data-testid="error-message"
+          style={{ minHeight: '24px' }}
+        >
+          ❌ Error: {error}
+        </div>
+      )}
+      
+      {/* Spacer para mantener altura cuando no hay error */}
+      {!error && (
+        <div style={{ minHeight: '24px' }} />
+      )}
+    </div>
   );
 }
 
-WaveformViewer.displayName = "WaveformViewer";
+WaveformViewer.displayName = 'WaveformViewer';

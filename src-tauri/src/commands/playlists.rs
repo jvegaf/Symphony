@@ -28,7 +28,7 @@ pub struct CreatePlaylistRequest {
 // Estructura para actualizar playlist
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct UpdatePlaylistRequest {
-    pub id: i64,
+    pub id: String,
     pub name: String,
     pub description: Option<String>,
 }
@@ -39,7 +39,7 @@ pub async fn create_playlist(
     name: String,
     description: Option<String>,
     db: State<'_, Mutex<Connection>>,
-) -> Result<i64, String> {
+) -> Result<String, String> {
     let conn = db.lock().map_err(|e| e.to_string())?;
     
     let playlist = Playlist {
@@ -66,80 +66,80 @@ pub async fn get_playlists(
 /// Obtener playlist por ID
 #[tauri::command]
 pub async fn get_playlist(
-    id: i64,
+    id: String,
     db: State<'_, Mutex<Connection>>,
 ) -> Result<Playlist, String> {
     let conn = db.lock().map_err(|e| e.to_string())?;
-    db_get_playlist(&conn, id).map_err(|e| e.to_string())
+    db_get_playlist(&conn, &id).map_err(|e| e.to_string())
 }
 
 /// Actualizar playlist
 #[tauri::command]
 pub async fn update_playlist(
-    id: i64,
+    id: String,
     name: String,
     description: Option<String>,
     db: State<'_, Mutex<Connection>>,
 ) -> Result<(), String> {
     let conn = db.lock().map_err(|e| e.to_string())?;
-    db_update_playlist(&conn, id, &name, description.as_deref())
+    db_update_playlist(&conn, &id, &name, description.as_deref())
         .map_err(|e| e.to_string())
 }
 
 /// Eliminar playlist
 #[tauri::command]
 pub async fn delete_playlist(
-    id: i64,
+    id: String,
     db: State<'_, Mutex<Connection>>,
 ) -> Result<(), String> {
     let conn = db.lock().map_err(|e| e.to_string())?;
-    db_delete_playlist(&conn, id).map_err(|e| e.to_string())
+    db_delete_playlist(&conn, &id).map_err(|e| e.to_string())
 }
 
 /// Agregar track a playlist
 #[tauri::command]
 pub async fn add_track_to_playlist(
-    playlist_id: i64,
-    track_id: i64,
+    playlist_id: String,
+    track_id: String,
     db: State<'_, Mutex<Connection>>,
 ) -> Result<(), String> {
     let conn = db.lock().map_err(|e| e.to_string())?;
-    db_add_track(&conn, playlist_id, track_id)
+    db_add_track(&conn, &playlist_id, &track_id)
         .map_err(|e| e.to_string())
 }
 
 /// Eliminar track de playlist
 #[tauri::command]
 pub async fn remove_track_from_playlist(
-    playlist_id: i64,
-    track_id: i64,
+    playlist_id: String,
+    track_id: String,
     db: State<'_, Mutex<Connection>>,
 ) -> Result<(), String> {
     let conn = db.lock().map_err(|e| e.to_string())?;
-    db_remove_track(&conn, playlist_id, track_id)
+    db_remove_track(&conn, &playlist_id, &track_id)
         .map_err(|e| e.to_string())
 }
 
 /// Reordenar tracks en playlist
 #[tauri::command]
 pub async fn reorder_playlist_tracks(
-    playlist_id: i64,
-    track_ids: Vec<i64>,
+    playlist_id: String,
+    track_ids: Vec<String>,
     db: State<'_, Mutex<Connection>>,
 ) -> Result<(), String> {
     let mut conn = db.lock().map_err(|e| e.to_string())?;
-    db_update_track_order(&mut conn, playlist_id, &track_ids)
+    db_update_track_order(&mut conn, &playlist_id, &track_ids)
         .map_err(|e| e.to_string())
 }
 
 /// Obtener tracks de una playlist
 #[tauri::command]
 pub async fn get_playlist_tracks_cmd(
-    playlist_id: i64,
+    playlist_id: String,
     db: State<'_, Mutex<Connection>>,
 ) -> Result<Vec<crate::db::models::Track>, String> {
     let conn = db.lock().map_err(|e| e.to_string())?;
-    get_playlist_tracks(&conn, playlist_id)
+    get_playlist_tracks(&conn, &playlist_id)
         .map_err(|e| e.to_string())
 }
 
@@ -169,7 +169,7 @@ mod tests {
         };
 
         let id = insert_playlist(&db.conn, &playlist).unwrap();
-        let retrieved = db_get_playlist(&db.conn, id).unwrap();
+        let retrieved = db_get_playlist(&db.conn, &id).unwrap();
 
         assert_eq!(retrieved.name, "Test Playlist");
         assert_eq!(retrieved.description, Some("Test description".to_string()));
@@ -192,19 +192,19 @@ mod tests {
         // Update
         db_update_playlist(
             &db.conn,
-            id,
+            &id,
             "Updated",
             Some("New description"),
         )
         .unwrap();
 
-        let retrieved = db_get_playlist(&db.conn, id).unwrap();
+        let retrieved = db_get_playlist(&db.conn, &id).unwrap();
         assert_eq!(retrieved.name, "Updated");
 
         // Delete
-        db_delete_playlist(&db.conn, id).unwrap();
+        db_delete_playlist(&db.conn, &id).unwrap();
 
-        let result = db_get_playlist(&db.conn, id);
+        let result = db_get_playlist(&db.conn, &id);
         assert!(result.is_err());
     }
 
@@ -247,18 +247,18 @@ mod tests {
         let track_id = insert_track(&db.conn, &track).unwrap();
 
         // Agregar track a playlist
-        db_add_track(&db.conn, playlist_id, track_id).unwrap();
+        db_add_track(&db.conn, &playlist_id, &track_id).unwrap();
 
         // Obtener tracks
-        let tracks = get_playlist_tracks(&db.conn, playlist_id).unwrap();
+        let tracks = get_playlist_tracks(&db.conn, &playlist_id).unwrap();
 
         assert_eq!(tracks.len(), 1);
         assert_eq!(tracks[0].title, "Test Track");
 
         // Remover track
-        db_remove_track(&db.conn, playlist_id, track_id).unwrap();
+        db_remove_track(&db.conn, &playlist_id, &track_id).unwrap();
 
-        let tracks = get_playlist_tracks(&db.conn, playlist_id).unwrap();
+        let tracks = get_playlist_tracks(&db.conn, &playlist_id).unwrap();
         assert_eq!(tracks.len(), 0);
     }
 }

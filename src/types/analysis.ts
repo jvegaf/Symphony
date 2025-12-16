@@ -1,6 +1,7 @@
 /**
  * Types para análisis avanzado de audio (Milestone 4)
  * 
+ * AIDEV-NOTE: Migrado de number a string (UUID v4) para todos los IDs
  * Interfaces sincronizadas con Rust backend (commands/analysis.rs)
  * Usa camelCase para serialización automática con serde
  */
@@ -13,7 +14,7 @@
  * Beatgrid de una pista con BPM y offset
  */
 export interface Beatgrid {
-  trackId: number;
+  trackId: string;
   bpm: number;
   offset: number;
   confidence?: number;
@@ -24,7 +25,7 @@ export interface Beatgrid {
  * Request para analizar beatgrid (sin request body, solo params)
  */
 export interface AnalyzeBeatgridParams {
-  trackId: number;
+  trackId: string;
   trackPath: string;
 }
 
@@ -32,7 +33,7 @@ export interface AnalyzeBeatgridParams {
  * Request para actualizar offset de beatgrid
  */
 export interface UpdateBeatgridOffsetParams {
-  trackId: number;
+  trackId: string;
   offset: number;
 }
 
@@ -49,8 +50,8 @@ export type CuePointType = 'cue' | 'intro' | 'outro' | 'drop' | 'vocal' | 'break
  * Cue point de una pista
  */
 export interface CuePoint {
-  id: number;
-  trackId: number;
+  id: string;
+  trackId: string;
   position: number;
   label: string;
   color: string;
@@ -63,7 +64,7 @@ export interface CuePoint {
  * Request para crear cue point
  */
 export interface CreateCuePointRequest {
-  trackId: number;
+  trackId: string;
   position: number;
   label?: string;
   color?: string;
@@ -90,8 +91,8 @@ export interface UpdateCuePointRequest {
  * Loop de una pista
  */
 export interface Loop {
-  id: number;
-  trackId: number;
+  id: string;
+  trackId: string;
   label: string;
   loopStart: number;
   loopEnd: number;
@@ -103,7 +104,7 @@ export interface Loop {
  * Request para crear loop
  */
 export interface CreateLoopRequest {
-  trackId: number;
+  trackId: string;
   label?: string;
   loopStart: number;
   loopEnd: number;

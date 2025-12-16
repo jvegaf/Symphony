@@ -16,7 +16,7 @@ use tauri::State;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BeatgridResponse {
-    pub track_id: i64,
+    pub track_id: String,
     pub bpm: f64,
     pub offset: f64,
     pub confidence: Option<f64>,
@@ -38,7 +38,7 @@ impl From<Beatgrid> for BeatgridResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateCuePointRequest {
-    pub track_id: i64,
+    pub track_id: String,
     pub position: f64,
     pub label: Option<String>,
     pub color: Option<String>,
@@ -61,8 +61,8 @@ pub struct UpdateCuePointRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CuePointResponse {
-    pub id: i64,
-    pub track_id: i64,
+    pub id: String,
+    pub track_id: String,
     pub position: f64,
     pub label: String,
     pub color: String,
@@ -75,7 +75,7 @@ pub struct CuePointResponse {
 impl From<CuePoint> for CuePointResponse {
     fn from(cue: CuePoint) -> Self {
         Self {
-            id: cue.id.unwrap_or(0),
+            id: cue.id.unwrap_or_default(),
             track_id: cue.track_id,
             position: cue.position,
             label: cue.label,
@@ -90,7 +90,7 @@ impl From<CuePoint> for CuePointResponse {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateLoopRequest {
-    pub track_id: i64,
+    pub track_id: String,
     pub label: Option<String>,
     pub loop_start: f64,
     pub loop_end: f64,
@@ -109,8 +109,8 @@ pub struct UpdateLoopRequest {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LoopResponse {
-    pub id: i64,
-    pub track_id: i64,
+    pub id: String,
+    pub track_id: String,
     pub label: String,
     pub loop_start: f64,
     pub loop_end: f64,
@@ -121,7 +121,7 @@ pub struct LoopResponse {
 impl From<Loop> for LoopResponse {
     fn from(loop_item: Loop) -> Self {
         Self {
-            id: loop_item.id.unwrap_or(0),
+            id: loop_item.id.unwrap_or_default(),
             track_id: loop_item.track_id,
             label: loop_item.label,
             loop_start: loop_item.loop_start,
@@ -142,7 +142,7 @@ impl From<Loop> for LoopResponse {
 /// resultados en la base de datos. Proceso asíncrono en background.
 #[tauri::command]
 pub async fn analyze_beatgrid(
-    track_id: i64,
+    track_id: String,
     track_path: String,
     db: State<'_, Mutex<Connection>>,
 ) -> Result<BeatgridResponse, String> {
@@ -159,7 +159,7 @@ pub async fn analyze_beatgrid(
     let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
     queries::upsert_beatgrid(
         &conn,
-        track_id,
+        &track_id,
         analysis.bpm,
         analysis.offset,
         Some(analysis.confidence),
@@ -167,7 +167,7 @@ pub async fn analyze_beatgrid(
     .map_err(|e| format!("Error guardando beatgrid: {}", e))?;
     
     // Obtener beatgrid guardado con timestamp
-    let saved = queries::get_beatgrid(&conn, track_id)
+    let saved = queries::get_beatgrid(&conn, &track_id)
         .map_err(|e| format!("Error obteniendo beatgrid: {}", e))?
         .ok_or_else(|| "Beatgrid no encontrado después de guardar".to_string())?;
     
@@ -177,12 +177,12 @@ pub async fn analyze_beatgrid(
 /// Obtiene beatgrid de una pista si existe
 #[tauri::command]
 pub fn get_beatgrid(
-    track_id: i64,
+    track_id: String,
     db: State<'_, Mutex<Connection>>,
 ) -> Result<Option<BeatgridResponse>, String> {
     let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
     
-    queries::get_beatgrid(&conn, track_id)
+    queries::get_beatgrid(&conn, &track_id)
         .map(|opt| opt.map(BeatgridResponse::from))
         .map_err(|e| format!("Error obteniendo beatgrid: {}", e))
 }
@@ -190,25 +190,25 @@ pub fn get_beatgrid(
 /// Actualiza offset del beatgrid (ajuste manual fino)
 #[tauri::command]
 pub fn update_beatgrid_offset(
-    track_id: i64,
+    track_id: String,
     offset: f64,
     db: State<'_, Mutex<Connection>>,
 ) -> Result<(), String> {
     let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
     
-    queries::update_beatgrid_offset(&conn, track_id, offset)
+    queries::update_beatgrid_offset(&conn, &track_id, offset)
         .map_err(|e| format!("Error actualizando offset: {}", e))
 }
 
 /// Elimina beatgrid de una pista
 #[tauri::command]
 pub fn delete_beatgrid(
-    track_id: i64,
+    track_id: String,
     db: State<'_, Mutex<Connection>>,
 ) -> Result<(), String> {
     let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
     
-    queries::delete_beatgrid(&conn, track_id)
+    queries::delete_beatgrid(&conn, &track_id)
         .map_err(|e| format!("Error eliminando beatgrid: {}", e))
 }
 
@@ -226,7 +226,7 @@ pub fn create_cue_point(
     
     let id = queries::insert_cue_point(
         &conn,
-        request.track_id,
+        &request.track_id,
         request.position,
         &request.label.as_deref().unwrap_or(""),
         &request.color.as_deref().unwrap_or("#FFFFFF"),
@@ -251,12 +251,12 @@ pub fn create_cue_point(
 /// Obtiene todos los cue points de una pista
 #[tauri::command]
 pub fn get_cue_points(
-    track_id: i64,
+    track_id: String,
     db: State<'_, Mutex<Connection>>,
 ) -> Result<Vec<CuePointResponse>, String> {
     let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
     
-    queries::get_cue_points(&conn, track_id)
+    queries::get_cue_points(&conn, &track_id)
         .map(|cues| cues.into_iter().map(CuePointResponse::from).collect())
         .map_err(|e| format!("Error obteniendo cue points: {}", e))
 }
@@ -264,7 +264,7 @@ pub fn get_cue_points(
 /// Actualiza un cue point existente
 #[tauri::command]
 pub fn update_cue_point(
-    id: i64,
+    id: String,
     request: UpdateCuePointRequest,
     db: State<'_, Mutex<Connection>>,
 ) -> Result<(), String> {
@@ -272,7 +272,7 @@ pub fn update_cue_point(
     
     queries::update_cue_point(
         &conn,
-        id,
+        &id,
         request.position,
         request.label.as_deref(),
         request.color.as_deref(),
@@ -285,12 +285,12 @@ pub fn update_cue_point(
 /// Elimina un cue point
 #[tauri::command]
 pub fn delete_cue_point(
-    id: i64,
+    id: String,
     db: State<'_, Mutex<Connection>>,
 ) -> Result<(), String> {
     let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
     
-    queries::delete_cue_point(&conn, id)
+    queries::delete_cue_point(&conn, &id)
         .map_err(|e| format!("Error eliminando cue point: {}", e))
 }
 
@@ -308,7 +308,7 @@ pub fn create_loop(
     
     let id = queries::insert_loop(
         &conn,
-        request.track_id,
+        &request.track_id,
         &request.label.as_deref().unwrap_or(""),
         request.loop_start,
         request.loop_end,
@@ -330,12 +330,12 @@ pub fn create_loop(
 /// Obtiene todos los loops de una pista
 #[tauri::command]
 pub fn get_loops(
-    track_id: i64,
+    track_id: String,
     db: State<'_, Mutex<Connection>>,
 ) -> Result<Vec<LoopResponse>, String> {
     let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
     
-    queries::get_loops(&conn, track_id)
+    queries::get_loops(&conn, &track_id)
         .map(|loops| loops.into_iter().map(LoopResponse::from).collect())
         .map_err(|e| format!("Error obteniendo loops: {}", e))
 }
@@ -343,7 +343,7 @@ pub fn get_loops(
 /// Actualiza un loop existente
 #[tauri::command]
 pub fn update_loop(
-    id: i64,
+    id: String,
     request: UpdateLoopRequest,
     db: State<'_, Mutex<Connection>>,
 ) -> Result<(), String> {
@@ -351,7 +351,7 @@ pub fn update_loop(
     
     queries::update_loop(
         &conn,
-        id,
+        &id,
         request.label.as_deref(),
         request.loop_start,
         request.loop_end,
@@ -363,12 +363,12 @@ pub fn update_loop(
 /// Elimina un loop
 #[tauri::command]
 pub fn delete_loop(
-    id: i64,
+    id: String,
     db: State<'_, Mutex<Connection>>,
 ) -> Result<(), String> {
     let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
     
-    queries::delete_loop(&conn, id)
+    queries::delete_loop(&conn, &id)
         .map_err(|e| format!("Error eliminando loop: {}", e))
 }
 
@@ -400,7 +400,7 @@ mod tests {
         conn
     }
 
-    fn insert_test_track(conn: &Connection, track_id: i64) {
+    fn insert_test_track(conn: &Connection, track_id: &str) {
         conn.execute(
             "INSERT INTO tracks (id, path, title, artist, duration, bitrate, sample_rate, file_size, date_added, date_modified)
              VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
@@ -424,7 +424,8 @@ mod tests {
     #[test]
     fn test_module_compiles() {
         let conn = setup_test_db();
-        insert_test_track(&conn, 1);
+        let test_id = uuid::Uuid::new_v4().to_string();
+        insert_test_track(&conn, &test_id);
         
         // Verificar que la BD funciona
         let count: i64 = conn

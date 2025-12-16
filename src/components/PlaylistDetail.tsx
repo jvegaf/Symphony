@@ -28,7 +28,7 @@ import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
 
 interface PlaylistDetailProps {
-  playlistId: number;
+  playlistId: string;
 }
 
 interface SortableTrackItemProps {
@@ -50,7 +50,7 @@ const SortableTrackItem: React.FC<SortableTrackItemProps> = ({
     transform,
     transition,
     isDragging,
-  } = useSortable({ id: track.id });
+  } = useSortable({ id: track.id || "" });
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -105,9 +105,8 @@ const SortableTrackItem: React.FC<SortableTrackItemProps> = ({
 
       <Button
         onClick={onRemove}
-        variant="ghost"
-        size="sm"
-        className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
+        variant="secondary"
+        className="text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 bg-transparent hover:bg-red-50 dark:hover:bg-red-900/20"
       >
         Quitar
       </Button>
@@ -124,7 +123,7 @@ export const PlaylistDetail: React.FC<PlaylistDetailProps> = ({
 }) => {
   const [showAddDialog, setShowAddDialog] = useState(false);
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
-  const [selectedTrackId, setSelectedTrackId] = useState<number | null>(null);
+  const [selectedTrackId, setSelectedTrackId] = useState<string | null>(null);
   const [trackIdToAdd, setTrackIdToAdd] = useState<string>("");
   const [localTracks, setLocalTracks] = useState<Track[]>([]);
 
@@ -168,20 +167,19 @@ export const PlaylistDetail: React.FC<PlaylistDetailProps> = ({
     // Auto-guardar reordenamiento
     reorderMutation.mutate({
       playlist_id: playlistId,
-      track_ids: reorderedTracks.map((t) => t.id),
+      track_ids: reorderedTracks.map((t) => t.id).filter((id): id is string => id !== undefined),
     });
   };
 
   const handleAddTrack = () => {
-    const trackId = parseInt(trackIdToAdd, 10);
-    if (isNaN(trackId)) {
+    if (!trackIdToAdd.trim()) {
       return;
     }
 
     addTrackMutation.mutate(
       {
         playlist_id: playlistId,
-        track_id: trackId,
+        track_id: trackIdToAdd,
       },
       {
         onSuccess: () => {
@@ -192,7 +190,7 @@ export const PlaylistDetail: React.FC<PlaylistDetailProps> = ({
     );
   };
 
-  const handleRemoveTrack = (trackId: number) => {
+  const handleRemoveTrack = (trackId: string) => {
     setSelectedTrackId(trackId);
     setShowRemoveDialog(true);
   };
@@ -276,15 +274,15 @@ export const PlaylistDetail: React.FC<PlaylistDetailProps> = ({
           onDragEnd={handleDragEnd}
         >
           <SortableContext
-            items={Array.isArray(localTracks) ? localTracks.map((t) => t.id) : []}
+            items={Array.isArray(localTracks) ? localTracks.map((t) => t.id || "").filter((id): id is string => id.length > 0) : []}
             strategy={verticalListSortingStrategy}
           >
             <div className="space-y-2">
-              {localTracks.map((track) => (
+              {localTracks.map((track) => track.id && (
                 <SortableTrackItem
                   key={track.id}
                   track={track}
-                  onRemove={() => handleRemoveTrack(track.id)}
+                  onRemove={() => handleRemoveTrack(track.id!)}
                 />
               ))}
             </div>
@@ -314,7 +312,7 @@ export const PlaylistDetail: React.FC<PlaylistDetailProps> = ({
               </div>
               <div className="flex gap-2 justify-end">
                 <Button
-                  variant="outline"
+                  variant="secondary"
                   onClick={() => {
                     setShowAddDialog(false);
                     setTrackIdToAdd("");
@@ -346,7 +344,7 @@ export const PlaylistDetail: React.FC<PlaylistDetailProps> = ({
             </p>
             <div className="flex gap-2 justify-end">
               <Button
-                variant="outline"
+                variant="secondary"
                 onClick={() => {
                   setShowRemoveDialog(false);
                   setSelectedTrackId(null);

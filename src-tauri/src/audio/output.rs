@@ -73,8 +73,21 @@ impl CpalAudioOutput {
     /// 
     /// # Arguments
     /// * `device_name` - Nombre del dispositivo (None = default)
+    /// * `desired_sample_rate` - Sample rate deseado (None = usar default del dispositivo)
+    /// * `desired_channels` - Número de canales deseado (None = usar default del dispositivo)
     /// * `initial_volume` - Volumen inicial (0.0 - 1.0)
-    pub fn new(device_name: Option<&str>, initial_volume: f64) -> AudioResult<Self> {
+    ///
+    /// # AIDEV-NOTE: Estilo Musicat
+    /// Si el dispositivo soporta el sample rate y canales deseados, se usa eso.
+    /// Si no, se usa la configuración por defecto del dispositivo.
+    /// Esto evita resampling innecesario cuando el dispositivo puede manejar
+    /// el sample rate y canales del archivo nativamente.
+    pub fn new(
+        device_name: Option<&str>, 
+        desired_sample_rate: Option<u32>,
+        desired_channels: Option<u16>,
+        initial_volume: f64
+    ) -> AudioResult<Self> {
         let host = cpal::default_host();
         
         // Seleccionar dispositivo
@@ -88,11 +101,22 @@ impl CpalAudioOutput {
         log::info!("🔊 Usando dispositivo de audio: {:?}", device.name());
         
         // Obtener configuración soportada
-        let supported_config = get_best_config(&device)?;
+        let supported_config = get_best_config(&device, desired_sample_rate, desired_channels)?;
         let sample_rate = supported_config.sample_rate().0;
         let channels = supported_config.channels();
         
-        log::info!("📊 Config: {} Hz, {} canales", sample_rate, channels);
+        if let Some(desired_rate) = desired_sample_rate {
+            if sample_rate == desired_rate && Some(channels) == desired_channels {
+                log::info!("✅ Dispositivo configurado a sample rate y canales deseados: {} Hz ({} canales)", sample_rate, channels);
+            } else {
+                log::warn!(
+                    "⚠️ Dispositivo no soporta {} Hz / {} canales, usando {} Hz / {} canales",
+                    desired_rate, desired_channels.unwrap_or(2), sample_rate, channels
+                );
+            }
+        } else {
+            log::info!("📊 Config: {} Hz, {} canales", sample_rate, channels);
+        }
         
         // Crear ring buffer
         let ring_buffer = SpscRb::<f32>::new(RING_BUFFER_SIZE);
@@ -252,8 +276,53 @@ fn find_device_by_name(host: &Host, name: &str) -> AudioResult<Device> {
 }
 
 /// Obtiene la mejor configuración soportada por el dispositivo
-fn get_best_config(device: &Device) -> AudioResult<SupportedStreamConfig> {
-    // Intentar obtener configuración por defecto primero
+fn get_best_config(device: &Device, desired_sample_rate: Option<u32>, desired_channels: Option<u16>) -> AudioResult<SupportedStreamConfig> {
+    // AIDEV-NOTE: Basado en Musicat - intentar usar el sample rate y canales del archivo si el dispositivo lo soporta
+    
+    // Si se especificó un sample rate y/o canales deseados, verificar si el dispositivo los soporta
+    if desired_sample_rate.is_some() || desired_channels.is_some() {
+        if let Ok(configs) = device.supported_output_configs() {
+            // Buscar una config que soporte lo solicitado
+            for config_range in configs {
+                let mut matches = true;
+                
+                // Verificar sample rate si se especificó
+                if let Some(desired_rate) = desired_sample_rate {
+                    if config_range.try_with_sample_rate(cpal::SampleRate(desired_rate)).is_none() {
+                        matches = false;
+                    }
+                }
+                
+                // Verificar canales si se especificó
+                if let Some(desired_ch) = desired_channels {
+                    if config_range.channels() != desired_ch {
+                        matches = false;
+                    }
+                }
+                
+                if matches {
+                    // Encontramos una configuración que cumple los requisitos
+                    let sample_rate = desired_sample_rate.unwrap_or(config_range.max_sample_rate().0);
+                    if let Some(config_with_rate) = config_range.try_with_sample_rate(cpal::SampleRate(sample_rate)) {
+                        log::info!(
+                            "✅ Dispositivo soporta {} Hz / {} canales",
+                            sample_rate,
+                            config_range.channels()
+                        );
+                        return Ok(config_with_rate);
+                    }
+                }
+            }
+            
+            log::warn!(
+                "⚠️ Dispositivo NO soporta {:?} Hz / {:?} canales, usando configuración por defecto",
+                desired_sample_rate,
+                desired_channels
+            );
+        }
+    }
+    
+    // Fallback: intentar obtener configuración por defecto
     if let Ok(config) = device.default_output_config() {
         return Ok(config);
     }
@@ -261,7 +330,7 @@ fn get_best_config(device: &Device) -> AudioResult<SupportedStreamConfig> {
     // Si no hay default, buscar una configuración adecuada
     if let Ok(mut configs) = device.supported_output_configs() {
         if let Some(config) = configs.next() {
-            // Preferir 44100 Hz si está en el rango
+            // Preferir 44100 Hz y 2 canales (stereo) si está en el rango
             let sample_rate = if config.min_sample_rate().0 <= DEFAULT_SAMPLE_RATE 
                 && config.max_sample_rate().0 >= DEFAULT_SAMPLE_RATE {
                 cpal::SampleRate(DEFAULT_SAMPLE_RATE)
@@ -327,7 +396,7 @@ mod tests {
 
     #[test]
     fn test_cpal_output_creation_with_default_device() {
-        let result = CpalAudioOutput::new(None, DEFAULT_VOLUME);
+        let result = CpalAudioOutput::new(None, None, None, DEFAULT_VOLUME);
         
         if let Ok(output) = result {
             assert!(output.sample_rate() > 0);
@@ -338,7 +407,7 @@ mod tests {
 
     #[test]
     fn test_cpal_output_volume_range() {
-        if let Ok(output) = CpalAudioOutput::new(None, 0.5) {
+        if let Ok(output) = CpalAudioOutput::new(None, None, None, 0.5) {
             assert!((output.get_volume() - 0.5).abs() < 0.01);
             
             output.set_volume(0.8);
@@ -354,13 +423,13 @@ mod tests {
 
     #[test]
     fn test_cpal_output_with_invalid_device() {
-        let result = CpalAudioOutput::new(Some("NonExistentDevice12345"), DEFAULT_VOLUME);
+        let result = CpalAudioOutput::new(Some("NonExistentDevice12345"), None, None, DEFAULT_VOLUME);
         assert!(result.is_err());
     }
 
     #[test]
     fn test_audio_output_trait_methods() {
-        if let Ok(output) = CpalAudioOutput::new(None, DEFAULT_VOLUME) {
+        if let Ok(output) = CpalAudioOutput::new(None, None, None, DEFAULT_VOLUME) {
             let _producer = output.get_producer();
             let _sr = output.sample_rate();
             let _ch = output.channels();
@@ -372,7 +441,7 @@ mod tests {
 
     #[test]
     fn test_volume_persistence() {
-        if let Ok(output) = CpalAudioOutput::new(None, 0.3) {
+        if let Ok(output) = CpalAudioOutput::new(None, None, None, 0.3) {
             assert!((output.get_volume() - 0.3).abs() < 0.01);
             
             output.set_volume(0.7);

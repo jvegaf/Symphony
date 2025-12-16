@@ -1,5 +1,6 @@
 /**
  * Tipos para sistema de playlists
+ * AIDEV-NOTE: Migrado de number a string (UUID v4) para todos los IDs
  * Sincronizados con modelos Rust en src-tauri/src/db/models.rs
  */
 
@@ -7,7 +8,7 @@
  * Playlist - Lista de reproducción
  */
 export interface Playlist {
-  id: number;
+  id: string;
   name: string;
   description: string | null;
   date_created: string;
@@ -26,7 +27,7 @@ export interface CreatePlaylistRequest {
  * Request para actualizar playlist existente
  */
 export interface UpdatePlaylistRequest {
-  id: number;
+  id: string;
   name: string;
   description?: string;
 }
@@ -35,7 +36,7 @@ export interface UpdatePlaylistRequest {
  * Request para actualizar metadatos de pista
  */
 export interface UpdateTrackMetadataRequest {
-  id: number;
+  id: string;
   title?: string;
   artist?: string;
   album?: string;
@@ -50,22 +51,22 @@ export interface UpdateTrackMetadataRequest {
  * Request para agregar track a playlist
  */
 export interface AddTrackToPlaylistRequest {
-  playlist_id: number;
-  track_id: number;
+  playlist_id: string;
+  track_id: string;
 }
 
 /**
  * Request para remover track de playlist
  */
 export interface RemoveTrackFromPlaylistRequest {
-  playlist_id: number;
-  track_id: number;
+  playlist_id: string;
+  track_id: string;
 }
 
 /**
  * Request para reordenar tracks en playlist
  */
 export interface ReorderPlaylistTracksRequest {
-  playlist_id: number;
-  track_ids: number[];
+  playlist_id: string;
+  track_ids: string[];
 }

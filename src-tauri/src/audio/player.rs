@@ -31,6 +31,7 @@ use super::output::{AudioOutput, CpalAudioOutput};
 
 /// Estado de reproducción
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "lowercase")]
 pub enum PlaybackState {
     Playing,
     Paused,
@@ -260,17 +261,30 @@ fn decode_loop<R: tauri::Runtime>(
                         // Detener decodificación actual
                         decoder_state = None;
                         
-                        // Crear nuevo output si no existe
-                        if audio_output.is_none() {
-                            match CpalAudioOutput::new(current_device.as_deref(), vol) {
-                                Ok(output) => {
-                                    audio_output = Some(Box::new(output));
-                                }
-                                Err(e) => {
-                                    log::error!("❌ Error creando output: {}", e);
-                                    emit_error(&app_handle, &e.to_string(), true);
-                                    continue;
-                                }
+                        // AIDEV-NOTE: Estilo Musicat - probe el archivo primero para obtener sample rate y canales
+                        // Luego crear/recrear output con esos parámetros
+                        let (codec_sample_rate, codec_channels) = match probe_file_sample_rate(&path) {
+                            Ok((rate, channels)) => {
+                                log::info!("📊 Archivo: {} Hz, {} canales", rate, channels);
+                                (Some(rate), Some(channels))
+                            }
+                            Err(e) => {
+                                log::error!("❌ Error obteniendo info del archivo: {}", e);
+                                (None, None)
+                            }
+                        };
+                        
+                        // Recrear output con el sample rate y canales del archivo
+                        // Esto permite que el dispositivo se configure correctamente si lo soporta
+                        audio_output = None; // Destruir output anterior
+                        match CpalAudioOutput::new(current_device.as_deref(), codec_sample_rate, codec_channels, vol) {
+                            Ok(output) => {
+                                audio_output = Some(Box::new(output));
+                            }
+                            Err(e) => {
+                                log::error!("❌ Error creando output: {}", e);
+                                emit_error(&app_handle, &e.to_string(), true);
+                                continue;
                             }
                         }
                         
@@ -355,12 +369,17 @@ fn decode_loop<R: tauri::Runtime>(
                         current_device = device_name.clone();
                         
                         // Recrear output con nuevo dispositivo
+                        // Usar el sample rate del decoder actual si existe
                         let vol = f64::from_bits(volume.load(Ordering::SeqCst));
+                        let codec_sample_rate = decoder_state.as_ref().map(|ds| ds.sample_rate);
+                        // TODO: Almacenar canales en DecoderState para poder usarlos aquí
+                        let codec_channels = None; // Por ahora usar default
+                        
                         if audio_output.is_some() {
                             if let Some(ref mut output) = audio_output {
                                 output.stop();
                             }
-                            match CpalAudioOutput::new(current_device.as_deref(), vol) {
+                            match CpalAudioOutput::new(current_device.as_deref(), codec_sample_rate, codec_channels, vol) {
                                 Ok(output) => {
                                     audio_output = Some(Box::new(output));
                                     if !is_paused {
@@ -440,6 +459,49 @@ enum DecodeResult {
     EndOfTrack,
 }
 
+/// Obtiene el sample rate y número de canales de un archivo sin crear el decoder completo
+/// 
+/// AIDEV-NOTE: Usado para determinar qué sample rate y canales configurar en el dispositivo
+/// antes de crear el output. Estilo Musicat.
+/// 
+/// Retorna: (sample_rate, channels)
+fn probe_file_sample_rate(path: &str) -> AudioResult<(u32, u16)> {
+    let file = std::fs::File::open(path)?;
+    let mss = MediaSourceStream::new(Box::new(file), Default::default());
+    
+    let mut hint = Hint::new();
+    if let Some(ext) = Path::new(path).extension() {
+        hint.with_extension(&ext.to_string_lossy());
+    }
+    
+    let format_opts = FormatOptions {
+        enable_gapless: false,
+        ..Default::default()
+    };
+    let metadata_opts = MetadataOptions::default();
+    
+    let probed = symphonia::default::get_probe()
+        .format(&hint, mss, &format_opts, &metadata_opts)
+        .map_err(|e| AudioError::DecodingFailed(format!("Error probando formato: {}", e)))?;
+    
+    let format_reader = probed.format;
+    
+    let track = format_reader
+        .tracks()
+        .iter()
+        .find(|t| t.codec_params.codec != CODEC_TYPE_NULL)
+        .ok_or_else(|| AudioError::DecodingFailed("No se encontró track de audio".to_string()))?;
+    
+    let sample_rate = track.codec_params.sample_rate
+        .ok_or_else(|| AudioError::DecodingFailed("No se pudo determinar sample rate".to_string()))?;
+    
+    let channels = track.codec_params.channels
+        .map(|ch| ch.count() as u16)
+        .unwrap_or(2); // Default a stereo si no se puede determinar
+    
+    Ok((sample_rate, channels))
+}
+
 /// Abre un archivo de audio y prepara el decodificador
 fn open_audio_file(
     path: &str,
@@ -478,9 +540,36 @@ fn open_audio_file(
     let track_id = track.id;
     let codec_params = &track.codec_params;
     
-    // Obtener time_base y sample_rate
+    // Obtener time_base y sample rates
     let time_base = codec_params.time_base.unwrap_or(symphonia::core::units::TimeBase::new(1, 44100));
-    let sample_rate = codec_params.sample_rate.unwrap_or(output.sample_rate());
+    let codec_sample_rate = codec_params.sample_rate.unwrap_or(44100);
+    let output_sample_rate = output.sample_rate();
+    let output_channels = output.channels() as usize;
+    
+    log::info!("========== AUDIO STREAM INFO ==========");
+    log::info!("Codec sample rate: {:?}", codec_params.sample_rate);
+    log::info!("Output device sample rate: {}", output_sample_rate);
+    log::info!("Output channels: {}", output_channels);
+    log::info!("Codec channels: {:?}", codec_params.channels);
+    
+    // AIDEV-NOTE: NO crear resampler aquí.
+    // Confiamos en que el dispositivo está configurado al sample rate correcto del archivo.
+    // Si los sample rates no coinciden, es porque el dispositivo NO soporta el sample rate del archivo,
+    // y en ese caso el audio sonará más rápido/lento (bug conocido que necesita implementación
+    // de resampler personalizado estilo Musicat, no rubato).
+    if codec_sample_rate != output_sample_rate {
+        log::warn!(
+            "⚠️ SAMPLE RATE MISMATCH: codec {} Hz vs device {} Hz",
+            codec_sample_rate,
+            output_sample_rate
+        );
+        log::warn!("⚠️ Audio puede sonar a velocidad incorrecta - el dispositivo debería haberse configurado al sample rate del archivo");
+    } else {
+        log::info!("✅ Sample rates match - no resampling needed");
+    }
+    
+    // Para duración y otros cálculos, usamos el sample rate del codec
+    let sample_rate = codec_sample_rate;
     
     // Calcular duración
     let duration = if let Some(n_frames) = codec_params.n_frames {
@@ -563,6 +652,9 @@ fn decode_next_frame(
     sample_buf.copy_interleaved_ref(decoded);
     
     let samples = sample_buf.samples();
+    
+    // AIDEV-NOTE: Sin resampling - confiamos en que el dispositivo está configurado
+    // al sample rate correcto del archivo (ver probe_file_sample_rate + CpalAudioOutput::new)
     
     // Escribir al ring buffer
     // AIDEV-NOTE: Si el buffer está lleno, esto bloqueará brevemente.

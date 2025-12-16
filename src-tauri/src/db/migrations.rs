@@ -1,7 +1,8 @@
 use rusqlite::{Connection, Result};
 
 /// Versión actual del esquema
-const CURRENT_VERSION: i32 = 2;
+/// AIDEV-NOTE: Versión 3 migra todos los IDs de INTEGER a TEXT (UUID)
+const CURRENT_VERSION: i32 = 3;
 
 /// Ejecuta todas las migraciones pendientes
 pub fn run_migrations(conn: &Connection) -> Result<()> {
@@ -24,6 +25,11 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
     if current_version < 2 {
         migration_002_update_analysis_tables(conn)?;
         update_version(conn, 2)?;
+    }
+
+    if current_version < 3 {
+        migration_003_uuid_migration(conn)?;
+        update_version(conn, 3)?;
     }
 
     Ok(())
@@ -241,6 +247,141 @@ fn migration_002_update_analysis_tables(conn: &Connection) -> Result<()> {
     Ok(())
 }
 
+/// Migración 003: Cambiar todos los IDs de INTEGER a TEXT (UUID)
+/// AIDEV-NOTE: Como no hay datos que migrar (base de datos nueva), hacemos DROP y CREATE
+fn migration_003_uuid_migration(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "
+        -- Drop todas las tablas (orden importante por foreign keys)
+        DROP TABLE IF EXISTS playlist_tracks;
+        DROP TABLE IF EXISTS playlists;
+        DROP TABLE IF EXISTS loops;
+        DROP TABLE IF EXISTS cue_points;
+        DROP TABLE IF EXISTS beatgrids;
+        DROP TABLE IF EXISTS waveforms;
+        DROP TABLE IF EXISTS tracks;
+        DROP TABLE IF EXISTS settings;
+
+        -- Recrear tabla tracks con UUID
+        CREATE TABLE tracks (
+            id TEXT PRIMARY KEY,
+            path TEXT NOT NULL UNIQUE,
+            title TEXT NOT NULL,
+            artist TEXT NOT NULL,
+            album TEXT,
+            genre TEXT,
+            year INTEGER,
+            duration REAL NOT NULL,
+            bitrate INTEGER NOT NULL,
+            sample_rate INTEGER NOT NULL,
+            file_size INTEGER NOT NULL,
+            bpm REAL,
+            key TEXT,
+            rating INTEGER CHECK(rating BETWEEN 0 AND 5),
+            play_count INTEGER DEFAULT 0,
+            last_played TEXT,
+            date_added TEXT NOT NULL,
+            date_modified TEXT NOT NULL
+        );
+
+        CREATE INDEX idx_tracks_artist ON tracks(artist);
+        CREATE INDEX idx_tracks_album ON tracks(album);
+        CREATE INDEX idx_tracks_genre ON tracks(genre);
+        CREATE INDEX idx_tracks_bpm ON tracks(bpm);
+        CREATE INDEX idx_tracks_rating ON tracks(rating);
+
+        -- Recrear tabla waveforms con UUID
+        CREATE TABLE waveforms (
+            id TEXT PRIMARY KEY,
+            track_id TEXT NOT NULL UNIQUE,
+            data BLOB NOT NULL,
+            resolution INTEGER NOT NULL,
+            date_generated TEXT NOT NULL,
+            FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX idx_waveforms_track ON waveforms(track_id);
+
+        -- Recrear tabla beatgrids con UUID
+        CREATE TABLE beatgrids (
+            id TEXT PRIMARY KEY,
+            track_id TEXT NOT NULL UNIQUE,
+            bpm REAL NOT NULL,
+            offset REAL NOT NULL,
+            confidence REAL,
+            analyzed_at TEXT NOT NULL,
+            FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX idx_beatgrids_track ON beatgrids(track_id);
+
+        -- Recrear tabla cue_points con UUID
+        CREATE TABLE cue_points (
+            id TEXT PRIMARY KEY,
+            track_id TEXT NOT NULL,
+            position REAL NOT NULL,
+            label TEXT NOT NULL,
+            color TEXT NOT NULL,
+            type TEXT NOT NULL,
+            hotkey INTEGER CHECK(hotkey BETWEEN 1 AND 8),
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX idx_cue_points_track ON cue_points(track_id);
+        CREATE INDEX idx_cue_points_position ON cue_points(position);
+
+        -- Recrear tabla loops con UUID
+        CREATE TABLE loops (
+            id TEXT PRIMARY KEY,
+            track_id TEXT NOT NULL,
+            label TEXT NOT NULL,
+            loop_start REAL NOT NULL,
+            loop_end REAL NOT NULL,
+            is_active INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE
+        );
+
+        CREATE INDEX idx_loops_track ON loops(track_id);
+        CREATE INDEX idx_loops_start ON loops(loop_start);
+
+        -- Recrear tabla playlists con UUID
+        CREATE TABLE playlists (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            description TEXT,
+            date_created TEXT NOT NULL,
+            date_modified TEXT NOT NULL
+        );
+
+        -- Recrear tabla playlist_tracks con UUID
+        CREATE TABLE playlist_tracks (
+            id TEXT PRIMARY KEY,
+            playlist_id TEXT NOT NULL,
+            track_id TEXT NOT NULL,
+            position INTEGER NOT NULL,
+            date_added TEXT NOT NULL,
+            FOREIGN KEY (playlist_id) REFERENCES playlists(id) ON DELETE CASCADE,
+            FOREIGN KEY (track_id) REFERENCES tracks(id) ON DELETE CASCADE,
+            UNIQUE(playlist_id, track_id)
+        );
+
+        CREATE INDEX idx_playlist_tracks_playlist ON playlist_tracks(playlist_id);
+        CREATE INDEX idx_playlist_tracks_track ON playlist_tracks(track_id);
+
+        -- Recrear tabla settings (sin cambios)
+        CREATE TABLE settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            value_type TEXT NOT NULL
+        );
+        "
+    )?;
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -259,7 +400,7 @@ mod tests {
         run_migrations(&db.conn).unwrap();
         
         let version = get_current_version(&db.conn).unwrap();
-        assert_eq!(version, 2);
+        assert_eq!(version, 3);
     }
 
     #[test]
@@ -289,19 +430,19 @@ mod tests {
         let db = Database::new_in_memory().unwrap();
         run_migrations(&db.conn).unwrap();
 
+        let track_id = "test-track-uuid-123";
+
         // Insertar track
         db.conn.execute(
-            "INSERT INTO tracks (path, title, artist, duration, bitrate, sample_rate, file_size, date_added, date_modified)
-             VALUES ('test.mp3', 'Test', 'Artist', 180.0, 320, 44100, 8388608, '2024-01-01', '2024-01-01')",
-            [],
+            "INSERT INTO tracks (id, path, title, artist, duration, bitrate, sample_rate, file_size, date_added, date_modified)
+             VALUES (?1, 'test.mp3', 'Test', 'Artist', 180.0, 320, 44100, 8388608, '2024-01-01', '2024-01-01')",
+            [track_id],
         ).unwrap();
-
-        let track_id: i64 = db.conn.last_insert_rowid();
 
         // Intentar insertar waveform con track inexistente debería fallar
         let result = db.conn.execute(
-            "INSERT INTO waveforms (track_id, data, resolution, date_generated)
-             VALUES (999999, X'00', 1024, '2024-01-01')",
+            "INSERT INTO waveforms (id, track_id, data, resolution, date_generated)
+             VALUES ('wf-invalid', 'non-existent-track', X'00', 1024, '2024-01-01')",
             [],
         );
 
@@ -309,8 +450,8 @@ mod tests {
 
         // Insertar waveform con track válido debería funcionar
         let result = db.conn.execute(
-            "INSERT INTO waveforms (track_id, data, resolution, date_generated)
-             VALUES (?1, X'00', 1024, '2024-01-01')",
+            "INSERT INTO waveforms (id, track_id, data, resolution, date_generated)
+             VALUES ('wf-valid', ?1, X'00', 1024, '2024-01-01')",
             [track_id],
         );
 

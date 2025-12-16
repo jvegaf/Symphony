@@ -31,6 +31,23 @@ pub const DEFAULT_VOLUME: f64 = 1.0;
 pub const PAUSE_VALUE: u32 = 1;
 pub const PLAY_VALUE: u32 = 0;
 
+// ============================================================================
+// Constantes de Waveform
+// ============================================================================
+
+/// Tamaño de ventana para calcular peaks de waveform (en samples)
+/// AIDEV-NOTE: Valor de Musicat - 8192 samples por peak
+pub const WAVEFORM_WINDOW_SIZE: usize = 8192;
+
+/// Número de peaks por paquete de streaming
+/// ~100 paquetes para mostrar progreso incremental
+pub const WAVEFORM_PEAKS_PER_PACKET: usize = 100;
+
+/// Método de cálculo de peaks por defecto
+/// AIDEV-NOTE: RMS es más perceptualmente relevante que peak simple
+pub use crate::audio::dsp::PeakMethod;
+pub const WAVEFORM_PEAK_METHOD: PeakMethod = PeakMethod::Rms;
+
 #[cfg(test)]
 mod tests {
     use super::*;

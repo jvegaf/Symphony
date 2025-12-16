@@ -1,10 +1,11 @@
 use serde::{Deserialize, Serialize};
 
 /// Modelo de pista musical
+/// AIDEV-NOTE: Migrado de i64 a String (UUID v4) para mejor escalabilidad
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Track {
-    pub id: Option<i64>,
+    pub id: Option<String>,
     pub path: String,
     pub title: String,
     pub artist: String,
@@ -25,11 +26,12 @@ pub struct Track {
 }
 
 /// Modelo de waveform
+/// AIDEV-NOTE: data almacena peaks como Vec<f32> serializado a bincode
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Waveform {
-    pub id: Option<i64>,
-    pub track_id: i64,
+    pub id: Option<String>,
+    pub track_id: String,
     pub data: Vec<u8>,
     pub resolution: i32,
     pub date_generated: String,
@@ -39,8 +41,8 @@ pub struct Waveform {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Beatgrid {
-    pub id: Option<i64>,
-    pub track_id: i64,
+    pub id: Option<String>,
+    pub track_id: String,
     pub bpm: f64,
     pub offset: f64,  // Offset del primer beat en segundos
     pub confidence: Option<f64>,  // Confidence score del análisis (0-100)
@@ -51,8 +53,8 @@ pub struct Beatgrid {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct CuePoint {
-    pub id: Option<i64>,
-    pub track_id: i64,
+    pub id: Option<String>,
+    pub track_id: String,
     pub position: f64,
     pub label: String,
     pub color: String,
@@ -65,8 +67,8 @@ pub struct CuePoint {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Loop {
-    pub id: Option<i64>,
-    pub track_id: i64,
+    pub id: Option<String>,
+    pub track_id: String,
     pub label: String,
     pub loop_start: f64,
     pub loop_end: f64,
@@ -79,7 +81,7 @@ pub struct Loop {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Playlist {
-    pub id: Option<i64>,
+    pub id: Option<String>,
     pub name: String,
     pub description: Option<String>,
     pub date_created: String,
@@ -90,9 +92,9 @@ pub struct Playlist {
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PlaylistTrack {
-    pub id: Option<i64>,
-    pub playlist_id: i64,
-    pub track_id: i64,
+    pub id: Option<String>,
+    pub playlist_id: String,
+    pub track_id: String,
     pub position: i32,
     pub date_added: String,
 }
@@ -113,7 +115,7 @@ mod tests {
     #[test]
     fn test_track_creation() {
         let track = Track {
-            id: Some(1),
+            id: Some("test-uuid-1234".to_string()),
             path: "/music/test.mp3".to_string(),
             title: "Test Track".to_string(),
             artist: "Test Artist".to_string(),
@@ -140,7 +142,7 @@ mod tests {
     #[test]
     fn test_playlist_creation() {
         let playlist = Playlist {
-            id: Some(1),
+            id: Some("test-playlist-uuid".to_string()),
             name: "My Playlist".to_string(),
             description: Some("Test playlist".to_string()),
             date_created: "2024-01-01".to_string(),

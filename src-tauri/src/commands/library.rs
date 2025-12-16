@@ -82,12 +82,12 @@ pub async fn search_tracks(query: String) -> Result<Vec<Track>, String> {
         .map_err(|e| e.to_string())
 }
 
-/// Obtiene una pista por ID
+/// Obtiene una pista por ID (UUID)
 #[tauri::command]
-pub async fn get_track_by_id(id: i64) -> Result<Track, String> {
+pub async fn get_track_by_id(id: String) -> Result<Track, String> {
     let db = crate::db::get_connection()
         .map_err(|e| e.to_string())?;
-    queries::get_track_by_id(&db.conn, id)
+    queries::get_track(&db.conn, &id)
         .map_err(|e| e.to_string())
 }
 
@@ -126,7 +126,7 @@ pub async fn get_library_stats() -> Result<LibraryStats, String> {
 /// Estructura para actualizar metadatos de track
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 pub struct UpdateTrackMetadataRequest {
-    pub id: i64,
+    pub id: String,
     pub title: Option<String>,
     pub artist: Option<String>,
     pub album: Option<String>,
@@ -146,7 +146,7 @@ pub async fn update_track_metadata(
     
     queries::update_track_metadata(
         &db.conn,
-        request.id,
+        &request.id,
         request.title.as_deref(),
         request.artist.as_deref(),
         request.album.as_deref(),

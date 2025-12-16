@@ -4,11 +4,11 @@ import { WaveformViewer } from "../components/WaveformViewer";
 import { useGetTrack } from "../hooks/useLibrary";
 
 interface PlayerPageProps {
-  trackId?: number;
+  trackId?: string;
 }
 
 export const Player = ({ trackId }: PlayerPageProps) => {
-  const { data: track, isLoading } = useGetTrack(trackId || 0, !!trackId);
+  const { data: track, isLoading } = useGetTrack(trackId || "", !!trackId);
 
   if (!trackId) {
     return (
@@ -87,7 +87,11 @@ export const Player = ({ trackId }: PlayerPageProps) => {
 
         {/* Waveform Viewer */}
         <Card title="Forma de Onda">
-          <WaveformViewer audioPath={track.path} />
+          <WaveformViewer 
+            trackId={track.id}
+            trackPath={track.path}
+            duration={track.duration}
+          />
         </Card>
 
         {/* Audio Player */}

@@ -9,7 +9,7 @@ Aplicación de escritorio profesional para gestionar bibliotecas musicales con i
 ## ✨ Características
 
 - 📁 **Importación de Bibliotecas:** Escaneo recursivo con preservación de estructura
-- 🎵 **Reproducción Integrada:** Player completo con waveform interactivo
+- 🎵 **Reproducción Integrada:** Player completo con waveform interactivo (canvas propio, streaming progresivo, seek visual, feedback instantáneo). Ver [docs/waveform-implementation.md](./docs/waveform-implementation.md) para detalles.
 - 📊 **Análisis de Audio:** Beatgrids automáticos, cue points y loops personalizados
 - 📋 **Playlists:** Gestión completa con drag & drop
 - ✏️ **Edición de Metadatos:** Editor integrado con rating de pistas

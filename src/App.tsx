@@ -9,6 +9,8 @@ import { useGetAllTracks, useImportLibrary } from "./hooks/useLibrary";
 import { BenchmarkPage } from "./pages/Benchmark";
 import type { ImportProgress, Track } from "./types/library";
 import { logger } from "./utils/logger";
+// AIDEV-NOTE: Import waveform debugger to expose window.debugWaveform()
+import "./utils/waveform-debug";
 
 function App() {
   const [activeTab, setActiveTab] = useState<"library" | "settings" | "import" | "export" | "tools" | "benchmark">("library");

@@ -5,9 +5,10 @@
 
 /**
  * Modelo de pista musical
+ * AIDEV-NOTE: Migrado de number a string (UUID v4)
  */
 export interface Track {
-  id?: number;
+  id?: string;
   path: string;
   title: string;
   artist: string;

@@ -4,13 +4,12 @@ use std::sync::mpsc::Sender;
 use std::fs;
 use serde::{Serialize, Deserialize};
 use tauri::{AppHandle, Manager, State};
-use rusqlite::OptionalExtension;
 
 use crate::audio::{
     AudioDecoder, AudioDeviceInfo, AudioMetadata, CpalAudioOutput,
-    PlayerControlEvent, WaveformData, generate_waveform,
+    PlayerControlEvent, WaveformState,
+    generate_waveform_streaming, cancel_waveform_generation,
 };
-use crate::db::Database;
 
 /// Estado global del reproductor de audio
 /// 
@@ -62,7 +61,9 @@ pub struct PlaybackPositionResponse {
     pub duration: f64,
 }
 
-/// Genera datos de waveform para una pista
+/// Genera datos de waveform para una pista (DEPRECATED - usar get_waveform)
+/// AIDEV-NOTE: Función antigua, reemplazada por sistema streaming
+/*
 #[tauri::command]
 pub async fn generate_waveform_data(
     path: String,
@@ -74,10 +75,53 @@ pub async fn generate_waveform_data(
     let target_samples = samples.unwrap_or(1000);
     
     generate_waveform(&path, target_samples)
-        .map_err(|e| e.to_string())
+        .map_err(|e: AudioError| e.to_string())
+}
+*/
+
+/// Obtiene waveform con cache y streaming (NUEVO)
+/// 
+/// AIDEV-NOTE: Sistema estilo Musicat con:
+/// - Verificación de cache en SQLite
+/// - Generación streaming si no existe
+/// - Eventos: waveform:progress, waveform:complete, waveform:error
+#[tauri::command]
+pub async fn get_waveform(
+    track_id: String,
+    track_path: String,
+    duration: f64,
+    app: AppHandle,
+    waveform_state: State<'_, Arc<WaveformState>>,
+    db: State<'_, Arc<tokio::sync::Mutex<rusqlite::Connection>>>,
+) -> Result<(), String> {
+    log::info!("🎵 get_waveform: track_id={}, path={}", track_id, track_path);
+    
+    generate_waveform_streaming(
+        track_id,
+        track_path,
+        duration,
+        app,
+        waveform_state.inner().clone(),
+        db.inner().clone(),
+    )
+    .await
+    .map_err(|e| e.to_string())
 }
 
-/// Obtiene un waveform cacheado de la base de datos
+/// Cancela generación de waveform en progreso
+#[tauri::command]
+pub async fn cancel_waveform(
+    track_id: String,
+    waveform_state: State<'_, Arc<WaveformState>>,
+) -> Result<bool, String> {
+    log::info!("🛑 cancel_waveform: track_id={}", track_id);
+    
+    Ok(cancel_waveform_generation(&track_id, waveform_state.inner().clone()).await)
+}
+
+/// Obtiene un waveform cacheado de la base de datos (DEPRECATED)
+/// AIDEV-NOTE: Reemplazado por get_waveform que maneja cache internamente
+/*
 #[tauri::command]
 pub async fn get_cached_waveform(
     track_id: i64,
@@ -119,8 +163,11 @@ pub async fn get_cached_waveform(
         }
     }
 }
+*/
 
-/// Genera un waveform y lo guarda en la base de datos
+/// Genera un waveform y lo guarda en la base de datos (DEPRECATED)
+/// AIDEV-NOTE: Reemplazado por get_waveform que maneja generación y cache
+/*
 #[tauri::command]
 pub async fn generate_and_cache_waveform(
     track_id: i64,
@@ -133,7 +180,7 @@ pub async fn generate_and_cache_waveform(
     let path_buf = PathBuf::from(&path);
     let target_samples = samples.unwrap_or(200);
     let waveform = generate_waveform(&path_buf, target_samples)
-        .map_err(|e| e.to_string())?;
+        .map_err(|e: AudioError| e.to_string())?;
     
     let blob = bincode::serialize(&waveform)
         .map_err(|e| format!("Failed to serialize waveform: {}", e))?;
@@ -161,6 +208,7 @@ pub async fn generate_and_cache_waveform(
         }
     }
 }
+*/
 
 /// Reproduce una pista de audio
 /// 

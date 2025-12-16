@@ -3,7 +3,6 @@ import { useGetPlaylists, useCreatePlaylist, useDeletePlaylist } from "../hooks/
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";
 import { Input } from "./ui/Input";
-import { cn } from "../utils/cn";
 
 /**
  * PlaylistManager - Componente para gestionar playlists
@@ -12,7 +11,7 @@ import { cn } from "../utils/cn";
 const PlaylistManager: React.FC = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const [selectedPlaylistId, setSelectedPlaylistId] = useState<number | null>(null);
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
   const [newPlaylistName, setNewPlaylistName] = useState("");
   const [newPlaylistDescription, setNewPlaylistDescription] = useState("");
 
@@ -49,7 +48,7 @@ const PlaylistManager: React.FC = () => {
     });
   };
 
-  const openDeleteDialog = (id: number) => {
+  const openDeleteDialog = (id: string) => {
     setSelectedPlaylistId(id);
     setShowDeleteDialog(true);
   };
@@ -95,13 +94,13 @@ const PlaylistManager: React.FC = () => {
               </p>
             )}
             <div className="flex items-center justify-between">
-              <Button variant="ghost" size="sm">
+              <Button variant="secondary">
                 Abrir
               </Button>
               <Button
-                variant="destructive"
-                size="sm"
+                variant="primary"
                 onClick={() => openDeleteDialog(playlist.id)}
+                className="bg-red-600 hover:bg-red-700"
               >
                 Eliminar
               </Button>
@@ -129,7 +128,7 @@ const PlaylistManager: React.FC = () => {
               />
               <div className="flex justify-end space-x-2">
                 <Button
-                  variant="ghost"
+                  variant="secondary"
                   onClick={() => {
                     setShowCreateDialog(false);
                     setNewPlaylistName("");
@@ -155,7 +154,7 @@ const PlaylistManager: React.FC = () => {
             <p className="mb-6">¿Estás seguro de eliminar esta playlist?</p>
             <div className="flex justify-end space-x-2">
               <Button
-                variant="ghost"
+                variant="secondary"
                 onClick={() => {
                   setShowDeleteDialog(false);
                   setSelectedPlaylistId(null);
@@ -163,7 +162,7 @@ const PlaylistManager: React.FC = () => {
               >
                 Cancelar
               </Button>
-              <Button variant="destructive" onClick={handleDelete}>
+              <Button variant="primary" onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
                 Confirmar
               </Button>
             </div>

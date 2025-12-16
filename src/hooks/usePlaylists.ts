@@ -27,7 +27,7 @@ export const useGetPlaylists = () => {
 /**
  * Hook para obtener una playlist por ID
  */
-export const useGetPlaylist = (id: number) => {
+export const useGetPlaylist = (id: string) => {
   return useQuery<Playlist>({
     queryKey: ["playlists", id],
     queryFn: async () => {
@@ -41,7 +41,7 @@ export const useGetPlaylist = (id: number) => {
 /**
  * Hook para obtener tracks de una playlist
  */
-export const useGetPlaylistTracks = (playlistId: number) => {
+export const useGetPlaylistTracks = (playlistId: string) => {
   return useQuery<Track[]>({
     queryKey: ["playlists", playlistId, "tracks"],
     queryFn: async () => {
@@ -62,7 +62,7 @@ export const useCreatePlaylist = () => {
 
   return useMutation({
     mutationFn: async (data: CreatePlaylistRequest) => {
-      const id = await invoke<number>("create_playlist", {
+      const id = await invoke<string>("create_playlist", {
         name: data.name,
         description: data.description,
       });
@@ -104,7 +104,7 @@ export const useDeletePlaylist = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (id: number) => {
+    mutationFn: async (id: string) => {
       await invoke("delete_playlist", { id });
     },
     onSuccess: () => {
@@ -188,7 +188,17 @@ export const useUpdateTrackMetadata = () => {
 
   return useMutation({
     mutationFn: async (data: UpdateTrackMetadataRequest) => {
-      await invoke("update_track_metadata", data);
+      await invoke("update_track_metadata", {
+        id: data.id,
+        title: data.title,
+        artist: data.artist,
+        album: data.album,
+        genre: data.genre,
+        year: data.year,
+        bpm: data.bpm,
+        key: data.key,
+        rating: data.rating,
+      });
     },
     onSuccess: (_, variables) => {
       // Invalidar tracks para actualizar en todas las listas

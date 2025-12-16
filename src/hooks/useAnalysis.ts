@@ -1,20 +1,23 @@
 /**
  * Hooks de TanStack Query para análisis avanzado (Milestone 4)
  * 
+ * AIDEV-NOTE: Migrado de number a string (UUID v4) para todos los IDs
  * Gestiona beatgrids, cue points y loops con cache y sincronización
  */
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+
 import { invoke } from '@tauri-apps/api/core';
-import {
-  Beatgrid,
+
+import type {
   AnalyzeBeatgridParams,
-  UpdateBeatgridOffsetParams,
-  CuePoint,
+  Beatgrid,
   CreateCuePointRequest,
-  UpdateCuePointRequest,
-  Loop,
   CreateLoopRequest,
+  CuePoint,
+  Loop,
+  UpdateBeatgridOffsetParams,
+  UpdateCuePointRequest,
   UpdateLoopRequest,
 } from '../types/analysis';
 
@@ -25,11 +28,11 @@ import {
 export const analysisKeys = {
   all: ['analysis'] as const,
   beatgrids: () => [...analysisKeys.all, 'beatgrids'] as const,
-  beatgrid: (trackId: number) => [...analysisKeys.beatgrids(), trackId] as const,
+  beatgrid: (trackId: string) => [...analysisKeys.beatgrids(), trackId] as const,
   cuePoints: () => [...analysisKeys.all, 'cuePoints'] as const,
-  cuePointsForTrack: (trackId: number) => [...analysisKeys.cuePoints(), trackId] as const,
+  cuePointsForTrack: (trackId: string) => [...analysisKeys.cuePoints(), trackId] as const,
   loops: () => [...analysisKeys.all, 'loops'] as const,
-  loopsForTrack: (trackId: number) => [...analysisKeys.loops(), trackId] as const,
+  loopsForTrack: (trackId: string) => [...analysisKeys.loops(), trackId] as const,
 };
 
 // ============================================================================
@@ -58,7 +61,7 @@ export const useAnalyzeBeatgrid = () => {
 /**
  * Obtiene beatgrid de una pista
  */
-export const useGetBeatgrid = (trackId: number) => {
+export const useGetBeatgrid = (trackId: string) => {
   return useQuery({
     queryKey: analysisKeys.beatgrid(trackId),
     queryFn: async () => {
@@ -92,7 +95,7 @@ export const useDeleteBeatgrid = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (trackId: number) => {
+    mutationFn: async (trackId: string) => {
       await invoke('delete_beatgrid', { trackId });
     },
     onSuccess: (_, trackId) => {
@@ -114,7 +117,7 @@ export const useCreateCuePoint = () => {
 
   return useMutation({
     mutationFn: async (request: CreateCuePointRequest) => {
-      const id = await invoke<number>('create_cue_point', { request });
+      const id = await invoke<string>('create_cue_point', { request });
       return { id, ...request };
     },
     onSuccess: (data) => {
@@ -129,7 +132,7 @@ export const useCreateCuePoint = () => {
 /**
  * Obtiene cue points de una pista
  */
-export const useGetCuePoints = (trackId: number) => {
+export const useGetCuePoints = (trackId: string) => {
   return useQuery({
     queryKey: analysisKeys.cuePointsForTrack(trackId),
     queryFn: async () => {
@@ -146,7 +149,7 @@ export const useUpdateCuePoint = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, request, trackId }: { id: number; request: UpdateCuePointRequest; trackId: number }) => {
+    mutationFn: async ({ id, request, trackId }: { id: string; request: UpdateCuePointRequest; trackId: string }) => {
       await invoke('update_cue_point', { id, request });
       return { id, trackId };
     },
@@ -166,7 +169,7 @@ export const useDeleteCuePoint = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, trackId }: { id: number; trackId: number }) => {
+    mutationFn: async ({ id, trackId }: { id: string; trackId: string }) => {
       await invoke('delete_cue_point', { id });
       return trackId;
     },
@@ -191,7 +194,7 @@ export const useCreateLoop = () => {
 
   return useMutation({
     mutationFn: async (request: CreateLoopRequest) => {
-      const id = await invoke<number>('create_loop', { request });
+      const id = await invoke<string>('create_loop', { request });
       return { id, ...request };
     },
     onSuccess: (data) => {
@@ -206,7 +209,7 @@ export const useCreateLoop = () => {
 /**
  * Obtiene loops de una pista
  */
-export const useGetLoops = (trackId: number) => {
+export const useGetLoops = (trackId: string) => {
   return useQuery({
     queryKey: analysisKeys.loopsForTrack(trackId),
     queryFn: async () => {
@@ -223,7 +226,7 @@ export const useUpdateLoop = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, request, trackId }: { id: number; request: UpdateLoopRequest; trackId: number }) => {
+    mutationFn: async ({ id, request, trackId }: { id: string; request: UpdateLoopRequest; trackId: string }) => {
       await invoke('update_loop', { id, request });
       return { id, trackId };
     },
@@ -243,7 +246,7 @@ export const useDeleteLoop = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, trackId }: { id: number; trackId: number }) => {
+    mutationFn: async ({ id, trackId }: { id: string; trackId: string }) => {
       await invoke('delete_loop', { id });
       return trackId;
     },

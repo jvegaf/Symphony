@@ -135,22 +135,22 @@ export const useSearchTracks = (query: string, enabled = true) => {
 /**
  * Hook para obtener una pista por ID
  * 
- * @param id - ID de la pista
+ * @param id - ID de la pista (UUID)
  * @param enabled - Si la query está habilitada (default: true)
  * 
  * @example
  * ```tsx
- * const { data: track } = useGetTrack(123);
+ * const { data: track } = useGetTrack("550e8400-e29b-41d4-a716-446655440000");
  * ```
  */
-export const useGetTrack = (id: number, enabled = true) => {
+export const useGetTrack = (id: string, enabled = true) => {
   return useQuery<Track, Error>({
     queryKey: ["tracks", "byId", id],
     queryFn: async () => {
       const track = await invoke<Track>("get_track_by_id", { id });
       return track;
     },
-    enabled: enabled && id > 0,
+    enabled: enabled && id.length > 0,
     staleTime: 10 * 60 * 1000, // 10 minutos
   });
 };
