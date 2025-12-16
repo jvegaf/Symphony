@@ -150,34 +150,14 @@ db-migrate: ## Ejecutar migraciones de base de datos
 	$(CARGO) run --bin migrate
 	@echo "$(GREEN)✓ Migraciones completadas$(NC)"
 
-db-clean: ## Limpiar SOLO base de datos de desarrollo (src-tauri/symphony.db)
-	@echo "$(YELLOW)Limpiando base de datos de desarrollo...$(NC)"
-	@if [ -f src-tauri/symphony.db ]; then \
-		rm -f src-tauri/symphony.db; \
-		echo "$(GREEN)✓ Base de datos de desarrollo eliminada$(NC)"; \
-	else \
-		echo "$(YELLOW)⚠ No existe base de datos de desarrollo$(NC)"; \
-	fi
+db-view:
+	@echo "$(YELLOW)Abriendo base de datos$(NC)"
+	@sqlitebrowser "$HOME/.config/symphony/symphony.db"
 
-db-clean-user: ## Limpiar base de datos del usuario (~/.local/share/symphony/)
-	@echo "$(YELLOW)Limpiando base de datos del usuario...$(NC)"
-	@if [ -f ~/.local/share/symphony/symphony.db ]; then \
-		rm -f ~/.local/share/symphony/symphony.db; \
-		echo "$(GREEN)✓ Base de datos del usuario eliminada$(NC)"; \
-	else \
-		echo "$(YELLOW)⚠ No existe base de datos del usuario$(NC)"; \
-	fi
-	@if [ -f ~/.local/share/symphony/symphony.log ]; then \
-		rm -f ~/.local/share/symphony/symphony.log; \
-		echo "$(GREEN)✓ Log del usuario eliminado$(NC)"; \
-	fi
-
-db-clean-all: ## Limpiar TODAS las bases de datos (desarrollo + usuario) [CUIDADO]
-	@echo "$(RED)¿Estás seguro de eliminar TODAS las bases de datos? [y/N]$(NC)" && read ans && [ $${ans:-N} = y ]
-	@echo "$(YELLOW)Limpiando todas las bases de datos...$(NC)"
-	@$(MAKE) db-clean
-	@$(MAKE) db-clean-user
-	@echo "$(GREEN)✓ Todas las bases de datos eliminadas$(NC)"
+db-clean:
+	@echo "$(YELLOW)Limpiando base de datos$(NC)"
+	@rm -rf $HOME/.config/symphony/symphony.db
+	@echo "$(GREEN)✓ Linmpieza completada$(NC)"
 
 db-backup: ## Crear backup de la base de datos del usuario
 	@echo "$(BLUE)Creando backup de base de datos...$(NC)"
