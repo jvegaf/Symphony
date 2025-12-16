@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
@@ -144,7 +144,7 @@ describe("useGetAllTracks", () => {
   it("debería obtener todas las pistas", async () => {
     const mockTracks: Track[] = [
       {
-        id: 1,
+        id: "1",
         path: "/music/track1.mp3",
         title: "Track 1",
         artist: "Artist 1",
@@ -195,7 +195,7 @@ describe("useSearchTracks", () => {
   it("debería buscar pistas con query", async () => {
     const mockTracks: Track[] = [
       {
-        id: 1,
+        id: "1",
         path: "/music/test.mp3",
         title: "Test Song",
         artist: "Test Artist",
@@ -248,7 +248,7 @@ describe("useGetTrack", () => {
 
   it("debería obtener pista por ID", async () => {
     const mockTrack: Track = {
-      id: 42,
+      id: "42",
       path: "/music/song.flac",
       title: "Amazing Song",
       artist: "Great Artist",
@@ -263,7 +263,7 @@ describe("useGetTrack", () => {
     };
     mockInvoke.mockResolvedValue(mockTrack);
 
-    const { result } = renderHook(() => useGetTrack(42), {
+    const { result } = renderHook(() => useGetTrack("42"), {
       wrapper: createWrapper(),
     });
 
@@ -271,12 +271,12 @@ describe("useGetTrack", () => {
       expect(result.current.isSuccess).toBe(true);
     });
 
-    expect(mockInvoke).toHaveBeenCalledWith("get_track_by_id", { id: 42 });
+    expect(mockInvoke).toHaveBeenCalledWith("get_track_by_id", { id: "42" });
     expect(result.current.data).toEqual(mockTrack);
   });
 
   it("no debería buscar con ID inválido", () => {
-    const { result } = renderHook(() => useGetTrack(0), {
+    const { result } = renderHook(() => useGetTrack("0"), {
       wrapper: createWrapper(),
     });
 
@@ -285,7 +285,7 @@ describe("useGetTrack", () => {
   });
 
   it("no debería buscar si enabled es false", () => {
-    const { result } = renderHook(() => useGetTrack(1, false), {
+    const { result } = renderHook(() => useGetTrack("1", false), {
       wrapper: createWrapper(),
     });
 

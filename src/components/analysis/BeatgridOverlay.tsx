@@ -4,7 +4,7 @@
  */
 
 import { useMemo } from 'react';
-import { cn } from '@/utils/cn';
+import { cn } from '../../utils/cn';
 
 export interface BeatgridOverlayProps {
   /** Duración total de la pista en segundos */

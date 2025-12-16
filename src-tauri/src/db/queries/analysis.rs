@@ -1,10 +1,9 @@
-/// CRUD para análisis de audio (beatgrids, cue points, loops) con UUIDs
-/// 
-/// AIDEV-NOTE: Migrado de i64 a String (UUID v4) para IDs
-
-use rusqlite::{Connection, Result, params, OptionalExtension};
-use uuid::Uuid;
 use crate::db::models::{Beatgrid, CuePoint, Loop};
+/// CRUD para análisis de audio (beatgrids, cue points, loops) con UUIDs
+///
+/// AIDEV-NOTE: Migrado de i64 a String (UUID v4) para IDs
+use rusqlite::{params, Connection, OptionalExtension, Result};
+use uuid::Uuid;
 
 // ============================================================================
 // WAVEFORMS
@@ -14,18 +13,20 @@ use crate::db::models::{Beatgrid, CuePoint, Loop};
 pub fn save_waveform(
     conn: &Connection,
     track_id: &str,
-    data: &str,  // JSON serializado de Vec<f32>
+    data: &str, // JSON serializado de Vec<f32>
 ) -> Result<String> {
     let data_bytes = data.as_bytes();
     let resolution = data_bytes.len() as i32;
-    
+
     // Verificar si ya existe
-    let existing: Option<String> = conn.query_row(
-        "SELECT id FROM waveforms WHERE track_id = ?1",
-        [track_id],
-        |row| row.get(0),
-    ).optional()?;
-    
+    let existing: Option<String> = conn
+        .query_row(
+            "SELECT id FROM waveforms WHERE track_id = ?1",
+            [track_id],
+            |row| row.get(0),
+        )
+        .optional()?;
+
     if let Some(id) = existing {
         // Actualizar existente
         conn.execute(
@@ -79,11 +80,13 @@ pub fn upsert_beatgrid(
     confidence: Option<f64>,
 ) -> Result<String> {
     // Verificar si ya existe
-    let existing: Option<String> = conn.query_row(
-        "SELECT id FROM beatgrids WHERE track_id = ?1",
-        [track_id],
-        |row| row.get(0),
-    ).optional()?;
+    let existing: Option<String> = conn
+        .query_row(
+            "SELECT id FROM beatgrids WHERE track_id = ?1",
+            [track_id],
+            |row| row.get(0),
+        )
+        .optional()?;
 
     if let Some(id) = existing {
         // Actualizar existente
@@ -106,10 +109,7 @@ pub fn upsert_beatgrid(
 }
 
 /// Obtiene beatgrid de una pista
-pub fn get_beatgrid(
-    conn: &Connection,
-    track_id: &str,
-) -> Result<Option<Beatgrid>> {
+pub fn get_beatgrid(conn: &Connection, track_id: &str) -> Result<Option<Beatgrid>> {
     conn.query_row(
         "SELECT id, track_id, bpm, offset, confidence, analyzed_at
          FROM beatgrids
@@ -130,11 +130,7 @@ pub fn get_beatgrid(
 }
 
 /// Actualiza solo el offset del beatgrid (ajuste fino manual)
-pub fn update_beatgrid_offset(
-    conn: &Connection,
-    track_id: &str,
-    offset: f64,
-) -> Result<()> {
+pub fn update_beatgrid_offset(conn: &Connection, track_id: &str, offset: f64) -> Result<()> {
     conn.execute(
         "UPDATE beatgrids SET offset = ?1 WHERE track_id = ?2",
         params![offset, track_id],
@@ -143,14 +139,8 @@ pub fn update_beatgrid_offset(
 }
 
 /// Elimina beatgrid de una pista
-pub fn delete_beatgrid(
-    conn: &Connection,
-    track_id: &str,
-) -> Result<()> {
-    conn.execute(
-        "DELETE FROM beatgrids WHERE track_id = ?1",
-        [track_id],
-    )?;
+pub fn delete_beatgrid(conn: &Connection, track_id: &str) -> Result<()> {
+    conn.execute("DELETE FROM beatgrids WHERE track_id = ?1", [track_id])?;
     Ok(())
 }
 
@@ -174,45 +164,42 @@ pub fn insert_cue_point(
         [track_id],
         |row| row.get(0),
     )?;
-    
+
     if count >= 64 {
         return Err(rusqlite::Error::InvalidParameterName(
-            "Máximo 64 cue points por pista".to_string()
+            "Máximo 64 cue points por pista".to_string(),
         ));
     }
-    
+
     // Validar hotkey (1-8)
     if let Some(hk) = hotkey {
         if !(1..=8).contains(&hk) {
             return Err(rusqlite::Error::InvalidParameterName(
-                "Hotkey debe estar entre 1 y 8".to_string()
+                "Hotkey debe estar entre 1 y 8".to_string(),
             ));
         }
     }
-    
+
     let id = Uuid::new_v4().to_string();
-    
+
     conn.execute(
         "INSERT INTO cue_points (id, track_id, position, label, color, type, hotkey, created_at)
          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, datetime('now'))",
         params![&id, track_id, position, label, color, cue_type, hotkey],
     )?;
-    
+
     Ok(id)
 }
 
 /// Obtiene todos los cue points de una pista ordenados por posición
-pub fn get_cue_points(
-    conn: &Connection,
-    track_id: &str,
-) -> Result<Vec<CuePoint>> {
+pub fn get_cue_points(conn: &Connection, track_id: &str) -> Result<Vec<CuePoint>> {
     let mut stmt = conn.prepare(
         "SELECT id, track_id, position, label, color, type, hotkey, created_at
          FROM cue_points
          WHERE track_id = ?1
          ORDER BY position ASC",
     )?;
-    
+
     let cue_points = stmt.query_map([track_id], |row| {
         Ok(CuePoint {
             id: row.get(0)?,
@@ -225,7 +212,7 @@ pub fn get_cue_points(
             created_at: row.get(7)?,
         })
     })?;
-    
+
     cue_points.collect()
 }
 
@@ -243,15 +230,15 @@ pub fn update_cue_point(
     if let Some(Some(hk)) = hotkey {
         if !(1..=8).contains(&hk) {
             return Err(rusqlite::Error::InvalidParameterName(
-                "Hotkey debe estar entre 1 y 8".to_string()
+                "Hotkey debe estar entre 1 y 8".to_string(),
             ));
         }
     }
-    
+
     // Construir query dinámicamente
     let mut updates = Vec::new();
     let mut params_vec: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
-    
+
     if let Some(pos) = position {
         updates.push("position = ?");
         params_vec.push(Box::new(pos));
@@ -272,25 +259,22 @@ pub fn update_cue_point(
         updates.push("hotkey = ?");
         params_vec.push(Box::new(hk));
     }
-    
+
     if updates.is_empty() {
         return Ok(());
     }
-    
+
     let query = format!("UPDATE cue_points SET {} WHERE id = ?", updates.join(", "));
     params_vec.push(Box::new(id.to_string()));
-    
+
     let params_refs: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|p| p.as_ref()).collect();
     conn.execute(&query, params_refs.as_slice())?;
-    
+
     Ok(())
 }
 
 /// Elimina cue point
-pub fn delete_cue_point(
-    conn: &Connection,
-    id: &str,
-) -> Result<()> {
+pub fn delete_cue_point(conn: &Connection, id: &str) -> Result<()> {
     conn.execute("DELETE FROM cue_points WHERE id = ?1", [id])?;
     Ok(())
 }
@@ -311,33 +295,30 @@ pub fn insert_loop(
     const EPSILON: f64 = 0.001;
     if loop_end < loop_start + 0.1 - EPSILON {
         return Err(rusqlite::Error::InvalidParameterName(
-            "Loop debe tener duración mínima de 100ms".to_string()
+            "Loop debe tener duración mínima de 100ms".to_string(),
         ));
     }
-    
+
     let id = Uuid::new_v4().to_string();
-    
+
     conn.execute(
         "INSERT INTO loops (id, track_id, label, loop_start, loop_end, is_active, created_at)
          VALUES (?1, ?2, ?3, ?4, ?5, 0, datetime('now'))",
         params![&id, track_id, label, loop_start, loop_end],
     )?;
-    
+
     Ok(id)
 }
 
 /// Obtiene todos los loops de una pista ordenados por posición
-pub fn get_loops(
-    conn: &Connection,
-    track_id: &str,
-) -> Result<Vec<Loop>> {
+pub fn get_loops(conn: &Connection, track_id: &str) -> Result<Vec<Loop>> {
     let mut stmt = conn.prepare(
         "SELECT id, track_id, label, loop_start, loop_end, is_active, created_at
          FROM loops
          WHERE track_id = ?1
          ORDER BY loop_start ASC",
     )?;
-    
+
     let loops = stmt.query_map([track_id], |row| {
         Ok(Loop {
             id: row.get(0)?,
@@ -349,7 +330,7 @@ pub fn get_loops(
             created_at: row.get(6)?,
         })
     })?;
-    
+
     loops.collect()
 }
 
@@ -369,22 +350,22 @@ pub fn update_loop(
             [id],
             |row| Ok((row.get(0)?, row.get(1)?)),
         )?;
-        
+
         let final_start = loop_start.unwrap_or(current.0);
         let final_end = loop_end.unwrap_or(current.1);
-        
+
         const EPSILON: f64 = 0.001;
         if final_end < final_start + 0.1 - EPSILON {
             return Err(rusqlite::Error::InvalidParameterName(
-                "Loop debe tener duración mínima de 100ms".to_string()
+                "Loop debe tener duración mínima de 100ms".to_string(),
             ));
         }
     }
-    
+
     // Construir query dinámicamente
     let mut updates = Vec::new();
     let mut params_vec: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
-    
+
     if let Some(lbl) = label {
         updates.push("label = ?");
         params_vec.push(Box::new(lbl.to_string()));
@@ -402,25 +383,22 @@ pub fn update_loop(
         updates.push("is_active = ?");
         params_vec.push(Box::new(active_int));
     }
-    
+
     if updates.is_empty() {
         return Ok(());
     }
-    
+
     let query = format!("UPDATE loops SET {} WHERE id = ?", updates.join(", "));
     params_vec.push(Box::new(id.to_string()));
-    
+
     let params_refs: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|p| p.as_ref()).collect();
     conn.execute(&query, params_refs.as_slice())?;
-    
+
     Ok(())
 }
 
 /// Elimina loop
-pub fn delete_loop(
-    conn: &Connection,
-    id: &str,
-) -> Result<()> {
+pub fn delete_loop(conn: &Connection, id: &str) -> Result<()> {
     conn.execute("DELETE FROM loops WHERE id = ?1", [id])?;
     Ok(())
 }
@@ -428,7 +406,7 @@ pub fn delete_loop(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::{Database, migrations, queries::tracks};
+    use crate::db::{migrations, queries::tracks, Database};
 
     fn setup_db() -> Database {
         let db = Database::new_in_memory().unwrap();
@@ -508,7 +486,8 @@ mod tests {
             "#FF0000",
             "intro",
             Some(1),
-        ).unwrap();
+        )
+        .unwrap();
 
         assert!(!id.is_empty());
 

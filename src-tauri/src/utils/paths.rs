@@ -2,7 +2,6 @@
 ///
 /// Todas las rutas de Symphony (base de datos, logs, settings) se almacenan
 /// en ~/.config/symphony/ siguiendo el estándar XDG Base Directory.
-
 use std::path::PathBuf;
 
 /// Obtiene el directorio de configuración de la aplicación
@@ -54,7 +53,9 @@ mod tests {
     fn test_get_app_config_dir() {
         let dir = get_app_config_dir();
         assert!(dir.ends_with("symphony"));
-        assert!(dir.to_string_lossy().contains("config") || dir.to_string_lossy().contains("AppData"));
+        assert!(
+            dir.to_string_lossy().contains("config") || dir.to_string_lossy().contains("AppData")
+        );
     }
 
     #[test]

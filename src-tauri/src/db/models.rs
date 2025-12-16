@@ -45,8 +45,8 @@ pub struct Beatgrid {
     pub id: Option<String>,
     pub track_id: String,
     pub bpm: f64,
-    pub offset: f64,  // Offset del primer beat en segundos
-    pub confidence: Option<f64>,  // Confidence score del análisis (0-100)
+    pub offset: f64,             // Offset del primer beat en segundos
+    pub confidence: Option<f64>, // Confidence score del análisis (0-100)
     pub analyzed_at: String,
 }
 
@@ -59,8 +59,8 @@ pub struct CuePoint {
     pub position: f64,
     pub label: String,
     pub color: String,
-    pub cue_type: String,  // intro, outro, drop, break, custom
-    pub hotkey: Option<i32>,  // 1-8 para hot cues
+    pub cue_type: String,    // intro, outro, drop, break, custom
+    pub hotkey: Option<i32>, // 1-8 para hot cues
     pub created_at: String,
 }
 

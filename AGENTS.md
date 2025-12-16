@@ -48,3 +48,5 @@ cargo clippy        # Rust linting
 - **Language:** All documentation/comments in Spanish, code in English
 
 **Full docs:** `.github/copilot-instructions.md` | **Makefile:** `make help`
+
+When you need to search docs, use `context7` tools.

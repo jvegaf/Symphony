@@ -1,6 +1,6 @@
-use std::path::{Path, PathBuf};
-use std::fs;
 use super::error::{LibraryError, Result};
+use std::fs;
+use std::path::{Path, PathBuf};
 
 /// Extensiones de archivo soportadas
 const SUPPORTED_EXTENSIONS: &[&str] = &["mp3", "flac", "wav", "ogg", "m4a", "aac"];
@@ -15,24 +15,24 @@ impl LibraryScanner {
     }
 
     /// Escanea recursivamente un directorio en busca de archivos de audio
-    /// 
+    ///
     /// # Arguments
     /// * `path` - Ruta al directorio raíz de la biblioteca
-    /// 
+    ///
     /// # Returns
     /// Vector de PathBuf con todos los archivos de audio encontrados
-    /// 
+    ///
     /// # Errors
     /// Retorna error si:
     /// - La ruta no existe
     /// - No hay permisos de lectura
     /// - Error durante el escaneo
-    /// 
+    ///
     /// # Example
     /// ```
     /// use std::path::Path;
     /// use symphony_lib::library::scanner::LibraryScanner;
-    /// 
+    ///
     /// let scanner = LibraryScanner::new();
     /// // let files = scanner.scan_directory(Path::new("/music"))?;
     /// ```
@@ -44,9 +44,10 @@ impl LibraryScanner {
 
         // Validar que es un directorio
         if !path.is_dir() {
-            return Err(LibraryError::ScanError(
-                format!("{} no es un directorio", path.display())
-            ));
+            return Err(LibraryError::ScanError(format!(
+                "{} no es un directorio",
+                path.display()
+            )));
         }
 
         // Escanear recursivamente
@@ -77,7 +78,7 @@ impl LibraryScanner {
                     Err(LibraryError::PermissionDenied(_)) => {
                         // Ignorar directorios sin permisos y continuar
                         continue;
-                    },
+                    }
                     Err(e) => return Err(e),
                 }
             } else if path.is_file() && self.is_supported_audio_file(&path) {
@@ -136,13 +137,13 @@ mod tests {
     #[test]
     fn test_scanner_new() {
         let _scanner = LibraryScanner::new();
-        assert!(true); // Scanner se crea correctamente
+        // Scanner se crea correctamente si no hay panic
     }
 
     #[test]
     fn test_scanner_default() {
-        let _scanner = LibraryScanner::default();
-        assert!(true); // Scanner default funciona
+        let _scanner = LibraryScanner;
+        // Scanner default funciona si no hay panic
     }
 
     #[test]
@@ -150,12 +151,12 @@ mod tests {
         let scanner = LibraryScanner::new();
         let path = Path::new("/nonexistent/path/that/does/not/exist");
         let result = scanner.scan_directory(path);
-        
+
         assert!(result.is_err());
         match result {
             Err(LibraryError::PathNotFound(p)) => {
                 assert_eq!(p, path);
-            },
+            }
             _ => panic!("Esperaba PathNotFound"),
         }
     }
@@ -168,12 +169,12 @@ mod tests {
 
         let scanner = LibraryScanner::new();
         let result = scanner.scan_directory(&file_path);
-        
+
         assert!(result.is_err());
         match result {
             Err(LibraryError::ScanError(msg)) => {
                 assert!(msg.contains("no es un directorio"));
-            },
+            }
             _ => panic!("Esperaba ScanError"),
         }
     }
@@ -186,7 +187,7 @@ mod tests {
 
         assert!(result.is_ok());
         let files = result.unwrap();
-        
+
         // Debe encontrar 5 archivos de audio (mp3, flac, wav, ogg, m4a)
         assert_eq!(files.len(), 5);
 
@@ -205,7 +206,7 @@ mod tests {
 
         assert!(result.is_ok());
         let files = result.unwrap();
-        
+
         // No debe encontrar archivos .jpg o .txt
         for file in &files {
             let ext = file.extension().unwrap().to_str().unwrap();
@@ -222,7 +223,7 @@ mod tests {
 
         assert!(result.is_ok());
         let files = result.unwrap();
-        
+
         // Verificar que encuentra archivos en subdirectorios profundos
         assert!(files.iter().any(|p| p.to_str().unwrap().contains("Album1")));
         assert!(files.iter().any(|p| p.to_str().unwrap().contains("Album2")));
@@ -266,7 +267,7 @@ mod tests {
     fn test_scan_directory_with_aac_files() {
         let temp_dir = TempDir::new().unwrap();
         File::create(temp_dir.path().join("test.aac")).unwrap();
-        
+
         let scanner = LibraryScanner::new();
         let result = scanner.scan_directory(temp_dir.path());
 

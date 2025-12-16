@@ -1,13 +1,12 @@
-/// CRUD para playlists con UUIDs
-
-use rusqlite::{Connection, Result, params, OptionalExtension};
-use uuid::Uuid;
 use crate::db::models::{Playlist, Track};
+/// CRUD para playlists con UUIDs
+use rusqlite::{params, Connection, OptionalExtension, Result};
+use uuid::Uuid;
 
 /// Inserta una nueva playlist y retorna su UUID
 pub fn insert_playlist(conn: &Connection, playlist: &Playlist) -> Result<String> {
     let id = Uuid::new_v4().to_string();
-    
+
     conn.execute(
         "INSERT INTO playlists (id, name, description, date_created, date_modified)
          VALUES (?1, ?2, ?3, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)",
@@ -76,11 +75,7 @@ pub fn update_playlist(
 }
 
 /// Agrega un track a una playlist
-pub fn add_track_to_playlist(
-    conn: &Connection,
-    playlist_id: &str,
-    track_id: &str,
-) -> Result<()> {
+pub fn add_track_to_playlist(conn: &Connection, playlist_id: &str, track_id: &str) -> Result<()> {
     // Obtener posición más alta actual
     let max_position: Option<i32> = conn
         .query_row(
@@ -90,10 +85,10 @@ pub fn add_track_to_playlist(
         )
         .optional()?
         .flatten();
-    
+
     let next_position = max_position.unwrap_or(-1) + 1;
     let id = Uuid::new_v4().to_string();
-    
+
     conn.execute(
         "INSERT INTO playlist_tracks (id, playlist_id, track_id, position, date_added)
          VALUES (?1, ?2, ?3, ?4, CURRENT_TIMESTAMP)",
@@ -113,28 +108,25 @@ pub fn remove_track_from_playlist(
          WHERE playlist_id = ?1 AND track_id = ?2",
         params![playlist_id, track_id],
     )?;
-    
+
     // Reordenar posiciones
     reorder_playlist_tracks(conn, playlist_id)?;
     Ok(())
 }
 
 /// Reordena las posiciones de tracks en una playlist
-pub fn reorder_playlist_tracks(
-    conn: &Connection,
-    playlist_id: &str,
-) -> Result<()> {
+pub fn reorder_playlist_tracks(conn: &Connection, playlist_id: &str) -> Result<()> {
     // Obtener tracks en orden actual
     let mut stmt = conn.prepare(
         "SELECT id FROM playlist_tracks 
          WHERE playlist_id = ?1 
-         ORDER BY position"
+         ORDER BY position",
     )?;
-    
+
     let track_ids: Vec<String> = stmt
         .query_map([playlist_id], |row| row.get(0))?
         .collect::<Result<Vec<_>, _>>()?;
-    
+
     // Actualizar posiciones secuencialmente
     for (idx, id) in track_ids.iter().enumerate() {
         conn.execute(
@@ -142,7 +134,7 @@ pub fn reorder_playlist_tracks(
             params![idx as i32, id],
         )?;
     }
-    
+
     Ok(())
 }
 
@@ -153,13 +145,13 @@ pub fn update_playlist_track_order(
     track_ids: &[String],
 ) -> Result<()> {
     let tx = conn.transaction()?;
-    
+
     // Eliminar tracks actuales
     tx.execute(
         "DELETE FROM playlist_tracks WHERE playlist_id = ?1",
         [playlist_id],
     )?;
-    
+
     // Insertar con nuevo orden
     for (position, track_id) in track_ids.iter().enumerate() {
         let id = Uuid::new_v4().to_string();
@@ -169,16 +161,13 @@ pub fn update_playlist_track_order(
             params![&id, playlist_id, track_id, position as i32],
         )?;
     }
-    
+
     tx.commit()?;
     Ok(())
 }
 
 /// Obtiene todos los tracks de una playlist ordenados por posición
-pub fn get_playlist_tracks(
-    conn: &Connection,
-    playlist_id: &str,
-) -> Result<Vec<Track>> {
+pub fn get_playlist_tracks(conn: &Connection, playlist_id: &str) -> Result<Vec<Track>> {
     let mut stmt = conn.prepare(
         "SELECT t.id, t.path, t.title, t.artist, t.album, t.genre, t.year,
                 t.duration, t.bitrate, t.sample_rate, t.file_size,
@@ -187,9 +176,9 @@ pub fn get_playlist_tracks(
          FROM tracks t
          INNER JOIN playlist_tracks pt ON t.id = pt.track_id
          WHERE pt.playlist_id = ?1
-         ORDER BY pt.position"
+         ORDER BY pt.position",
     )?;
-    
+
     let tracks = stmt.query_map([playlist_id], |row| {
         Ok(Track {
             id: row.get(0)?,
@@ -212,14 +201,14 @@ pub fn get_playlist_tracks(
             date_modified: row.get(17)?,
         })
     })?;
-    
+
     tracks.collect()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::{Database, migrations, queries::tracks};
+    use crate::db::{migrations, queries::tracks, Database};
 
     fn setup_db() -> Database {
         let db = Database::new_in_memory().unwrap();

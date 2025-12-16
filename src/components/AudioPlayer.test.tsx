@@ -9,26 +9,38 @@ const mockPlay = vi.fn();
 const mockPause = vi.fn();
 const mockResume = vi.fn();
 const mockStop = vi.fn();
-const mockRefreshState = vi.fn();
+const mockSeek = vi.fn();
+const mockSetVolume = vi.fn();
+const mockOnTrackEnd = vi.fn();
 
 vi.mock("@/hooks/useAudioPlayer", () => ({
   useAudioPlayer: vi.fn(),
 }));
+
+const createMockPlayerState = (overrides: Partial<ReturnType<typeof useAudioPlayerModule.useAudioPlayer>> = {}) => ({
+  isPlaying: false,
+  state: "stopped" as const,
+  currentTrackPath: null,
+  position: 0,
+  duration: 0,
+  volume: 1.0,
+  error: null,
+  play: mockPlay,
+  pause: mockPause,
+  resume: mockResume,
+  stop: mockStop,
+  seek: mockSeek,
+  setVolume: mockSetVolume,
+  onTrackEnd: mockOnTrackEnd,
+  ...overrides,
+});
 
 describe("AudioPlayer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     
     // Mock por defecto: estado stopped
-    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue({
-      isPlaying: false,
-      state: "stopped",
-      currentTrackPath: null,
-      play: mockPlay,
-      pause: mockPause,
-      resume: mockResume,
-      stop: mockStop,
-    });
+    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue(createMockPlayerState());
   });
 
   it("debería renderizar correctamente", () => {
@@ -46,15 +58,9 @@ describe("AudioPlayer", () => {
   });
 
   it("debería mostrar el título de la pista cuando se proporciona", () => {
-    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue({
-      isPlaying: false,
-      state: "stopped",
-      currentTrackPath: "/test/song.mp3",
-      play: mockPlay,
-      pause: mockPause,
-      resume: mockResume,
-      stop: mockStop,
-    });
+    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue(
+      createMockPlayerState({ currentTrackPath: "/test/song.mp3" })
+    );
 
     render(<AudioPlayer trackPath="/test/song.mp3" trackTitle="Mi Canción" />);
     
@@ -75,15 +81,13 @@ describe("AudioPlayer", () => {
   });
 
   it("debería mostrar botón de pausar cuando está playing", () => {
-    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue({
-      isPlaying: true,
-      state: "playing",
-      currentTrackPath: "/test/song.mp3",
-      play: mockPlay,
-      pause: mockPause,
-      resume: mockResume,
-      stop: mockStop,
-    });
+    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue(
+      createMockPlayerState({ 
+        isPlaying: true,
+        state: "playing",
+        currentTrackPath: "/test/song.mp3"
+      })
+    );
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
     
@@ -92,15 +96,13 @@ describe("AudioPlayer", () => {
   });
 
   it("debería mostrar botones de reanudar y detener cuando está paused", () => {
-    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue({
-      isPlaying: false,
-      state: "paused",
-      currentTrackPath: "/test/song.mp3",
-      play: mockPlay,
-      pause: mockPause,
-      resume: mockResume,
-      stop: mockStop,
-    });
+    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue(
+      createMockPlayerState({
+        isPlaying: false,
+        state: "paused",
+        currentTrackPath: "/test/song.mp3"
+      })
+    );
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
     
@@ -138,15 +140,13 @@ describe("AudioPlayer", () => {
     const user = userEvent.setup();
     mockPause.mockResolvedValue(undefined);
 
-    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue({
-      isPlaying: true,
-      state: "playing",
-      currentTrackPath: "/test/song.mp3",
-      play: mockPlay,
-      pause: mockPause,
-      resume: mockResume,
-      stop: mockStop,
-    });
+    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue(
+      createMockPlayerState({
+        isPlaying: true,
+        state: "playing",
+        currentTrackPath: "/test/song.mp3"
+      })
+    );
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
     
@@ -159,15 +159,13 @@ describe("AudioPlayer", () => {
     const user = userEvent.setup();
     mockResume.mockResolvedValue(undefined);
 
-    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue({
-      isPlaying: false,
-      state: "paused",
-      currentTrackPath: "/test/song.mp3",
-      play: mockPlay,
-      pause: mockPause,
-      resume: mockResume,
-      stop: mockStop,
-    });
+    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue(
+      createMockPlayerState({
+        isPlaying: false,
+        state: "paused",
+        currentTrackPath: "/test/song.mp3"
+      })
+    );
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
     
@@ -180,15 +178,13 @@ describe("AudioPlayer", () => {
     const user = userEvent.setup();
     mockStop.mockResolvedValue(undefined);
 
-    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue({
-      isPlaying: false,
-      state: "paused",
-      currentTrackPath: "/test/song.mp3",
-      play: mockPlay,
-      pause: mockPause,
-      resume: mockResume,
-      stop: mockStop,
-    });
+    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue(
+      createMockPlayerState({
+        isPlaying: false,
+        state: "paused",
+        currentTrackPath: "/test/song.mp3"
+      })
+    );
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
     
@@ -226,15 +222,13 @@ describe("AudioPlayer", () => {
   });
 
   it("debería mostrar indicador de reproducción cuando isPlaying es true", () => {
-    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue({
-      isPlaying: true,
-      state: "playing",
-      currentTrackPath: "/test/song.mp3",
-      play: mockPlay,
-      pause: mockPause,
-      resume: mockResume,
-      stop: mockStop,
-    });
+    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue(
+      createMockPlayerState({
+        isPlaying: true,
+        state: "playing",
+        currentTrackPath: "/test/song.mp3"
+      })
+    );
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
     
@@ -250,15 +244,13 @@ describe("AudioPlayer", () => {
     const user = userEvent.setup();
     mockPause.mockRejectedValue(new Error("Error al pausar"));
 
-    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue({
-      isPlaying: true,
-      state: "playing",
-      currentTrackPath: "/test/song.mp3",
-      play: mockPlay,
-      pause: mockPause,
-      resume: mockResume,
-      stop: mockStop,
-    });
+    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue(
+      createMockPlayerState({
+        isPlaying: true,
+        state: "playing",
+        currentTrackPath: "/test/song.mp3"
+      })
+    );
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
     
@@ -274,15 +266,13 @@ describe("AudioPlayer", () => {
     const user = userEvent.setup();
     mockResume.mockRejectedValue(new Error("Error al reanudar"));
 
-    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue({
-      isPlaying: false,
-      state: "paused",
-      currentTrackPath: "/test/song.mp3",
-      play: mockPlay,
-      pause: mockPause,
-      resume: mockResume,
-      stop: mockStop,
-    });
+    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue(
+      createMockPlayerState({
+        isPlaying: false,
+        state: "paused",
+        currentTrackPath: "/test/song.mp3"
+      })
+    );
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
     
@@ -298,15 +288,13 @@ describe("AudioPlayer", () => {
     const user = userEvent.setup();
     mockStop.mockRejectedValue(new Error("Error al detener"));
 
-    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue({
-      isPlaying: false,
-      state: "paused",
-      currentTrackPath: "/test/song.mp3",
-      play: mockPlay,
-      pause: mockPause,
-      resume: mockResume,
-      stop: mockStop,
-    });
+    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue(
+      createMockPlayerState({
+        isPlaying: false,
+        state: "paused",
+        currentTrackPath: "/test/song.mp3"
+      })
+    );
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
     
@@ -337,15 +325,13 @@ describe("AudioPlayer", () => {
     const onPause = vi.fn();
     mockPause.mockResolvedValue(undefined);
 
-    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue({
-      isPlaying: true,
-      state: "playing",
-      currentTrackPath: "/test/song.mp3",
-      play: mockPlay,
-      pause: mockPause,
-      resume: mockResume,
-      stop: mockStop,
-    });
+    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue(
+      createMockPlayerState({
+        isPlaying: true,
+        state: "playing",
+        currentTrackPath: "/test/song.mp3"
+      })
+    );
 
     render(<AudioPlayer trackPath="/test/song.mp3" onPause={onPause} />);
     
@@ -361,15 +347,13 @@ describe("AudioPlayer", () => {
     const onStop = vi.fn();
     mockStop.mockResolvedValue(undefined);
 
-    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue({
-      isPlaying: false,
-      state: "paused",
-      currentTrackPath: "/test/song.mp3",
-      play: mockPlay,
-      pause: mockPause,
-      resume: mockResume,
-      stop: mockStop,
-    });
+    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue(
+      createMockPlayerState({
+        isPlaying: false,
+        state: "paused",
+        currentTrackPath: "/test/song.mp3"
+      })
+    );
 
     render(<AudioPlayer trackPath="/test/song.mp3" onStop={onStop} />);
     

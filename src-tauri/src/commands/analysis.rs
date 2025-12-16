@@ -1,12 +1,12 @@
+use crate::audio::beatgrid_detector::BeatgridDetector;
 use crate::db::{
     models::{Beatgrid, CuePoint, Loop},
     queries,
 };
-use crate::audio::beatgrid_detector::BeatgridDetector;
 use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
-use std::sync::Mutex;
 use std::path::Path;
+use std::sync::Mutex;
 use tauri::State;
 
 // ============================================================================
@@ -137,7 +137,7 @@ impl From<Loop> for LoopResponse {
 // ============================================================================
 
 /// Analiza beatgrid de una pista automáticamente
-/// 
+///
 /// Este comando carga el audio, detecta tempo y offset, y guarda
 /// resultados en la base de datos. Proceso asíncrono en background.
 #[tauri::command]
@@ -148,13 +148,11 @@ pub async fn analyze_beatgrid(
 ) -> Result<BeatgridResponse, String> {
     // Analizar en thread separado para no bloquear UI
     let path = track_path.clone();
-    let analysis = tokio::task::spawn_blocking(move || {
-        BeatgridDetector::analyze(Path::new(&path))
-    })
-    .await
-    .map_err(|e| format!("Error en task: {}", e))?
-    .map_err(|e| format!("Error de análisis: {}", e))?;
-    
+    let analysis = tokio::task::spawn_blocking(move || BeatgridDetector::analyze(Path::new(&path)))
+        .await
+        .map_err(|e| format!("Error en task: {}", e))?
+        .map_err(|e| format!("Error de análisis: {}", e))?;
+
     // Guardar en DB
     let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
     queries::upsert_beatgrid(
@@ -165,12 +163,12 @@ pub async fn analyze_beatgrid(
         Some(analysis.confidence),
     )
     .map_err(|e| format!("Error guardando beatgrid: {}", e))?;
-    
+
     // Obtener beatgrid guardado con timestamp
     let saved = queries::get_beatgrid(&conn, &track_id)
         .map_err(|e| format!("Error obteniendo beatgrid: {}", e))?
         .ok_or_else(|| "Beatgrid no encontrado después de guardar".to_string())?;
-    
+
     Ok(BeatgridResponse::from(saved))
 }
 
@@ -181,7 +179,7 @@ pub fn get_beatgrid(
     db: State<'_, Mutex<Connection>>,
 ) -> Result<Option<BeatgridResponse>, String> {
     let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
-    
+
     queries::get_beatgrid(&conn, &track_id)
         .map(|opt| opt.map(BeatgridResponse::from))
         .map_err(|e| format!("Error obteniendo beatgrid: {}", e))
@@ -195,19 +193,16 @@ pub fn update_beatgrid_offset(
     db: State<'_, Mutex<Connection>>,
 ) -> Result<(), String> {
     let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
-    
+
     queries::update_beatgrid_offset(&conn, &track_id, offset)
         .map_err(|e| format!("Error actualizando offset: {}", e))
 }
 
 /// Elimina beatgrid de una pista
 #[tauri::command]
-pub fn delete_beatgrid(
-    track_id: String,
-    db: State<'_, Mutex<Connection>>,
-) -> Result<(), String> {
+pub fn delete_beatgrid(track_id: String, db: State<'_, Mutex<Connection>>) -> Result<(), String> {
     let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
-    
+
     queries::delete_beatgrid(&conn, &track_id)
         .map_err(|e| format!("Error eliminando beatgrid: {}", e))
 }
@@ -223,18 +218,18 @@ pub fn create_cue_point(
     db: State<'_, Mutex<Connection>>,
 ) -> Result<CuePointResponse, String> {
     let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
-    
+
     let id = queries::insert_cue_point(
         &conn,
         &request.track_id,
         request.position,
-        &request.label.as_deref().unwrap_or(""),
-        &request.color.as_deref().unwrap_or("#FFFFFF"),
+        request.label.as_deref().unwrap_or(""),
+        request.color.as_deref().unwrap_or("#FFFFFF"),
         &request.cue_type,
         request.hotkey,
     )
     .map_err(|e| format!("Error creando cue point: {}", e))?;
-    
+
     // Retornar el cue point creado
     Ok(CuePointResponse {
         id,
@@ -255,7 +250,7 @@ pub fn get_cue_points(
     db: State<'_, Mutex<Connection>>,
 ) -> Result<Vec<CuePointResponse>, String> {
     let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
-    
+
     queries::get_cue_points(&conn, &track_id)
         .map(|cues| cues.into_iter().map(CuePointResponse::from).collect())
         .map_err(|e| format!("Error obteniendo cue points: {}", e))
@@ -269,7 +264,7 @@ pub fn update_cue_point(
     db: State<'_, Mutex<Connection>>,
 ) -> Result<(), String> {
     let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
-    
+
     queries::update_cue_point(
         &conn,
         &id,
@@ -284,14 +279,10 @@ pub fn update_cue_point(
 
 /// Elimina un cue point
 #[tauri::command]
-pub fn delete_cue_point(
-    id: String,
-    db: State<'_, Mutex<Connection>>,
-) -> Result<(), String> {
+pub fn delete_cue_point(id: String, db: State<'_, Mutex<Connection>>) -> Result<(), String> {
     let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
-    
-    queries::delete_cue_point(&conn, &id)
-        .map_err(|e| format!("Error eliminando cue point: {}", e))
+
+    queries::delete_cue_point(&conn, &id).map_err(|e| format!("Error eliminando cue point: {}", e))
 }
 
 // ============================================================================
@@ -305,16 +296,16 @@ pub fn create_loop(
     db: State<'_, Mutex<Connection>>,
 ) -> Result<LoopResponse, String> {
     let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
-    
+
     let id = queries::insert_loop(
         &conn,
         &request.track_id,
-        &request.label.as_deref().unwrap_or(""),
+        request.label.as_deref().unwrap_or(""),
         request.loop_start,
         request.loop_end,
     )
     .map_err(|e| format!("Error creando loop: {}", e))?;
-    
+
     // Retornar el loop creado
     Ok(LoopResponse {
         id,
@@ -334,7 +325,7 @@ pub fn get_loops(
     db: State<'_, Mutex<Connection>>,
 ) -> Result<Vec<LoopResponse>, String> {
     let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
-    
+
     queries::get_loops(&conn, &track_id)
         .map(|loops| loops.into_iter().map(LoopResponse::from).collect())
         .map_err(|e| format!("Error obteniendo loops: {}", e))
@@ -348,7 +339,7 @@ pub fn update_loop(
     db: State<'_, Mutex<Connection>>,
 ) -> Result<(), String> {
     let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
-    
+
     queries::update_loop(
         &conn,
         &id,
@@ -362,14 +353,10 @@ pub fn update_loop(
 
 /// Elimina un loop
 #[tauri::command]
-pub fn delete_loop(
-    id: String,
-    db: State<'_, Mutex<Connection>>,
-) -> Result<(), String> {
+pub fn delete_loop(id: String, db: State<'_, Mutex<Connection>>) -> Result<(), String> {
     let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
-    
-    queries::delete_loop(&conn, &id)
-        .map_err(|e| format!("Error eliminando loop: {}", e))
+
+    queries::delete_loop(&conn, &id).map_err(|e| format!("Error eliminando loop: {}", e))
 }
 
 // ============================================================================
@@ -378,7 +365,7 @@ pub fn delete_loop(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+
     use crate::db::migrations;
     use rusqlite::Connection;
 
@@ -393,10 +380,10 @@ mod tests {
     // o tests de integración E2E con Tauri test harness.
     //
     // Referencia: https://tauri.app/v1/guides/testing/
-    
+
     fn setup_test_db() -> Connection {
-        let mut conn = Connection::open_in_memory().unwrap();
-        migrations::run_migrations(&mut conn).unwrap();
+        let conn = Connection::open_in_memory().unwrap();
+        migrations::run_migrations(&conn).unwrap();
         conn
     }
 
@@ -426,7 +413,7 @@ mod tests {
         let conn = setup_test_db();
         let test_id = uuid::Uuid::new_v4().to_string();
         insert_test_track(&conn, &test_id);
-        
+
         // Verificar que la BD funciona
         let count: i64 = conn
             .query_row("SELECT COUNT(*) FROM tracks", [], |row| row.get(0))

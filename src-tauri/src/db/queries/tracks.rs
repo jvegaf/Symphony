@@ -1,15 +1,14 @@
-/// CRUD para tracks con UUIDs
-/// 
-/// AIDEV-NOTE: Migrado de i64 a String (UUID v4) para IDs
-
-use rusqlite::{Connection, Result, params};
-use uuid::Uuid;
 use crate::db::models::Track;
+/// CRUD para tracks con UUIDs
+///
+/// AIDEV-NOTE: Migrado de i64 a String (UUID v4) para IDs
+use rusqlite::{params, Connection, Result};
+use uuid::Uuid;
 
 /// Inserta un nuevo track y retorna su UUID
 pub fn insert_track(conn: &Connection, track: &Track) -> Result<String> {
     let id = Uuid::new_v4().to_string();
-    
+
     conn.execute(
         "INSERT INTO tracks (
             id, path, title, artist, album, genre, year,
@@ -192,6 +191,7 @@ pub fn search_tracks(conn: &Connection, query: &str) -> Result<Vec<Track>> {
 }
 
 /// Actualización parcial de metadatos de track
+#[allow(clippy::too_many_arguments)]
 pub fn update_track_metadata(
     conn: &Connection,
     id: &str,
@@ -207,7 +207,7 @@ pub fn update_track_metadata(
     if let Some(r) = rating {
         if !(0..=5).contains(&r) {
             return Err(rusqlite::Error::InvalidParameterName(
-                "Rating must be between 0 and 5".to_string()
+                "Rating must be between 0 and 5".to_string(),
             ));
         }
     }
@@ -252,10 +252,7 @@ pub fn update_track_metadata(
     // Actualizar date_modified
     updates.push("date_modified = CURRENT_TIMESTAMP");
 
-    let query = format!(
-        "UPDATE tracks SET {} WHERE id = ?",
-        updates.join(", ")
-    );
+    let query = format!("UPDATE tracks SET {} WHERE id = ?", updates.join(", "));
     params.push(Box::new(id.to_string()));
 
     let params_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
@@ -267,7 +264,7 @@ pub fn update_track_metadata(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::{Database, migrations};
+    use crate::db::{migrations, Database};
 
     fn setup_db() -> Database {
         let db = Database::new_in_memory().unwrap();
@@ -278,7 +275,7 @@ mod tests {
     #[test]
     fn test_insert_and_get_track() {
         let db = setup_db();
-        
+
         let track = Track {
             id: None,
             path: "/music/test.mp3".to_string(),
@@ -379,7 +376,8 @@ mod tests {
             None,
             None,
             Some(5),
-        ).unwrap();
+        )
+        .unwrap();
 
         let updated = get_track(&db.conn, &id).unwrap();
         assert_eq!(updated.title, "New Title");

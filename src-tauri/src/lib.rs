@@ -1,15 +1,15 @@
-pub mod db;
 pub mod audio;
-pub mod library;
 pub mod commands;
+pub mod db;
+pub mod library;
 pub mod utils;
 
+use audio::WaveformState;
 use commands::audio::AudioPlayerState;
 use commands::library::LibraryState;
-use std::sync::{Arc, Mutex};
 use db::Database;
-use audio::WaveformState;
-use utils::paths::{ensure_app_dirs, get_log_path, get_db_path};
+use std::sync::{Arc, Mutex};
+use utils::paths::{ensure_app_dirs, get_db_path, get_log_path};
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -40,7 +40,7 @@ pub fn run() {
     eprintln!("║ Para ver logs en tiempo real:");
     eprintln!("║   tail -f {:?}", log_file_path);
     eprintln!("╚══════════════════════════════════════════════════════════════════╝");
-    
+
     log::info!("==================== SYMPHONY STARTING ====================");
     log::info!("Iniciando Symphony...");
     log::info!("📁 Directorio de configuración: {:?}", config_dir);
@@ -65,15 +65,15 @@ pub fn run() {
             panic!("Cannot start without database: {}", e);
         }
     };
-    
+
     // Inicializar estados
     let waveform_state = Arc::new(WaveformState::new());
-    
+
     // Connection para waveform (necesita tokio::sync::Mutex para async)
     // AIDEV-NOTE: Usamos una segunda conexión para waveform porque las async operations
     // necesitan tokio::sync::Mutex en lugar de std::sync::Mutex
     let waveform_db = Arc::new(tokio::sync::Mutex::new(
-        rusqlite::Connection::open(&db_path).expect("Failed to open DB for waveform")
+        rusqlite::Connection::open(&db_path).expect("Failed to open DB for waveform"),
     ));
 
     tauri::Builder::default()
@@ -94,7 +94,7 @@ pub fn run() {
                 .level(log::LevelFilter::Info)
                 .level_for("symphonia_core", log::LevelFilter::Warn) // Reducir ruido de symphonia
                 .level_for("symphonia_bundle_mp3", log::LevelFilter::Warn)
-                .build()
+                .build(),
         )
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_dialog::init())

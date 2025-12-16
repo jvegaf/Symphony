@@ -25,25 +25,25 @@ pub struct AudioDeviceInfo {
 pub trait AudioOutput: Send {
     /// Obtiene una referencia al producer del ring buffer para escribir samples
     fn get_producer(&self) -> &Producer<f32>;
-    
+
     /// Obtiene el sample rate del dispositivo
     fn sample_rate(&self) -> u32;
-    
+
     /// Obtiene el número de canales
     fn channels(&self) -> u16;
-    
+
     /// Inicia la reproducción
     fn play(&self) -> AudioResult<()>;
-    
+
     /// Pausa la reproducción
     fn pause(&self) -> AudioResult<()>;
-    
+
     /// Detiene y libera recursos
     fn stop(&mut self);
-    
+
     /// Establece el volumen (0.0 - 1.0)
     fn set_volume(&self, volume: f64);
-    
+
     /// Obtiene el volumen actual
     fn get_volume(&self) -> f64;
 }
@@ -70,7 +70,7 @@ unsafe impl Send for CpalAudioOutput {}
 
 impl CpalAudioOutput {
     /// Crea una nueva salida de audio con el dispositivo especificado
-    /// 
+    ///
     /// # Arguments
     /// * `device_name` - Nombre del dispositivo (None = default)
     /// * `desired_sample_rate` - Sample rate deseado (None = usar default del dispositivo)
@@ -83,76 +83,82 @@ impl CpalAudioOutput {
     /// Esto evita resampling innecesario cuando el dispositivo puede manejar
     /// el sample rate y canales del archivo nativamente.
     pub fn new(
-        device_name: Option<&str>, 
+        device_name: Option<&str>,
         desired_sample_rate: Option<u32>,
         desired_channels: Option<u16>,
-        initial_volume: f64
+        initial_volume: f64,
     ) -> AudioResult<Self> {
         let host = cpal::default_host();
-        
+
         // Seleccionar dispositivo
         let device = if let Some(name) = device_name {
             find_device_by_name(&host, name)?
         } else {
-            host.default_output_device()
-                .ok_or_else(|| AudioError::PlaybackFailed("No hay dispositivo de audio disponible".to_string()))?
+            host.default_output_device().ok_or_else(|| {
+                AudioError::PlaybackFailed("No hay dispositivo de audio disponible".to_string())
+            })?
         };
-        
+
         log::info!("🔊 Usando dispositivo de audio: {:?}", device.name());
-        
+
         // Obtener configuración soportada
         let supported_config = get_best_config(&device, desired_sample_rate, desired_channels)?;
         let sample_rate = supported_config.sample_rate().0;
         let channels = supported_config.channels();
-        
+
         if let Some(desired_rate) = desired_sample_rate {
             if sample_rate == desired_rate && Some(channels) == desired_channels {
                 log::info!("✅ Dispositivo configurado a sample rate y canales deseados: {} Hz ({} canales)", sample_rate, channels);
             } else {
                 log::warn!(
                     "⚠️ Dispositivo no soporta {} Hz / {} canales, usando {} Hz / {} canales",
-                    desired_rate, desired_channels.unwrap_or(2), sample_rate, channels
+                    desired_rate,
+                    desired_channels.unwrap_or(2),
+                    sample_rate,
+                    channels
                 );
             }
         } else {
             log::info!("📊 Config: {} Hz, {} canales", sample_rate, channels);
         }
-        
+
         // Crear ring buffer
         let ring_buffer = SpscRb::<f32>::new(RING_BUFFER_SIZE);
         let (producer, consumer) = (ring_buffer.producer(), ring_buffer.consumer());
-        
+
         // Estado de pausa compartido
         let pause_state = Arc::new(AtomicU32::new(PLAY_VALUE));
         let pause_state_callback = Arc::clone(&pause_state);
-        
+
         // Volumen compartido (como u32 bits para atomic)
         let volume_bits = (initial_volume.clamp(0.0, 1.0) as f32).to_bits();
         let volume = Arc::new(AtomicU32::new(volume_bits));
         let volume_callback = Arc::clone(&volume);
-        
+
         // Configuración del stream
         let config: StreamConfig = supported_config.into();
         let channels_count = channels as usize;
-        
+
         // Crear stream con callback
-        let stream = device.build_output_stream(
-            &config,
-            move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
-                audio_callback(
-                    data,
-                    &consumer,
-                    &pause_state_callback,
-                    &volume_callback,
-                    channels_count,
-                );
-            },
-            move |err| {
-                log::error!("❌ Error en stream de audio: {}", err);
-            },
-            None, // No timeout
-        ).map_err(|e| AudioError::PlaybackFailed(format!("No se pudo crear stream: {}", e)))?;
-        
+        let stream = device
+            .build_output_stream(
+                &config,
+                move |data: &mut [f32], _: &cpal::OutputCallbackInfo| {
+                    audio_callback(
+                        data,
+                        &consumer,
+                        &pause_state_callback,
+                        &volume_callback,
+                        channels_count,
+                    );
+                },
+                move |err| {
+                    log::error!("❌ Error en stream de audio: {}", err);
+                },
+                None, // No timeout
+            )
+            .map_err(|e| AudioError::PlaybackFailed(format!("No se pudo crear stream: {}", e)))?;
+
         Ok(Self {
             _stream: stream,
             producer,
@@ -162,15 +168,15 @@ impl CpalAudioOutput {
             volume,
         })
     }
-    
+
     /// Lista todos los dispositivos de audio disponibles
     pub fn list_devices() -> AudioResult<Vec<AudioDeviceInfo>> {
         let host = cpal::default_host();
         let default_device = host.default_output_device();
         let default_name = default_device.as_ref().and_then(|d| d.name().ok());
-        
+
         let mut devices = Vec::new();
-        
+
         if let Ok(output_devices) = host.output_devices() {
             for device in output_devices {
                 if let Ok(name) = device.name() {
@@ -179,7 +185,7 @@ impl CpalAudioOutput {
                 }
             }
         }
-        
+
         Ok(devices)
     }
 }
@@ -188,44 +194,45 @@ impl AudioOutput for CpalAudioOutput {
     fn get_producer(&self) -> &Producer<f32> {
         &self.producer
     }
-    
+
     fn sample_rate(&self) -> u32 {
         self.sample_rate
     }
-    
+
     fn channels(&self) -> u16 {
         self.channels
     }
-    
+
     fn play(&self) -> AudioResult<()> {
         self.pause_state.store(PLAY_VALUE, Ordering::SeqCst);
         atomic_wait::wake_all(self.pause_state.as_ref());
-        self._stream.play()
+        self._stream
+            .play()
             .map_err(|e| AudioError::PlaybackFailed(format!("Error al iniciar stream: {}", e)))
     }
-    
+
     fn pause(&self) -> AudioResult<()> {
         self.pause_state.store(PAUSE_VALUE, Ordering::SeqCst);
         Ok(())
     }
-    
+
     fn stop(&mut self) {
         // El stream se detendrá cuando se dropee
         self.pause_state.store(PAUSE_VALUE, Ordering::SeqCst);
     }
-    
+
     fn set_volume(&self, volume: f64) {
         let clamped = volume.clamp(0.0, 1.0) as f32;
         self.volume.store(clamped.to_bits(), Ordering::SeqCst);
     }
-    
+
     fn get_volume(&self) -> f64 {
         f32::from_bits(self.volume.load(Ordering::SeqCst)) as f64
     }
 }
 
 /// Callback de audio que lee del ring buffer y escribe al dispositivo
-/// 
+///
 /// AIDEV-NOTE: Este callback se ejecuta en el thread de audio de cpal.
 /// Debe ser lo más eficiente posible - sin allocations ni locks pesados.
 fn audio_callback(
@@ -242,18 +249,18 @@ fn audio_callback(
         atomic_wait::wait(pause_state, PAUSE_VALUE);
         return;
     }
-    
+
     // Obtener volumen actual
     let vol = f32::from_bits(volume.load(Ordering::SeqCst));
-    
+
     // Leer del ring buffer
     let read = consumer.read(data).unwrap_or(0);
-    
+
     // Aplicar volumen a los samples leídos
     for sample in &mut data[..read] {
         *sample *= vol;
     }
-    
+
     // Llenar el resto con silencio si no hay suficientes samples
     if read < data.len() {
         data[read..].fill(0.0);
@@ -271,39 +278,52 @@ fn find_device_by_name(host: &Host, name: &str) -> AudioResult<Device> {
             }
         }
     }
-    
-    Err(AudioError::PlaybackFailed(format!("Dispositivo '{}' no encontrado", name)))
+
+    Err(AudioError::PlaybackFailed(format!(
+        "Dispositivo '{}' no encontrado",
+        name
+    )))
 }
 
 /// Obtiene la mejor configuración soportada por el dispositivo
-fn get_best_config(device: &Device, desired_sample_rate: Option<u32>, desired_channels: Option<u16>) -> AudioResult<SupportedStreamConfig> {
+fn get_best_config(
+    device: &Device,
+    desired_sample_rate: Option<u32>,
+    desired_channels: Option<u16>,
+) -> AudioResult<SupportedStreamConfig> {
     // AIDEV-NOTE: Basado en Musicat - intentar usar el sample rate y canales del archivo si el dispositivo lo soporta
-    
+
     // Si se especificó un sample rate y/o canales deseados, verificar si el dispositivo los soporta
     if desired_sample_rate.is_some() || desired_channels.is_some() {
         if let Ok(configs) = device.supported_output_configs() {
             // Buscar una config que soporte lo solicitado
             for config_range in configs {
                 let mut matches = true;
-                
+
                 // Verificar sample rate si se especificó
                 if let Some(desired_rate) = desired_sample_rate {
-                    if config_range.try_with_sample_rate(cpal::SampleRate(desired_rate)).is_none() {
+                    if config_range
+                        .try_with_sample_rate(cpal::SampleRate(desired_rate))
+                        .is_none()
+                    {
                         matches = false;
                     }
                 }
-                
+
                 // Verificar canales si se especificó
                 if let Some(desired_ch) = desired_channels {
                     if config_range.channels() != desired_ch {
                         matches = false;
                     }
                 }
-                
+
                 if matches {
                     // Encontramos una configuración que cumple los requisitos
-                    let sample_rate = desired_sample_rate.unwrap_or(config_range.max_sample_rate().0);
-                    if let Some(config_with_rate) = config_range.try_with_sample_rate(cpal::SampleRate(sample_rate)) {
+                    let sample_rate =
+                        desired_sample_rate.unwrap_or(config_range.max_sample_rate().0);
+                    if let Some(config_with_rate) =
+                        config_range.try_with_sample_rate(cpal::SampleRate(sample_rate))
+                    {
                         log::info!(
                             "✅ Dispositivo soporta {} Hz / {} canales",
                             sample_rate,
@@ -313,7 +333,7 @@ fn get_best_config(device: &Device, desired_sample_rate: Option<u32>, desired_ch
                     }
                 }
             }
-            
+
             log::warn!(
                 "⚠️ Dispositivo NO soporta {:?} Hz / {:?} canales, usando configuración por defecto",
                 desired_sample_rate,
@@ -321,41 +341,44 @@ fn get_best_config(device: &Device, desired_sample_rate: Option<u32>, desired_ch
             );
         }
     }
-    
+
     // Fallback: intentar obtener configuración por defecto
     if let Ok(config) = device.default_output_config() {
         return Ok(config);
     }
-    
+
     // Si no hay default, buscar una configuración adecuada
     if let Ok(mut configs) = device.supported_output_configs() {
         if let Some(config) = configs.next() {
             // Preferir 44100 Hz y 2 canales (stereo) si está en el rango
-            let sample_rate = if config.min_sample_rate().0 <= DEFAULT_SAMPLE_RATE 
-                && config.max_sample_rate().0 >= DEFAULT_SAMPLE_RATE {
+            let sample_rate = if config.min_sample_rate().0 <= DEFAULT_SAMPLE_RATE
+                && config.max_sample_rate().0 >= DEFAULT_SAMPLE_RATE
+            {
                 cpal::SampleRate(DEFAULT_SAMPLE_RATE)
             } else {
                 config.max_sample_rate()
             };
-            
+
             return Ok(config.with_sample_rate(sample_rate));
         }
     }
-    
-    Err(AudioError::PlaybackFailed("No se encontró configuración de audio válida".to_string()))
+
+    Err(AudioError::PlaybackFailed(
+        "No se encontró configuración de audio válida".to_string(),
+    ))
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::audio::DEFAULT_VOLUME;
-    
+
     #[test]
     fn test_list_devices() {
         let result = CpalAudioOutput::list_devices();
         let _ = result;
     }
-    
+
     #[test]
     fn test_audio_device_info_serialize() {
         let info = AudioDeviceInfo {
@@ -373,7 +396,7 @@ mod tests {
             name: "Test Device".to_string(),
             is_default: false,
         };
-        
+
         assert_eq!(device.name, "Test Device");
         assert!(!device.is_default);
     }
@@ -381,7 +404,7 @@ mod tests {
     #[test]
     fn test_list_devices_returns_result() {
         let result = CpalAudioOutput::list_devices();
-        
+
         match result {
             Ok(devices) => {
                 for device in devices {
@@ -397,7 +420,7 @@ mod tests {
     #[test]
     fn test_cpal_output_creation_with_default_device() {
         let result = CpalAudioOutput::new(None, None, None, DEFAULT_VOLUME);
-        
+
         if let Ok(output) = result {
             assert!(output.sample_rate() > 0);
             assert!(output.channels() > 0);
@@ -409,13 +432,13 @@ mod tests {
     fn test_cpal_output_volume_range() {
         if let Ok(output) = CpalAudioOutput::new(None, None, None, 0.5) {
             assert!((output.get_volume() - 0.5).abs() < 0.01);
-            
+
             output.set_volume(0.8);
             assert!((output.get_volume() - 0.8).abs() < 0.01);
-            
+
             output.set_volume(-0.5);
             assert!((output.get_volume() - 0.0).abs() < 0.01);
-            
+
             output.set_volume(1.5);
             assert!((output.get_volume() - 1.0).abs() < 0.01);
         }
@@ -423,7 +446,8 @@ mod tests {
 
     #[test]
     fn test_cpal_output_with_invalid_device() {
-        let result = CpalAudioOutput::new(Some("NonExistentDevice12345"), None, None, DEFAULT_VOLUME);
+        let result =
+            CpalAudioOutput::new(Some("NonExistentDevice12345"), None, None, DEFAULT_VOLUME);
         assert!(result.is_err());
     }
 
@@ -433,7 +457,7 @@ mod tests {
             let _producer = output.get_producer();
             let _sr = output.sample_rate();
             let _ch = output.channels();
-            
+
             let _ = output.play();
             let _ = output.pause();
         }
@@ -443,16 +467,15 @@ mod tests {
     fn test_volume_persistence() {
         if let Ok(output) = CpalAudioOutput::new(None, None, None, 0.3) {
             assert!((output.get_volume() - 0.3).abs() < 0.01);
-            
+
             output.set_volume(0.7);
             assert!((output.get_volume() - 0.7).abs() < 0.01);
-            
+
             let _ = output.pause();
             assert!((output.get_volume() - 0.7).abs() < 0.01);
-            
+
             let _ = output.play();
             assert!((output.get_volume() - 0.7).abs() < 0.01);
         }
     }
 }
-

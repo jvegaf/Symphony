@@ -1,5 +1,5 @@
 import React from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -48,7 +48,7 @@ vi.mock("@dnd-kit/sortable", () => ({
 }));
 
 const mockPlaylist = {
-  id: 1,
+  id: "1",
   name: "Mi Playlist",
   description: "Descripción de prueba",
   track_count: 2,
@@ -58,7 +58,7 @@ const mockPlaylist = {
 
 const mockTracks = [
   {
-    id: 1,
+    id: "1",
     path: "/music/track1.mp3",
     title: "Track 1",
     artist: "Artist 1",
@@ -73,7 +73,7 @@ const mockTracks = [
     added_at: "2024-01-01T00:00:00Z",
   },
   {
-    id: 2,
+    id: "2",
     path: "/music/track2.mp3",
     title: "Track 2",
     artist: "Artist 2",
@@ -97,7 +97,7 @@ describe("PlaylistDetail", () => {
       defaultOptions: {
         queries: { 
           retry: false,
-          cacheTime: 0,
+          gcTime: 0,
           staleTime: 0,
         },
         mutations: { retry: false },
@@ -106,7 +106,7 @@ describe("PlaylistDetail", () => {
     vi.clearAllMocks();
 
     // Mock por defecto que funciona para todos los tests
-    mockInvoke.mockImplementation(async (command: string, args?: any) => {
+    mockInvoke.mockImplementation(async (command: string, _args?: any) => {
       if (command === "get_playlist") {
         return Promise.resolve(mockPlaylist);
       }
@@ -131,7 +131,7 @@ describe("PlaylistDetail", () => {
     queryClient.clear();
   });
 
-  const renderComponent = (playlistId: number) => {
+  const renderComponent = (playlistId: string) => {
     return render(
       <QueryClientProvider client={queryClient}>
         <PlaylistDetail playlistId={playlistId} />
@@ -140,7 +140,7 @@ describe("PlaylistDetail", () => {
   };
 
   it("debería renderizar información de playlist y lista de tracks", async () => {
-    renderComponent(1);
+    renderComponent("1");
 
     await waitFor(() => {
       expect(screen.getByText("Mi Playlist")).toBeInTheDocument();
@@ -155,7 +155,7 @@ describe("PlaylistDetail", () => {
       () => new Promise(() => {}) // Never resolves
     );
 
-    renderComponent(1);
+    renderComponent("1");
 
     expect(screen.getByText(/cargando/i)).toBeInTheDocument();
   });
@@ -165,7 +165,7 @@ describe("PlaylistDetail", () => {
       .mockRejectedValueOnce(new Error("Error de red"))
       .mockRejectedValueOnce(new Error("Error de red"));
 
-    renderComponent(1);
+    renderComponent("1");
 
     await waitFor(() => {
       expect(screen.getByText(/error/i)).toBeInTheDocument();
@@ -177,7 +177,7 @@ describe("PlaylistDetail", () => {
       .mockResolvedValueOnce(mockPlaylist)
       .mockResolvedValueOnce([]); // Sin tracks
 
-    renderComponent(1);
+    renderComponent("1");
 
     await waitFor(() => {
       expect(screen.getByText(/no hay tracks/i)).toBeInTheDocument();
@@ -190,7 +190,7 @@ describe("PlaylistDetail", () => {
       .mockResolvedValueOnce(mockPlaylist)
       .mockResolvedValueOnce(mockTracks);
 
-    renderComponent(1);
+    renderComponent("1");
 
     await waitFor(() => {
       expect(screen.getByText("Track 1")).toBeInTheDocument();
@@ -206,14 +206,14 @@ describe("PlaylistDetail", () => {
     const user = userEvent.setup();
     
     // Configurar mocks para soportar múltiples llamadas
-    mockInvoke.mockImplementation((cmd: string, args?: any) => {
+    mockInvoke.mockImplementation((cmd: string, _args?: any) => {
       if (cmd === "get_playlist") return Promise.resolve(mockPlaylist);
       if (cmd === "get_playlist_tracks_cmd") return Promise.resolve(mockTracks);
       if (cmd === "add_track_to_playlist") return Promise.resolve(undefined);
       return Promise.resolve(null);
     });
 
-    renderComponent(1);
+    renderComponent("1");
 
     await waitFor(() => {
       expect(screen.getByText("Track 1")).toBeInTheDocument();
@@ -238,8 +238,8 @@ describe("PlaylistDetail", () => {
       expect(addTrackCall).toBeDefined();
       expect(addTrackCall![1]).toEqual(
         expect.objectContaining({
-          playlist_id: 1,
-          track_id: 3,
+          playlist_id: "1",
+          track_id: "3",
         })
       );
     });
@@ -249,14 +249,14 @@ describe("PlaylistDetail", () => {
     const user = userEvent.setup();
     
     // Configurar mocks para soportar múltiples llamadas
-    mockInvoke.mockImplementation((cmd: string, args?: any) => {
+    mockInvoke.mockImplementation((cmd: string, _args?: any) => {
       if (cmd === "get_playlist") return Promise.resolve(mockPlaylist);
       if (cmd === "get_playlist_tracks_cmd") return Promise.resolve(mockTracks);
       if (cmd === "remove_track_from_playlist") return Promise.resolve(undefined);
       return Promise.resolve(null);
     });
 
-    renderComponent(1);
+    renderComponent("1");
 
     await waitFor(() => {
       expect(screen.getByText("Track 1")).toBeInTheDocument();
@@ -277,15 +277,15 @@ describe("PlaylistDetail", () => {
       expect(removeTrackCall).toBeDefined();
       expect(removeTrackCall![1]).toEqual(
         expect.objectContaining({
-          playlist_id: 1,
-          track_id: 1,
+          playlist_id: "1",
+          track_id: "1",
         })
       );
     });
   });
 
   it("debería reordenar tracks automáticamente", async () => {
-    renderComponent(1);
+    renderComponent("1");
 
     await waitFor(() => {
       expect(screen.getByText("Track 1")).toBeInTheDocument();
@@ -298,7 +298,7 @@ describe("PlaylistDetail", () => {
   });
 
   it("debería mostrar contador de tracks", async () => {
-    renderComponent(1);
+    renderComponent("1");
 
     await waitFor(() => {
       expect(screen.getByText(/2 tracks?/i)).toBeInTheDocument();
@@ -306,7 +306,7 @@ describe("PlaylistDetail", () => {
   });
 
   it("debería formatear duración de tracks correctamente", async () => {
-    renderComponent(1);
+    renderComponent("1");
 
     await waitFor(() => {
       expect(screen.getByText("3:00")).toBeInTheDocument(); // 180.5s

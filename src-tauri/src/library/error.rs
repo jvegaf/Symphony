@@ -7,19 +7,19 @@ use std::path::PathBuf;
 pub enum LibraryError {
     /// Error de I/O al acceder al sistema de archivos
     IoError(io::Error),
-    
+
     /// Ruta no encontrada
     PathNotFound(PathBuf),
-    
+
     /// Permisos insuficientes para acceder a la ruta
     PermissionDenied(PathBuf),
-    
+
     /// Error al extraer metadatos
     MetadataExtractionFailed(String),
-    
+
     /// Error en operación de base de datos
     DatabaseError(String),
-    
+
     /// Error al escanear directorio
     ScanError(String),
 }
@@ -56,7 +56,6 @@ pub type Result<T> = std::result::Result<T, LibraryError>;
 #[cfg(test)]
 mod tests {
     use super::*;
-
 
     #[test]
     fn test_error_display_io_error() {

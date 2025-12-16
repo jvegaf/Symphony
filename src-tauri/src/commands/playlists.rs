@@ -1,20 +1,15 @@
 use rusqlite::Connection;
+use serde::{Deserialize, Serialize};
 use std::sync::Mutex;
 use tauri::State;
-use serde::{Serialize, Deserialize};
 
 use crate::db::{
     models::Playlist,
     queries::{
-        insert_playlist,
-        get_all_playlists,
-        get_playlist as db_get_playlist,
-        update_playlist as db_update_playlist,
-        delete_playlist as db_delete_playlist,
-        add_track_to_playlist as db_add_track,
-        remove_track_from_playlist as db_remove_track,
+        add_track_to_playlist as db_add_track, delete_playlist as db_delete_playlist,
+        get_all_playlists, get_playlist as db_get_playlist, get_playlist_tracks, insert_playlist,
+        remove_track_from_playlist as db_remove_track, update_playlist as db_update_playlist,
         update_playlist_track_order as db_update_track_order,
-        get_playlist_tracks,
     },
 };
 
@@ -41,7 +36,7 @@ pub async fn create_playlist(
     db: State<'_, Mutex<Connection>>,
 ) -> Result<String, String> {
     let conn = db.lock().map_err(|e| e.to_string())?;
-    
+
     let playlist = Playlist {
         id: None,
         name,
@@ -49,16 +44,13 @@ pub async fn create_playlist(
         date_created: "".to_string(), // Se usa CURRENT_TIMESTAMP en DB
         date_modified: "".to_string(),
     };
-    
-    insert_playlist(&conn, &playlist)
-        .map_err(|e| e.to_string())
+
+    insert_playlist(&conn, &playlist).map_err(|e| e.to_string())
 }
 
 /// Obtener todas las playlists
 #[tauri::command]
-pub async fn get_playlists(
-    db: State<'_, Mutex<Connection>>,
-) -> Result<Vec<Playlist>, String> {
+pub async fn get_playlists(db: State<'_, Mutex<Connection>>) -> Result<Vec<Playlist>, String> {
     let conn = db.lock().map_err(|e| e.to_string())?;
     get_all_playlists(&conn).map_err(|e| e.to_string())
 }
@@ -82,16 +74,12 @@ pub async fn update_playlist(
     db: State<'_, Mutex<Connection>>,
 ) -> Result<(), String> {
     let conn = db.lock().map_err(|e| e.to_string())?;
-    db_update_playlist(&conn, &id, &name, description.as_deref())
-        .map_err(|e| e.to_string())
+    db_update_playlist(&conn, &id, &name, description.as_deref()).map_err(|e| e.to_string())
 }
 
 /// Eliminar playlist
 #[tauri::command]
-pub async fn delete_playlist(
-    id: String,
-    db: State<'_, Mutex<Connection>>,
-) -> Result<(), String> {
+pub async fn delete_playlist(id: String, db: State<'_, Mutex<Connection>>) -> Result<(), String> {
     let conn = db.lock().map_err(|e| e.to_string())?;
     db_delete_playlist(&conn, &id).map_err(|e| e.to_string())
 }
@@ -104,8 +92,7 @@ pub async fn add_track_to_playlist(
     db: State<'_, Mutex<Connection>>,
 ) -> Result<(), String> {
     let conn = db.lock().map_err(|e| e.to_string())?;
-    db_add_track(&conn, &playlist_id, &track_id)
-        .map_err(|e| e.to_string())
+    db_add_track(&conn, &playlist_id, &track_id).map_err(|e| e.to_string())
 }
 
 /// Eliminar track de playlist
@@ -116,8 +103,7 @@ pub async fn remove_track_from_playlist(
     db: State<'_, Mutex<Connection>>,
 ) -> Result<(), String> {
     let conn = db.lock().map_err(|e| e.to_string())?;
-    db_remove_track(&conn, &playlist_id, &track_id)
-        .map_err(|e| e.to_string())
+    db_remove_track(&conn, &playlist_id, &track_id).map_err(|e| e.to_string())
 }
 
 /// Reordenar tracks en playlist
@@ -128,8 +114,7 @@ pub async fn reorder_playlist_tracks(
     db: State<'_, Mutex<Connection>>,
 ) -> Result<(), String> {
     let mut conn = db.lock().map_err(|e| e.to_string())?;
-    db_update_track_order(&mut conn, &playlist_id, &track_ids)
-        .map_err(|e| e.to_string())
+    db_update_track_order(&mut conn, &playlist_id, &track_ids).map_err(|e| e.to_string())
 }
 
 /// Obtener tracks de una playlist
@@ -139,16 +124,15 @@ pub async fn get_playlist_tracks_cmd(
     db: State<'_, Mutex<Connection>>,
 ) -> Result<Vec<crate::db::models::Track>, String> {
     let conn = db.lock().map_err(|e| e.to_string())?;
-    get_playlist_tracks(&conn, &playlist_id)
-        .map_err(|e| e.to_string())
+    get_playlist_tracks(&conn, &playlist_id).map_err(|e| e.to_string())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::{Database, migrations};
-    use crate::db::queries::insert_track;
     use crate::db::models::Track;
+    use crate::db::queries::insert_track;
+    use crate::db::{migrations, Database};
 
     fn setup_db() -> Database {
         let db = Database::new_in_memory().unwrap();
@@ -190,13 +174,7 @@ mod tests {
         let id = insert_playlist(&db.conn, &playlist).unwrap();
 
         // Update
-        db_update_playlist(
-            &db.conn,
-            &id,
-            "Updated",
-            Some("New description"),
-        )
-        .unwrap();
+        db_update_playlist(&db.conn, &id, "Updated", Some("New description")).unwrap();
 
         let retrieved = db_get_playlist(&db.conn, &id).unwrap();
         assert_eq!(retrieved.name, "Updated");

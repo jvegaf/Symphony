@@ -48,13 +48,15 @@ export type CuePointType = 'cue' | 'intro' | 'outro' | 'drop' | 'vocal' | 'break
 
 /**
  * Cue point de una pista
+ * 
+ * AIDEV-NOTE: color es opcional - si no se especifica, se usa el color por defecto del tipo
  */
 export interface CuePoint {
   id: string;
   trackId: string;
   position: number;
   label: string;
-  color: string;
+  color?: string;
   type: CuePointType;
   hotkey?: number;
   createdAt: string;

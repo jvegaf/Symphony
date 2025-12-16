@@ -15,7 +15,7 @@ import {
 describe('validateCuePoint', () => {
   it('debería validar cue point válido', () => {
     const cue: Partial<CreateCuePointRequest> = {
-      trackId: 1,
+      trackId: "1",
       position: 30.5,
       type: 'cue',
       hotkey: 1,
@@ -66,7 +66,7 @@ describe('validateCuePoint', () => {
 describe('validateLoop', () => {
   it('debería validar loop válido', () => {
     const loop: Partial<CreateLoopRequest> = {
-      trackId: 1,
+      trackId: "1",
       loopStart: 10.0,
       loopEnd: 20.0,
     };
@@ -129,7 +129,7 @@ describe('validateLoop', () => {
 describe('validateBeatgrid', () => {
   it('debería validar beatgrid válido', () => {
     const beatgrid: Partial<Beatgrid> = {
-      trackId: 1,
+      trackId: "1",
       bpm: 120,
       offset: 0.5,
       confidence: 95,

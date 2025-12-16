@@ -1,12 +1,12 @@
-use std::path::Path;
+use serde::{Deserialize, Serialize};
 use std::fs::File;
-use symphonia::core::io::MediaSourceStream;
-use symphonia::core::probe::Hint;
-use symphonia::core::formats::FormatOptions;
-use symphonia::core::meta::MetadataOptions;
+use std::path::Path;
 use symphonia::core::codecs::CODEC_TYPE_NULL;
+use symphonia::core::formats::FormatOptions;
+use symphonia::core::io::MediaSourceStream;
+use symphonia::core::meta::MetadataOptions;
+use symphonia::core::probe::Hint;
 use symphonia::default::get_probe;
-use serde::{Serialize, Deserialize};
 
 use crate::audio::{AudioError, AudioResult};
 
@@ -39,13 +39,13 @@ pub struct AudioDecoder;
 
 impl AudioDecoder {
     /// Decodifica un archivo de audio y extrae muestras
-    /// 
+    ///
     /// Este método es para análisis que requieren acceso a samples (BPM detection, waveform, etc.)
     pub fn decode_samples(path: &Path) -> AudioResult<DecodedAudio> {
         use symphonia::core::audio::SampleBuffer;
         use symphonia::core::codecs::DecoderOptions;
         use symphonia::default::get_codecs;
-        
+
         // Validar que el archivo existe
         if !path.exists() {
             return Err(AudioError::FileNotFound(path.display().to_string()));
@@ -86,19 +86,20 @@ impl AudioDecoder {
         // Crear decoder
         let track_id = track.id;
         let codec_params = track.codec_params.clone();
-        let mut decoder = get_codecs()
-            .make(&codec_params, &DecoderOptions::default())?;
+        let mut decoder = get_codecs().make(&codec_params, &DecoderOptions::default())?;
 
-        let sample_rate = codec_params.sample_rate
+        let sample_rate = codec_params
+            .sample_rate
             .ok_or_else(|| AudioError::DecodingFailed("Sample rate not found".to_string()))?;
 
-        let channels = codec_params.channels
+        let channels = codec_params
+            .channels
             .ok_or_else(|| AudioError::DecodingFailed("Channels not found".to_string()))?
             .count() as u16;
 
         // Decodificar todos los packets y extraer samples
         let mut samples = Vec::new();
-        
+
         while let Ok(packet) = format.next_packet() {
             // Solo procesar packets del track de audio
             if packet.track_id() != track_id {
@@ -109,11 +110,9 @@ impl AudioDecoder {
             match decoder.decode(&packet) {
                 Ok(decoded) => {
                     // Crear buffer para convertir samples a f32
-                    let mut sample_buf = SampleBuffer::<f32>::new(
-                        decoded.capacity() as u64,
-                        *decoded.spec(),
-                    );
-                    
+                    let mut sample_buf =
+                        SampleBuffer::<f32>::new(decoded.capacity() as u64, *decoded.spec());
+
                     sample_buf.copy_interleaved_ref(decoded);
                     samples.extend_from_slice(sample_buf.samples());
                 }
@@ -132,7 +131,7 @@ impl AudioDecoder {
             duration,
         })
     }
-    
+
     /// Decodifica un archivo de audio y extrae metadatos
     pub fn decode(path: &Path) -> AudioResult<AudioMetadata> {
         // Validar que el archivo existe
@@ -175,10 +174,12 @@ impl AudioDecoder {
         // Extraer metadatos
         let codec_params = &track.codec_params;
 
-        let sample_rate = codec_params.sample_rate
+        let sample_rate = codec_params
+            .sample_rate
             .ok_or_else(|| AudioError::DecodingFailed("Sample rate not found".to_string()))?;
 
-        let channels = codec_params.channels
+        let channels = codec_params
+            .channels
             .ok_or_else(|| AudioError::DecodingFailed("Channels not found".to_string()))?
             .count() as u16;
 
@@ -212,9 +213,15 @@ impl AudioDecoder {
         if let Some(metadata) = format.metadata().current() {
             for tag in metadata.tags() {
                 match tag.std_key {
-                    Some(symphonia::core::meta::StandardTagKey::TrackTitle) => title = Some(tag.value.to_string()),
-                    Some(symphonia::core::meta::StandardTagKey::Artist) => artist = Some(tag.value.to_string()),
-                    Some(symphonia::core::meta::StandardTagKey::Album) => album = Some(tag.value.to_string()),
+                    Some(symphonia::core::meta::StandardTagKey::TrackTitle) => {
+                        title = Some(tag.value.to_string())
+                    }
+                    Some(symphonia::core::meta::StandardTagKey::Artist) => {
+                        artist = Some(tag.value.to_string())
+                    }
+                    Some(symphonia::core::meta::StandardTagKey::Album) => {
+                        album = Some(tag.value.to_string())
+                    }
                     Some(symphonia::core::meta::StandardTagKey::Date) => {
                         // Intentar parsear el año (puede venir como "2024" o "2024-01-01")
                         let val = tag.value.to_string();
@@ -225,9 +232,11 @@ impl AudioDecoder {
                                 year = Some(y);
                             }
                         }
-                    },
-                    Some(symphonia::core::meta::StandardTagKey::Genre) => genre = Some(tag.value.to_string()),
-                    _ => {},
+                    }
+                    Some(symphonia::core::meta::StandardTagKey::Genre) => {
+                        genre = Some(tag.value.to_string())
+                    }
+                    _ => {}
                 }
             }
         }
@@ -254,7 +263,9 @@ impl AudioDecoder {
             .map(|s| s.to_lowercase());
 
         match ext.as_deref() {
-            Some("mp3") | Some("flac") | Some("wav") | Some("ogg") | Some("m4a") | Some("aac") => Ok(()),
+            Some("mp3") | Some("flac") | Some("wav") | Some("ogg") | Some("m4a") | Some("aac") => {
+                Ok(())
+            }
             Some(fmt) => Err(AudioError::UnsupportedFormat(fmt.to_string())),
             None => Err(AudioError::UnsupportedFormat("unknown".to_string())),
         }
@@ -283,7 +294,10 @@ mod tests {
         let path = PathBuf::from("test.xyz");
         let result = AudioDecoder::validate_format(&path);
         assert!(result.is_err());
-        assert!(matches!(result.unwrap_err(), AudioError::UnsupportedFormat(_)));
+        assert!(matches!(
+            result.unwrap_err(),
+            AudioError::UnsupportedFormat(_)
+        ));
     }
 
     #[test]

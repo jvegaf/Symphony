@@ -28,7 +28,9 @@ impl fmt::Display for AudioError {
             AudioError::FileNotFound(path) => write!(f, "Archivo no encontrado: {}", path),
             AudioError::PlaybackFailed(msg) => write!(f, "Error de reproducción: {}", msg),
             AudioError::IoError(msg) => write!(f, "Error de I/O: {}", msg),
-            AudioError::WaveformGenerationFailed(msg) => write!(f, "Error generando waveform: {}", msg),
+            AudioError::WaveformGenerationFailed(msg) => {
+                write!(f, "Error generando waveform: {}", msg)
+            }
             AudioError::AnalysisError(msg) => write!(f, "Error en análisis: {}", msg),
         }
     }

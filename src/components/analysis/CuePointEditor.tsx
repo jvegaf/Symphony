@@ -4,8 +4,8 @@
  */
 
 import { useMemo } from 'react';
-import { cn } from '@/utils/cn';
-import type { CuePoint } from '@/types/analysis';
+import { cn } from '../../utils/cn';
+import type { CuePoint } from '../../types/analysis';
 
 export interface CuePointEditorProps {
   /** Lista de cue points */
@@ -19,9 +19,9 @@ export interface CuePointEditorProps {
   /** Callback cuando se hace click en un cue point */
   onCuePointClick?: (cuePoint: CuePoint) => void;
   /** Callback cuando se arrastra un cue point */
-  onCuePointDrag?: (cuePointId: number, newPosition: number) => void;
+  onCuePointDrag?: (cuePointId: string, newPosition: number) => void;
   /** ID del cue point seleccionado */
-  selectedCuePointId?: number;
+  selectedCuePointId?: string;
   /** Clase CSS adicional */
   className?: string;
 }

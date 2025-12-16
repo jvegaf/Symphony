@@ -1,12 +1,12 @@
+use serde::{Deserialize, Serialize};
+use std::fs;
 use std::path::Path;
 use std::time::{Duration, Instant};
-use std::fs;
 use tauri::{AppHandle, Emitter};
-use serde::{Serialize, Deserialize};
 
-use super::scanner::LibraryScanner;
-use super::metadata::MetadataExtractor;
 use super::error::Result;
+use super::metadata::MetadataExtractor;
+use super::scanner::LibraryScanner;
 use crate::db::models::Track;
 use crate::db::{get_connection, queries};
 
@@ -79,14 +79,14 @@ impl LibraryImporter {
     }
 
     /// Importa una biblioteca completa
-    /// 
+    ///
     /// # Arguments
     /// * `app_handle` - Handle de la aplicación Tauri (para eventos)
     /// * `library_path` - Ruta al directorio de la biblioteca
-    /// 
+    ///
     /// # Returns
     /// Resultado de la importación con estadísticas
-    /// 
+    ///
     /// # Events
     /// Emite eventos:
     /// - `library:import-progress` con ImportProgress
@@ -99,17 +99,21 @@ impl LibraryImporter {
         let start_time = Instant::now();
 
         // Fase 1: Escanear directorio
-        self.emit_progress(&app_handle, ImportProgress {
-            current: 0,
-            total: 0,
-            phase: ImportPhase::Scanning,
-        });
+        self.emit_progress(
+            &app_handle,
+            ImportProgress {
+                current: 0,
+                total: 0,
+                phase: ImportPhase::Scanning,
+            },
+        );
 
         let audio_files = self.scanner.scan_directory(library_path)?;
         let total_files = audio_files.len();
 
         // Obtener conexión a DB
-        let db = get_connection().map_err(|e| super::error::LibraryError::DatabaseError(e.to_string()))?;
+        let db = get_connection()
+            .map_err(|e| super::error::LibraryError::DatabaseError(e.to_string()))?;
 
         // Fase 2: Importar archivos
         let mut imported = 0;
@@ -146,11 +150,14 @@ impl LibraryImporter {
                 || last_progress_time.elapsed() >= self.config.progress_time_interval;
 
             if should_emit {
-                self.emit_progress(&app_handle, ImportProgress {
-                    current: idx + 1,
-                    total: total_files,
-                    phase: ImportPhase::Importing,
-                });
+                self.emit_progress(
+                    &app_handle,
+                    ImportProgress {
+                        current: idx + 1,
+                        total: total_files,
+                        phase: ImportPhase::Importing,
+                    },
+                );
                 last_progress_time = Instant::now();
             }
         }
@@ -170,19 +177,27 @@ impl LibraryImporter {
     }
 
     /// Convierte metadatos extraídos a modelo Track
-    fn metadata_to_track(&self, metadata: &super::metadata::TrackMetadata, path: &Path) -> Result<Track> {
+    fn metadata_to_track(
+        &self,
+        metadata: &super::metadata::TrackMetadata,
+        path: &Path,
+    ) -> Result<Track> {
         // Obtener tamaño del archivo
-        let file_size = fs::metadata(path)
-            .map(|m| m.len() as i64)
-            .unwrap_or(0);
+        let file_size = fs::metadata(path).map(|m| m.len() as i64).unwrap_or(0);
 
         let now = chrono::Local::now().to_rfc3339();
 
         Ok(Track {
             id: None, // Se asigna al insertar en DB
             path: metadata.path.clone(),
-            title: metadata.title.clone().unwrap_or_else(|| "Unknown".to_string()),
-            artist: metadata.artist.clone().unwrap_or_else(|| "Unknown".to_string()),
+            title: metadata
+                .title
+                .clone()
+                .unwrap_or_else(|| "Unknown".to_string()),
+            artist: metadata
+                .artist
+                .clone()
+                .unwrap_or_else(|| "Unknown".to_string()),
             album: metadata.album.clone(),
             genre: metadata.genre.clone(),
             year: metadata.year,
@@ -227,12 +242,12 @@ mod tests {
     // Helper: Crea un archivo WAV válido mínimo
     fn create_test_wav(path: &Path) {
         let mut file = File::create(path).unwrap();
-        
+
         // WAV header mínimo (44 bytes)
         file.write_all(b"RIFF").unwrap();
         file.write_all(&36u32.to_le_bytes()).unwrap();
         file.write_all(b"WAVE").unwrap();
-        
+
         file.write_all(b"fmt ").unwrap();
         file.write_all(&16u32.to_le_bytes()).unwrap();
         file.write_all(&1u16.to_le_bytes()).unwrap();
@@ -241,7 +256,7 @@ mod tests {
         file.write_all(&176400u32.to_le_bytes()).unwrap();
         file.write_all(&4u16.to_le_bytes()).unwrap();
         file.write_all(&16u16.to_le_bytes()).unwrap();
-        
+
         file.write_all(b"data").unwrap();
         file.write_all(&0u32.to_le_bytes()).unwrap();
     }
@@ -320,7 +335,11 @@ mod tests {
         assert_eq!(track.duration, 180.0);
         assert_eq!(track.bpm, Some(128.0));
         assert_eq!(track.key, Some("Am".to_string()));
-        assert_eq!(track.rating, Some(5), "Rating should be preserved from metadata");
+        assert_eq!(
+            track.rating,
+            Some(5),
+            "Rating should be preserved from metadata"
+        );
         assert!(track.file_size > 0);
     }
 

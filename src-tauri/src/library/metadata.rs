@@ -1,13 +1,13 @@
-use std::path::Path;
-use lofty::probe::Probe;
-use lofty::config::{ParseOptions, WriteOptions};
-use lofty::tag::{Accessor, ItemKey, Tag, TagType};
-use lofty::file::{AudioFile, TaggedFile, TaggedFileExt};
-use id3::TagLike;  // Needed for remove() and add_frame() methods
 use super::error::{LibraryError, Result};
+use id3::TagLike; // Needed for remove() and add_frame() methods
+use lofty::config::{ParseOptions, WriteOptions};
+use lofty::file::{AudioFile, TaggedFile, TaggedFileExt};
+use lofty::probe::Probe;
+use lofty::tag::{Accessor, ItemKey, Tag, TagType};
+use std::path::Path;
 
 /// Metadatos extraídos de un archivo de audio
-/// 
+///
 /// AIDEV-NOTE: Esta estructura replica los campos que extraíamos en Python con mutagen/TinyTag
 /// Soporta lectura y escritura de tags ID3v2 (MP3), MP4 (M4A), Vorbis, APE, etc.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -15,55 +15,55 @@ use super::error::{LibraryError, Result};
 pub struct TrackMetadata {
     /// Ruta completa del archivo
     pub path: String,
-    
+
     /// Título de la pista
     pub title: Option<String>,
-    
+
     /// Artista
     pub artist: Option<String>,
-    
+
     /// Álbum
     pub album: Option<String>,
-    
+
     /// Año de lanzamiento
     pub year: Option<i32>,
-    
+
     /// Género musical
     pub genre: Option<String>,
-    
+
     /// BPM (beats por minuto) - extraído de tag TBPM/tmpo
     pub bpm: Option<i32>,
-    
+
     /// Tonalidad musical (Initial Key) - extraído de tag TKEY/key
     pub key: Option<String>,
-    
+
     /// Rating/Popularidad (0-5 estrellas, se convierte a/desde POPM 0-255)
     pub rating: Option<i32>,
-    
+
     /// Comentarios
     pub comment: Option<String>,
-    
+
     /// Duración en segundos
     pub duration: f64,
-    
+
     /// Bitrate en kbps
     pub bitrate: i32,
-    
+
     /// Sample rate en Hz
     pub sample_rate: u32,
-    
+
     /// Número de canales
     pub channels: u16,
-    
+
     /// Formato de audio (mp3, flac, wav, etc.)
     pub format: String,
-    
+
     /// Artwork (imagen de portada) en base64
     pub artwork: Option<String>,
 }
 
 /// Extractor de metadatos de archivos de audio usando lofty
-/// 
+///
 /// AIDEV-NOTE: Equivalente Rust de SongCreator en Python
 /// Soporta lectura de ID3v2, ID3v1, APEv2, Vorbis Comments, MP4 atoms
 pub struct MetadataExtractor;
@@ -75,13 +75,13 @@ impl MetadataExtractor {
     }
 
     /// Extrae metadatos de un archivo de audio usando lofty
-    /// 
+    ///
     /// # Arguments
     /// * `path` - Ruta al archivo de audio
-    /// 
+    ///
     /// # Returns
     /// Estructura TrackMetadata con todos los metadatos disponibles
-    /// 
+    ///
     /// # Errors
     /// Retorna error si:
     /// - El archivo no existe
@@ -90,14 +90,15 @@ impl MetadataExtractor {
     pub fn extract_metadata(&self, path: &Path) -> Result<TrackMetadata> {
         // Validar que el archivo existe
         if !path.exists() {
-            return Err(LibraryError::MetadataExtractionFailed(
-                format!("File not found: {}", path.display())
-            ));
+            return Err(LibraryError::MetadataExtractionFailed(format!(
+                "File not found: {}",
+                path.display()
+            )));
         }
 
         // Leer archivo con lofty (auto-detecta formato)
         let parse_options = ParseOptions::new();
-        
+
         let tagged_file = Probe::open(path)
             .map_err(|e| LibraryError::MetadataExtractionFailed(e.to_string()))?
             .options(parse_options)
@@ -112,13 +113,15 @@ impl MetadataExtractor {
         let channels = properties.channels().unwrap_or(2) as u16;
 
         // Obtener formato
-        let format = path.extension()
+        let format = path
+            .extension()
             .and_then(|ext| ext.to_str())
             .unwrap_or("unknown")
             .to_lowercase();
 
         // Obtener tag primario (preferir ID3v2 > Vorbis > APE > ID3v1)
-        let tag = tagged_file.primary_tag()
+        let tag = tagged_file
+            .primary_tag()
             .or_else(|| tagged_file.first_tag());
 
         // Extraer rating de ID3v2 (POPM frame) si está disponible
@@ -173,7 +176,7 @@ impl MetadataExtractor {
 
     /// Obtiene el título del tag o del filename como fallback
     /// Replica el comportamiento de _get_title() en Python
-    /// 
+    ///
     /// AIDEV-NOTE: Si el tag tiene título y no está vacío, se usa.
     /// Si no, se usa el filename sin extensión como fallback.
     fn get_title(path: &Path, tag: &Tag) -> Option<String> {
@@ -186,7 +189,7 @@ impl MetadataExtractor {
 
     /// Extrae título del nombre del archivo (fallback cuando no hay tag)
     /// Replica el comportamiento de _get_title() en Python
-    /// 
+    ///
     /// Convierte "Song Name.mp3" -> "Song Name"
     fn get_title_from_filename(path: &Path) -> Option<String> {
         path.file_stem()
@@ -197,7 +200,7 @@ impl MetadataExtractor {
 
     /// Obtiene el artista del tag
     /// Replica el comportamiento de extracción en Python
-    /// 
+    ///
     /// AIDEV-NOTE: Si no hay artista en el tag, retorna None (no "Unknown")
     /// El frontend puede decidir cómo mostrar artistas vacíos
     fn get_artist(tag: &Tag) -> Option<String> {
@@ -231,27 +234,26 @@ impl MetadataExtractor {
     /// Extrae tonalidad musical del tag TKEY (ID3v2) o clave (MP4)
     /// Replica el comportamiento de _get_key() en Python
     fn get_key(tag: &Tag) -> Option<String> {
-        tag.get_string(&ItemKey::InitialKey)
-            .map(|s| s.to_string())
+        tag.get_string(&ItemKey::InitialKey).map(|s| s.to_string())
     }
 
     /// Extrae rating del tag POPM (Popularimeter en ID3v2)
     /// Replica el comportamiento de _get_rating() en Python
-    /// 
+    ///
     /// AIDEV-NOTE: Algoritmo compatible con Traktor Native Instruments
     /// POPM rating en ID3v2 está en rango 0-255, lo convertimos a 0-5 estrellas
     /// Usa round() para evitar inconsistencia del algoritmo antiguo de Python
     /// Algoritmo correcto: Math.round((popm / 255) * 5)
     /// Ver RATING_IMPLEMENTATION.md para detalles completos
-    /// 
+    ///
     /// Extrae rating de un archivo MP3 usando id3 crate
-    /// 
+    ///
     /// AIDEV-NOTE: Reemplaza get_rating_from_id3v2() porque lofty no expone frames POPM correctamente
     /// Ver test_debug_popm_frames_in_test_mp3() para evidencia diagnóstica
     fn get_rating_from_mp3_file(path: &Path) -> Option<i32> {
         // Intentar leer tag ID3 del archivo
         let tag = id3::Tag::read_from_path(path).ok()?;
-        
+
         // Buscar frame POPM (Popularimeter)
         for frame in tag.frames() {
             if frame.id() == "POPM" {
@@ -262,7 +264,7 @@ impl MetadataExtractor {
                 }
             }
         }
-        
+
         None
     }
 
@@ -270,18 +272,19 @@ impl MetadataExtractor {
     /// Continúa con el siguiente archivo si uno falla
     #[allow(dead_code)]
     pub fn extract_metadata_batch(&self, paths: &[impl AsRef<Path>]) -> Vec<Result<TrackMetadata>> {
-        paths.iter()
+        paths
+            .iter()
             .map(|path| self.extract_metadata(path.as_ref()))
             .collect()
     }
 
     /// Escribe metadatos a un archivo de audio
     /// Replica el comportamiento de SongUpdater.update_song_from_tag() en Python
-    /// 
+    ///
     /// # Arguments
     /// * `path` - Ruta al archivo de audio
     /// * `metadata` - Metadatos a escribir
-    /// 
+    ///
     /// # Errors
     /// Retorna error si:
     /// - El archivo no existe
@@ -290,7 +293,7 @@ impl MetadataExtractor {
     pub fn write_metadata(&self, path: &Path, metadata: &TrackMetadata) -> Result<()> {
         // Leer archivo existente
         let parse_options = ParseOptions::new().read_properties(false);
-        
+
         let mut tagged_file: TaggedFile = Probe::open(path)
             .map_err(|e: lofty::error::LoftyError| {
                 LibraryError::MetadataExtractionFailed(e.to_string())
@@ -332,7 +335,7 @@ impl MetadataExtractor {
         if let Some(ref comment) = metadata.comment {
             tag.set_comment(comment.clone());
         }
-        
+
         // BPM y Key requieren ItemKey específicos
         if let Some(bpm) = metadata.bpm {
             tag.insert_text(ItemKey::Bpm, bpm.to_string());
@@ -343,11 +346,10 @@ impl MetadataExtractor {
 
         // Guardar cambios al archivo (tags estándar)
         let write_options = WriteOptions::default();
-        tagged_file.save_to_path(path, write_options)
+        tagged_file
+            .save_to_path(path, write_options)
             .map_err(|e: lofty::error::LoftyError| {
-                LibraryError::MetadataExtractionFailed(
-                    format!("Failed to write metadata: {}", e)
-                )
+                LibraryError::MetadataExtractionFailed(format!("Failed to write metadata: {}", e))
             })?;
 
         // Escribir rating (POPM frame) para archivos MP3/ID3v2
@@ -362,14 +364,15 @@ impl MetadataExtractor {
 
     /// Escribe rating al tag ID3v2 usando frame POPM con id3 crate
     /// Replica el comportamiento de UpdateTrackRating en TypeScript
-    /// 
+    ///
     /// AIDEV-NOTE: Algoritmo compatible con Traktor Native Instruments
     /// - Input: rating_stars (0-5)
     /// - POPM value: Math.round((rating_stars / 5) * 255)
     /// - Email: traktor@native-instruments.de (mismo que usa Traktor Pro)
     /// - Counter: 0 (siempre, no usamos el contador de plays del POPM)
-    /// Ver RATING_IMPLEMENTATION.md para detalles completos
-    /// 
+    ///
+    ///   Ver RATING_IMPLEMENTATION.md para detalles completos
+    ///
     /// # Arguments
     /// * `path` - Ruta al archivo MP3
     /// * `rating_stars` - Valor de rating en estrellas (0-5)
@@ -384,12 +387,11 @@ impl MetadataExtractor {
         }
 
         // Leer tag existente o crear uno nuevo
-        let mut tag = id3::Tag::read_from_path(path)
-            .unwrap_or_else(|_| id3::Tag::new());
+        let mut tag = id3::Tag::read_from_path(path).unwrap_or_else(|_| id3::Tag::new());
 
         // Validar y clampear rango de estrellas
         let clamped_rating = rating_stars.clamp(0, 5);
-        
+
         // Convertir estrellas (0-5) a POPM (0-255) usando algoritmo de Traktor/TypeScript
         let popm_value = (((clamped_rating as f32 / 5.0) * 255.0).round() as i32).min(255) as u8;
 
@@ -405,12 +407,13 @@ impl MetadataExtractor {
         tag.add_frame(popm_frame);
 
         // Escribir tag al archivo (preservando ID3v2.3 si existe, usando v2.4 para nuevos)
-        tag.write_to_path(path, id3::Version::Id3v24)
-            .map_err(|e| {
-                LibraryError::MetadataExtractionFailed(
-                    format!("Failed to write rating to {}: {}", path.display(), e)
-                )
-            })?;
+        tag.write_to_path(path, id3::Version::Id3v24).map_err(|e| {
+            LibraryError::MetadataExtractionFailed(format!(
+                "Failed to write rating to {}: {}",
+                path.display(),
+                e
+            ))
+        })?;
 
         Ok(())
     }
@@ -444,34 +447,34 @@ mod tests {
     // Helper: Crea un archivo WAV válido usando hound
     fn create_test_wav(path: &Path) {
         use hound::{WavSpec, WavWriter};
-        
+
         let spec = WavSpec {
             channels: 2,
             sample_rate: 44100,
             bits_per_sample: 16,
             sample_format: hound::SampleFormat::Int,
         };
-        
+
         let mut writer = WavWriter::create(path, spec).unwrap();
-        
+
         // Escribir 1 segundo de audio silencioso
         for _ in 0..(spec.sample_rate * spec.channels as u32) {
             writer.write_sample(0i16).unwrap();
         }
-        
+
         writer.finalize().unwrap();
     }
 
     #[test]
     fn test_metadata_extractor_new() {
         let _extractor = MetadataExtractor::new();
-        assert!(true);
+        // Extractor se crea correctamente si no hay panic
     }
 
     #[test]
     fn test_metadata_extractor_default() {
-        let _extractor = MetadataExtractor::default();
-        assert!(true);
+        let _extractor = MetadataExtractor;
+        // Extractor default funciona si no hay panic
     }
 
     #[test]
@@ -479,10 +482,10 @@ mod tests {
         let extractor = MetadataExtractor::new();
         let path = Path::new("/nonexistent/file.mp3");
         let result = extractor.extract_metadata(path);
-        
+
         assert!(result.is_err());
         match result {
-            Err(LibraryError::MetadataExtractionFailed(_)) => {},
+            Err(LibraryError::MetadataExtractionFailed(_)) => {}
             _ => panic!("Esperaba MetadataExtractionFailed"),
         }
     }
@@ -498,7 +501,7 @@ mod tests {
 
         assert!(result.is_ok());
         let metadata = result.unwrap();
-        
+
         assert_eq!(metadata.format, "wav");
         assert!(metadata.duration >= 0.0);
         assert!(metadata.path.contains("test.wav"));
@@ -515,7 +518,7 @@ mod tests {
 
         assert!(result.is_ok());
         let metadata = result.unwrap();
-        
+
         // WAV sin tags debe usar filename como título
         assert_eq!(metadata.title, Some("My Awesome Song".to_string()));
     }
@@ -539,14 +542,14 @@ mod tests {
         let extractor = MetadataExtractor::new();
         let paths: Vec<&Path> = vec![];
         let results = extractor.extract_metadata_batch(&paths);
-        
+
         assert_eq!(results.len(), 0);
     }
 
     #[test]
     fn test_extract_metadata_batch_multiple_files() {
         let temp_dir = TempDir::new().unwrap();
-        
+
         let wav1 = temp_dir.path().join("track1.wav");
         let wav2 = temp_dir.path().join("track2.wav");
         create_test_wav(&wav1);
@@ -555,7 +558,7 @@ mod tests {
         let extractor = MetadataExtractor::new();
         let paths = vec![wav1, wav2];
         let results = extractor.extract_metadata_batch(&paths);
-        
+
         assert_eq!(results.len(), 2);
         assert!(results[0].is_ok());
         assert!(results[1].is_ok());
@@ -564,16 +567,16 @@ mod tests {
     #[test]
     fn test_extract_metadata_batch_with_failures() {
         let temp_dir = TempDir::new().unwrap();
-        
+
         let wav_valid = temp_dir.path().join("valid.wav");
         let wav_invalid = temp_dir.path().join("invalid.wav");
-        
+
         create_test_wav(&wav_valid);
 
         let extractor = MetadataExtractor::new();
         let paths = vec![wav_valid, wav_invalid];
         let results = extractor.extract_metadata_batch(&paths);
-        
+
         assert_eq!(results.len(), 2);
         assert!(results[0].is_ok());
         assert!(results[1].is_err());
@@ -652,9 +655,11 @@ mod tests {
 
         for (stars, expected_popm) in test_cases {
             let popm = (((stars as f32 / 5.0) * 255.0).round() as i32).min(255);
-            assert_eq!(popm, expected_popm, 
-                "Conversión incorrecta: {} estrellas debería dar {} POPM, pero dio {}", 
-                stars, expected_popm, popm);
+            assert_eq!(
+                popm, expected_popm,
+                "Conversión incorrecta: {} estrellas debería dar {} POPM, pero dio {}",
+                stars, expected_popm, popm
+            );
         }
     }
 
@@ -663,25 +668,27 @@ mod tests {
         // Test conversión de POPM a estrellas usando round()
         // AIDEV-NOTE: Verifica compatibilidad con algoritmo de Traktor
         let test_cases = vec![
-            (0, 0),    // 0 POPM -> round((0/255)*5) = 0 estrellas
-            (25, 0),   // 25 POPM -> round((25/255)*5) = round(0.49) = 0 estrellas
-            (26, 1),   // 26 POPM -> round((26/255)*5) = round(0.51) = 1 estrella
-            (51, 1),   // 51 POPM -> round((51/255)*5) = round(1.0) = 1 estrella
-            (77, 2),   // 77 POPM -> round((77/255)*5) = round(1.51) = 2 estrellas
-            (102, 2),  // 102 POPM -> round((102/255)*5) = round(2.0) = 2 estrellas
-            (128, 3),  // 128 POPM -> round((128/255)*5) = round(2.51) = 3 estrellas
-            (153, 3),  // 153 POPM -> round((153/255)*5) = round(3.0) = 3 estrellas
-            (179, 4),  // 179 POPM -> round((179/255)*5) = round(3.51) = 4 estrellas
-            (204, 4),  // 204 POPM -> round((204/255)*5) = round(4.0) = 4 estrellas
-            (230, 5),  // 230 POPM -> round((230/255)*5) = round(4.51) = 5 estrellas
-            (255, 5),  // 255 POPM -> round((255/255)*5) = round(5.0) = 5 estrellas
+            (0, 0),   // 0 POPM -> round((0/255)*5) = 0 estrellas
+            (25, 0),  // 25 POPM -> round((25/255)*5) = round(0.49) = 0 estrellas
+            (26, 1),  // 26 POPM -> round((26/255)*5) = round(0.51) = 1 estrella
+            (51, 1),  // 51 POPM -> round((51/255)*5) = round(1.0) = 1 estrella
+            (77, 2),  // 77 POPM -> round((77/255)*5) = round(1.51) = 2 estrellas
+            (102, 2), // 102 POPM -> round((102/255)*5) = round(2.0) = 2 estrellas
+            (128, 3), // 128 POPM -> round((128/255)*5) = round(2.51) = 3 estrellas
+            (153, 3), // 153 POPM -> round((153/255)*5) = round(3.0) = 3 estrellas
+            (179, 4), // 179 POPM -> round((179/255)*5) = round(3.51) = 4 estrellas
+            (204, 4), // 204 POPM -> round((204/255)*5) = round(4.0) = 4 estrellas
+            (230, 5), // 230 POPM -> round((230/255)*5) = round(4.51) = 5 estrellas
+            (255, 5), // 255 POPM -> round((255/255)*5) = round(5.0) = 5 estrellas
         ];
 
         for (popm, expected_stars) in test_cases {
             let stars = ((popm as f32 / 255.0) * 5.0).round() as i32;
-            assert_eq!(stars, expected_stars,
+            assert_eq!(
+                stars, expected_stars,
                 "Conversión incorrecta: {} POPM debería dar {} estrellas, pero dio {}",
-                popm, expected_stars, stars);
+                popm, expected_stars, stars
+            );
         }
     }
 
@@ -690,13 +697,15 @@ mod tests {
         // Test completo: estrellas -> POPM -> estrellas
         for stars in 0..=5 {
             // Convertir a POPM
-            let popm = (((stars as f32 / 5.0) * 255.0).round() as u8).min(255);
+            let popm = ((stars as f32 / 5.0) * 255.0).round() as u8;
             // Convertir de vuelta a estrellas
             let roundtrip_stars = ((popm as f32 / 255.0) * 5.0).round() as i32;
-            
-            assert_eq!(stars, roundtrip_stars,
+
+            assert_eq!(
+                stars, roundtrip_stars,
                 "Roundtrip falló: {} estrellas -> {} POPM -> {} estrellas",
-                stars, popm, roundtrip_stars);
+                stars, popm, roundtrip_stars
+            );
         }
     }
 
@@ -704,7 +713,7 @@ mod tests {
     fn test_extract_rating_from_real_mp3() {
         // Test con archivo MP3 real que tiene rating de 5 estrellas
         let path = Path::new("../data/test.mp3");
-        
+
         if !path.exists() {
             println!("⚠️  Archivo test.mp3 no encontrado, skipping test");
             return;
@@ -721,18 +730,21 @@ mod tests {
         println!("   - Bitrate: {} kbps", metadata.bitrate);
 
         // El archivo debe tener rating de 5 estrellas
-        assert_eq!(metadata.rating, Some(5), 
-            "El archivo test.mp3 debe tener rating de 5 estrellas, pero tiene {:?}", 
-            metadata.rating);
+        assert_eq!(
+            metadata.rating,
+            Some(5),
+            "El archivo test.mp3 debe tener rating de 5 estrellas, pero tiene {:?}",
+            metadata.rating
+        );
     }
 
     #[test]
     fn test_debug_popm_frames_in_test_mp3() {
-        use lofty::probe::Probe;
         use lofty::config::ParseOptions;
-        
+        use lofty::probe::Probe;
+
         let path = Path::new("../data/test.mp3");
-        
+
         if !path.exists() {
             println!("⚠️  Archivo test.mp3 no encontrado, skipping test");
             return;
@@ -751,7 +763,7 @@ mod tests {
         for tag in tagged_file.tags() {
             println!("\n📋 Tag type: {:?}", tag.tag_type());
             println!("   Items count: {}", tag.items().count());
-            
+
             for item in tag.items() {
                 println!("   - Key: {:?}", item.key());
                 match item.value() {
@@ -759,10 +771,17 @@ mod tests {
                     lofty::tag::ItemValue::Binary(b) => {
                         println!("     Value (binary): {} bytes", b.len());
                         if b.len() < 100 {
-                            println!("     Hex: {}", b.iter().map(|b| format!("{:02x}", b)).collect::<Vec<_>>().join(" "));
+                            println!(
+                                "     Hex: {}",
+                                b.iter()
+                                    .map(|b| format!("{:02x}", b))
+                                    .collect::<Vec<_>>()
+                                    .join(" ")
+                            );
                             // Try to parse as POPM
                             if let Some(null_pos) = b.iter().position(|&byte| byte == 0) {
-                                let email = std::str::from_utf8(&b[0..null_pos]).unwrap_or("<invalid>");
+                                let email =
+                                    std::str::from_utf8(&b[0..null_pos]).unwrap_or("<invalid>");
                                 if b.len() > null_pos + 1 {
                                     let rating_byte = b[null_pos + 1];
                                     println!("     POPM email: {}", email);
@@ -772,7 +791,7 @@ mod tests {
                                 }
                             }
                         }
-                    },
+                    }
                     lofty::tag::ItemValue::Locator(l) => println!("     Value (locator): {}", l),
                 }
             }
@@ -783,18 +802,18 @@ mod tests {
         if let Ok(tag) = id3::Tag::read_from_path(path) {
             println!("ID3 version: {:?}", tag.version());
             println!("Frames count: {}", tag.frames().count());
-            
+
             // Buscar frame POPM
             for frame in tag.frames() {
                 println!("\n   Frame ID: {}", frame.id());
-                
+
                 if frame.id() == "POPM" {
                     println!("   ✅ ENCONTRADO POPM!");
                     if let id3::Content::Popularimeter(popm) = frame.content() {
                         println!("      Email: {}", popm.user);
                         println!("      Rating: {}", popm.rating);
                         println!("      Counter: {}", popm.counter);
-                        
+
                         let stars = ((popm.rating as f32 / 255.0) * 5.0).round() as i32;
                         println!("      Stars: {}", stars);
                     }
@@ -809,9 +828,9 @@ mod tests {
     fn test_write_and_read_rating_roundtrip() {
         use std::fs;
         use tempfile::TempDir;
-        
+
         let source_path = Path::new("../data/test.mp3");
-        
+
         if !source_path.exists() {
             println!("⚠️  Archivo test.mp3 no encontrado, skipping test");
             return;
@@ -819,38 +838,51 @@ mod tests {
 
         // Crear directorio temporal
         let temp_dir = TempDir::new().unwrap();
-        
+
         // Test con diferentes valores de rating
         for test_rating in [0, 1, 2, 3, 4, 5] {
             println!("\n🧪 Testing rating: {} stars", test_rating);
-            
+
             // Copiar archivo de prueba al directorio temporal
-            let test_path = temp_dir.path().join(format!("test_rating_{}.mp3", test_rating));
+            let test_path = temp_dir
+                .path()
+                .join(format!("test_rating_{}.mp3", test_rating));
             fs::copy(source_path, &test_path).unwrap();
-            
+
             // Escribir rating usando nuestra función
             MetadataExtractor::write_rating_to_mp3_file(&test_path, test_rating).unwrap();
             println!("   ✅ Rating {} escrito", test_rating);
-            
+
             // Leer rating usando nuestra función
             let read_rating = MetadataExtractor::get_rating_from_mp3_file(&test_path);
             println!("   ✅ Rating leído: {:?}", read_rating);
-            
-            assert_eq!(read_rating, Some(test_rating),
+
+            assert_eq!(
+                read_rating,
+                Some(test_rating),
                 "Rating roundtrip falló: escribimos {} pero leímos {:?}",
-                test_rating, read_rating);
-            
+                test_rating,
+                read_rating
+            );
+
             // Verificar que extract_metadata también lee correctamente
             let extractor = MetadataExtractor::new();
             let metadata = extractor.extract_metadata(&test_path).unwrap();
-            
-            assert_eq!(metadata.rating, Some(test_rating),
+
+            assert_eq!(
+                metadata.rating,
+                Some(test_rating),
                 "extract_metadata leyó rating incorrecto: esperado {}, obtenido {:?}",
-                test_rating, metadata.rating);
-            
-            println!("   ✅ Roundtrip completo exitoso para {} estrellas", test_rating);
+                test_rating,
+                metadata.rating
+            );
+
+            println!(
+                "   ✅ Roundtrip completo exitoso para {} estrellas",
+                test_rating
+            );
         }
-        
+
         println!("\n🎉 Todos los valores de rating (0-5) pasaron el roundtrip test!");
     }
 
@@ -858,9 +890,9 @@ mod tests {
     fn test_update_metadata_with_rating() {
         use std::fs;
         use tempfile::TempDir;
-        
+
         let source_path = Path::new("../data/test.mp3");
-        
+
         if !source_path.exists() {
             println!("⚠️  Archivo test.mp3 no encontrado, skipping test");
             return;
@@ -869,34 +901,34 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let test_path = temp_dir.path().join("test_metadata_update.mp3");
         fs::copy(source_path, &test_path).unwrap();
-        
+
         let extractor = MetadataExtractor::new();
-        
+
         // Leer metadatos originales
         let original = extractor.extract_metadata(&test_path).unwrap();
         println!("\n📊 Metadatos originales:");
         println!("   - Título: {:?}", original.title);
         println!("   - Rating: {:?}", original.rating);
-        
+
         // Actualizar metadatos (cambiar título y rating)
         let mut updated = original.clone();
         updated.title = Some("Test Title Updated".to_string());
         updated.rating = Some(3);
-        
+
         extractor.write_metadata(&test_path, &updated).unwrap();
         println!("\n✏️  Metadatos actualizados:");
         println!("   - Nuevo título: {:?}", updated.title);
         println!("   - Nuevo rating: {:?}", updated.rating);
-        
+
         // Leer de nuevo para verificar
         let verified = extractor.extract_metadata(&test_path).unwrap();
         println!("\n✅ Metadatos verificados:");
         println!("   - Título leído: {:?}", verified.title);
         println!("   - Rating leído: {:?}", verified.rating);
-        
+
         assert_eq!(verified.title, Some("Test Title Updated".to_string()));
         assert_eq!(verified.rating, Some(3));
-        
+
         println!("\n🎉 write_metadata() funciona correctamente con rating!");
     }
 }

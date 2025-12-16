@@ -45,7 +45,7 @@ describe('Beatgrid Hooks', () => {
   describe('useAnalyzeBeatgrid', () => {
     it('debería analizar beatgrid correctamente', async () => {
       const mockBeatgrid: Beatgrid = {
-        trackId: 1,
+        trackId: "1",
         bpm: 128,
         offset: 0.5,
         confidence: 95,
@@ -58,12 +58,12 @@ describe('Beatgrid Hooks', () => {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate({ trackId: 1, trackPath: '/path/to/track.mp3' });
+      result.current.mutate({ trackId: "1", trackPath: '/path/to/track.mp3' });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual(mockBeatgrid);
       expect(mockInvoke).toHaveBeenCalledWith('analyze_beatgrid', {
-        trackId: 1,
+        trackId: "1",
         trackPath: '/path/to/track.mp3',
       });
     });
@@ -75,7 +75,7 @@ describe('Beatgrid Hooks', () => {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate({ trackId: 1, trackPath: '/invalid/path.mp3' });
+      result.current.mutate({ trackId: "1", trackPath: '/invalid/path.mp3' });
 
       await waitFor(() => expect(result.current.isError).toBe(true));
       expect(result.current.error).toBeDefined();
@@ -85,7 +85,7 @@ describe('Beatgrid Hooks', () => {
   describe('useGetBeatgrid', () => {
     it('debería obtener beatgrid existente', async () => {
       const mockBeatgrid: Beatgrid = {
-        trackId: 1,
+        trackId: "1",
         bpm: 120,
         offset: 0.2,
         confidence: 90,
@@ -94,19 +94,19 @@ describe('Beatgrid Hooks', () => {
 
       mockInvoke.mockResolvedValueOnce(mockBeatgrid);
 
-      const { result } = renderHook(() => useGetBeatgrid(1), {
+      const { result } = renderHook(() => useGetBeatgrid("1"), {
         wrapper: createWrapper(),
       });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(result.current.data).toEqual(mockBeatgrid);
-      expect(mockInvoke).toHaveBeenCalledWith('get_beatgrid', { trackId: 1 });
+      expect(mockInvoke).toHaveBeenCalledWith('get_beatgrid', { trackId: "1" });
     });
 
     it('debería retornar null si no hay beatgrid', async () => {
       mockInvoke.mockResolvedValueOnce(null);
 
-      const { result } = renderHook(() => useGetBeatgrid(999), {
+      const { result } = renderHook(() => useGetBeatgrid("999"), {
         wrapper: createWrapper(),
       });
 
@@ -123,11 +123,11 @@ describe('Beatgrid Hooks', () => {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate({ trackId: 1, offset: 0.75 });
+      result.current.mutate({ trackId: "1", offset: 0.75 });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(mockInvoke).toHaveBeenCalledWith('update_beatgrid_offset', {
-        trackId: 1,
+        trackId: "1",
         offset: 0.75,
       });
     });
@@ -141,10 +141,10 @@ describe('Beatgrid Hooks', () => {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate(1);
+      result.current.mutate("1");
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(mockInvoke).toHaveBeenCalledWith('delete_beatgrid', { trackId: 1 });
+      expect(mockInvoke).toHaveBeenCalledWith('delete_beatgrid', { trackId: "1" });
     });
   });
 });
@@ -163,7 +163,7 @@ describe('Cue Point Hooks', () => {
       });
 
       const request = {
-        trackId: 1,
+        trackId: "1",
         position: 30.5,
         label: 'Drop',
         color: '#ff0000',
@@ -183,8 +183,8 @@ describe('Cue Point Hooks', () => {
     it('debería obtener lista de cue points', async () => {
       const mockCuePoints: CuePoint[] = [
         {
-          id: 1,
-          trackId: 1,
+          id: "1",
+          trackId: "1",
           position: 10.5,
           label: 'Intro',
           color: '#00ff00',
@@ -193,8 +193,8 @@ describe('Cue Point Hooks', () => {
           createdAt: '2024-01-01T00:00:00Z',
         },
         {
-          id: 2,
-          trackId: 1,
+          id: "2",
+          trackId: "1",
           position: 60.0,
           label: 'Drop',
           color: '#ff0000',
@@ -205,7 +205,7 @@ describe('Cue Point Hooks', () => {
 
       mockInvoke.mockResolvedValueOnce(mockCuePoints);
 
-      const { result } = renderHook(() => useGetCuePoints(1), {
+      const { result } = renderHook(() => useGetCuePoints("1"), {
         wrapper: createWrapper(),
       });
 
@@ -224,14 +224,14 @@ describe('Cue Point Hooks', () => {
       });
 
       result.current.mutate({
-        id: 1,
-        trackId: 1,
+        id: "1",
+        trackId: "1",
         request: { position: 35.0, label: 'New Drop' },
       });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(mockInvoke).toHaveBeenCalledWith('update_cue_point', {
-        id: 1,
+        id: "1",
         request: { position: 35.0, label: 'New Drop' },
       });
     });
@@ -245,10 +245,10 @@ describe('Cue Point Hooks', () => {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate({ id: 1, trackId: 1 });
+      result.current.mutate({ id: "1", trackId: "1" });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
-      expect(mockInvoke).toHaveBeenCalledWith('delete_cue_point', { id: 1 });
+      expect(mockInvoke).toHaveBeenCalledWith('delete_cue_point', { id: "1" });
     });
   });
 });
@@ -267,7 +267,7 @@ describe('Loop Hooks', () => {
       });
 
       const request = {
-        trackId: 1,
+        trackId: "1",
         label: '8 bar loop',
         loopStart: 30.0,
         loopEnd: 46.0,
@@ -286,8 +286,8 @@ describe('Loop Hooks', () => {
     it('debería obtener lista de loops', async () => {
       const mockLoops: Loop[] = [
         {
-          id: 1,
-          trackId: 1,
+          id: "1",
+          trackId: "1",
           label: '4 bar loop',
           loopStart: 10.0,
           loopEnd: 18.0,
@@ -295,8 +295,8 @@ describe('Loop Hooks', () => {
           createdAt: '2024-01-01T00:00:00Z',
         },
         {
-          id: 2,
-          trackId: 1,
+          id: "2",
+          trackId: "1",
           label: '8 bar loop',
           loopStart: 30.0,
           loopEnd: 46.0,
@@ -307,7 +307,7 @@ describe('Loop Hooks', () => {
 
       mockInvoke.mockResolvedValueOnce(mockLoops);
 
-      const { result } = renderHook(() => useGetLoops(1), {
+      const { result } = renderHook(() => useGetLoops("1"), {
         wrapper: createWrapper(),
       });
 
@@ -326,14 +326,14 @@ describe('Loop Hooks', () => {
       });
 
       result.current.mutate({
-        id: 1,
-        trackId: 1,
+        id: "1",
+        trackId: "1",
         request: { isActive: true, label: 'Updated loop' },
       });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
       expect(mockInvoke).toHaveBeenCalledWith('update_loop', {
-        id: 1,
+        id: "1",
         request: { isActive: true, label: 'Updated loop' },
       });
     });

@@ -1,18 +1,17 @@
-use std::path::PathBuf;
-use std::sync::{Arc, Mutex};
-use std::sync::mpsc::Sender;
+use serde::{Deserialize, Serialize};
 use std::fs;
-use serde::{Serialize, Deserialize};
+use std::path::PathBuf;
+use std::sync::mpsc::Sender;
+use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Manager, State};
 
 use crate::audio::{
-    AudioDecoder, AudioDeviceInfo, AudioMetadata, CpalAudioOutput,
-    PlayerControlEvent, WaveformState,
-    generate_waveform_streaming, cancel_waveform_generation,
+    cancel_waveform_generation, generate_waveform_streaming, AudioDecoder, AudioDeviceInfo,
+    AudioMetadata, CpalAudioOutput, PlayerControlEvent, WaveformState,
 };
 
 /// Estado global del reproductor de audio
-/// 
+///
 /// AIDEV-NOTE: Guardamos el Sender del canal de control para enviar comandos
 /// al decode thread. El player vive en su propio thread y se comunica via channel.
 pub struct AudioPlayerState {
@@ -26,15 +25,15 @@ impl AudioPlayerState {
             control_tx: Arc::new(Mutex::new(None)),
         }
     }
-    
+
     pub fn set_control_tx(&self, tx: Sender<PlayerControlEvent>) {
         *self.control_tx.lock().unwrap() = Some(tx);
     }
-    
+
     pub fn get_control_tx(&self) -> Option<Sender<PlayerControlEvent>> {
         self.control_tx.lock().unwrap().clone()
     }
-    
+
     pub fn is_active(&self) -> bool {
         self.control_tx.lock().unwrap().is_some()
     }
@@ -61,8 +60,8 @@ pub struct PlaybackPositionResponse {
     pub duration: f64,
 }
 
-/// Genera datos de waveform para una pista (DEPRECATED - usar get_waveform)
-/// AIDEV-NOTE: Función antigua, reemplazada por sistema streaming
+// Genera datos de waveform para una pista (DEPRECATED - usar get_waveform)
+// AIDEV-NOTE: Función antigua, reemplazada por sistema streaming
 /*
 #[tauri::command]
 pub async fn generate_waveform_data(
@@ -70,17 +69,17 @@ pub async fn generate_waveform_data(
     samples: Option<usize>,
 ) -> Result<WaveformData, String> {
     log::info!("generate_waveform_data: path={}, samples={:?}", path, samples);
-    
+
     let path = PathBuf::from(&path);
     let target_samples = samples.unwrap_or(1000);
-    
+
     generate_waveform(&path, target_samples)
         .map_err(|e: AudioError| e.to_string())
 }
 */
 
 /// Obtiene waveform con cache y streaming (NUEVO)
-/// 
+///
 /// AIDEV-NOTE: Sistema estilo Musicat con:
 /// - Verificación de cache en SQLite
 /// - Generación streaming si no existe
@@ -94,8 +93,12 @@ pub async fn get_waveform(
     waveform_state: State<'_, Arc<WaveformState>>,
     db: State<'_, Arc<tokio::sync::Mutex<rusqlite::Connection>>>,
 ) -> Result<(), String> {
-    log::info!("🎵 get_waveform: track_id={}, path={}", track_id, track_path);
-    
+    log::info!(
+        "🎵 get_waveform: track_id={}, path={}",
+        track_id,
+        track_path
+    );
+
     generate_waveform_streaming(
         track_id,
         track_path,
@@ -115,12 +118,12 @@ pub async fn cancel_waveform(
     waveform_state: State<'_, Arc<WaveformState>>,
 ) -> Result<bool, String> {
     log::info!("🛑 cancel_waveform: track_id={}", track_id);
-    
+
     Ok(cancel_waveform_generation(&track_id, waveform_state.inner().clone()).await)
 }
 
-/// Obtiene un waveform cacheado de la base de datos (DEPRECATED)
-/// AIDEV-NOTE: Reemplazado por get_waveform que maneja cache internamente
+// Obtiene un waveform cacheado de la base de datos (DEPRECATED)
+// AIDEV-NOTE: Reemplazado por get_waveform que maneja cache internamente
 /*
 #[tauri::command]
 pub async fn get_cached_waveform(
@@ -128,9 +131,9 @@ pub async fn get_cached_waveform(
     db: State<'_, Arc<Mutex<Database>>>,
 ) -> Result<Option<WaveformData>, String> {
     log::info!("get_cached_waveform: track_id={}", track_id);
-    
+
     let db = db.lock().map_err(|e| e.to_string())?;
-    
+
     let result = db.conn.query_row(
         "SELECT data FROM waveforms WHERE track_id = ?1",
         [track_id],
@@ -139,7 +142,7 @@ pub async fn get_cached_waveform(
             Ok(blob)
         },
     ).optional();
-    
+
     match result {
         Ok(Some(blob)) => {
             match bincode::deserialize::<WaveformData>(&blob) {
@@ -176,17 +179,17 @@ pub async fn generate_and_cache_waveform(
     db: State<'_, Arc<Mutex<Database>>>,
 ) -> Result<WaveformData, String> {
     log::info!("generate_and_cache_waveform: track_id={}, path={}", track_id, path);
-    
+
     let path_buf = PathBuf::from(&path);
     let target_samples = samples.unwrap_or(200);
     let waveform = generate_waveform(&path_buf, target_samples)
         .map_err(|e: AudioError| e.to_string())?;
-    
+
     let blob = bincode::serialize(&waveform)
         .map_err(|e| format!("Failed to serialize waveform: {}", e))?;
-    
+
     let db = db.lock().map_err(|e| e.to_string())?;
-    
+
     let result = db.conn.execute(
         "INSERT INTO waveforms (track_id, data, resolution, date_generated)
          VALUES (?1, ?2, ?3, datetime('now'))
@@ -196,7 +199,7 @@ pub async fn generate_and_cache_waveform(
             date_generated = excluded.date_generated",
         rusqlite::params![track_id, &blob, target_samples as i32],
     );
-    
+
     match result {
         Ok(_) => {
             log::info!("✅ Waveform saved to database");
@@ -209,9 +212,8 @@ pub async fn generate_and_cache_waveform(
     }
 }
 */
-
 /// Reproduce una pista de audio
-/// 
+///
 /// AIDEV-NOTE: Crea el player y guarda el Sender del canal de control
 #[tauri::command]
 pub async fn play_track(
@@ -221,14 +223,14 @@ pub async fn play_track(
 ) -> Result<(), String> {
     log::info!("========== PLAY_TRACK COMMAND START ==========");
     log::info!("Path received: {}", path);
-    
+
     let path_buf = PathBuf::from(&path);
-    
+
     if !path_buf.exists() {
         log::error!("File does not exist: {:?}", path_buf);
         return Err(format!("El archivo no existe: {:?}", path_buf));
     }
-    
+
     // Si ya hay un player activo, enviar comando StreamFile
     if let Some(tx) = player_state.get_control_tx() {
         log::info!("Using existing player, sending StreamFile command");
@@ -237,39 +239,38 @@ pub async fn play_track(
             path: path_buf.to_string_lossy().to_string(),
             seek: None,
             volume,
-        }).map_err(|e| format!("Error enviando comando: {}", e))?;
+        })
+        .map_err(|e| format!("Error enviando comando: {}", e))?;
         return Ok(());
     }
-    
+
     // Crear nuevo player
     log::info!("Creating new AudioPlayer...");
     let player = crate::audio::AudioPlayer::new(app_handle).map_err(|e| {
         log::error!("Failed to create player: {}", e);
         e.to_string()
     })?;
-    
+
     // Guardar el sender
     player_state.set_control_tx(player.get_control_tx());
-    
+
     // Reproducir
     log::info!("Calling player.play()...");
     player.play(&path_buf, None).map_err(|e| {
         log::error!("player.play() failed: {}", e);
         e.to_string()
     })?;
-    
+
     // El player se mantiene vivo mientras su decode thread corre
     std::mem::forget(player);
-    
+
     log::info!("✅ player.play() SUCCESS");
     Ok(())
 }
 
 /// Pausa la reproducción
 #[tauri::command]
-pub fn pause_playback(
-    player_state: State<'_, AudioPlayerState>,
-) -> Result<(), String> {
+pub fn pause_playback(player_state: State<'_, AudioPlayerState>) -> Result<(), String> {
     if let Some(tx) = player_state.get_control_tx() {
         tx.send(PlayerControlEvent::Pause)
             .map_err(|e| format!("Error enviando comando: {}", e))
@@ -280,9 +281,7 @@ pub fn pause_playback(
 
 /// Reanuda la reproducción
 #[tauri::command]
-pub fn resume_playback(
-    player_state: State<'_, AudioPlayerState>,
-) -> Result<(), String> {
+pub fn resume_playback(player_state: State<'_, AudioPlayerState>) -> Result<(), String> {
     if let Some(tx) = player_state.get_control_tx() {
         tx.send(PlayerControlEvent::Resume)
             .map_err(|e| format!("Error enviando comando: {}", e))
@@ -293,9 +292,7 @@ pub fn resume_playback(
 
 /// Detiene la reproducción
 #[tauri::command]
-pub fn stop_playback(
-    player_state: State<'_, AudioPlayerState>,
-) -> Result<(), String> {
+pub fn stop_playback(player_state: State<'_, AudioPlayerState>) -> Result<(), String> {
     if let Some(tx) = player_state.get_control_tx() {
         tx.send(PlayerControlEvent::Stop)
             .map_err(|e| format!("Error enviando comando: {}", e))?;
@@ -314,7 +311,7 @@ pub async fn seek_to_position(
     player_state: State<'_, AudioPlayerState>,
 ) -> Result<(), String> {
     log::info!("seek_to_position command: {} seconds", position);
-    
+
     if let Some(tx) = player_state.get_control_tx() {
         tx.send(PlayerControlEvent::Seek { position })
             .map_err(|e| format!("Error enviando comando: {}", e))?;
@@ -360,7 +357,7 @@ pub fn get_playback_state(
     player_state: State<'_, AudioPlayerState>,
 ) -> Result<PlaybackStateResponse, String> {
     let is_active = player_state.is_active();
-    
+
     Ok(PlaybackStateResponse {
         state: if is_active { "playing" } else { "stopped" }.to_string(),
         is_playing: is_active,
@@ -403,22 +400,20 @@ pub struct AudioBlobResponse {
 
 /// Permite un archivo al asset protocol scope en runtime
 #[tauri::command]
-pub async fn allow_asset_file(
-    app_handle: AppHandle,
-    path: String,
-) -> Result<(), String> {
+pub async fn allow_asset_file(app_handle: AppHandle, path: String) -> Result<(), String> {
     log::info!("allow_asset_file: {}", path);
-    
+
     let path_buf = PathBuf::from(&path);
-    
+
     if !path_buf.exists() {
         return Err(format!("El archivo no existe: {}", path));
     }
-    
+
     let asset_scope = app_handle.asset_protocol_scope();
-    asset_scope.allow_file(&path_buf)
+    asset_scope
+        .allow_file(&path_buf)
         .map_err(|e| format!("Error añadiendo archivo al asset scope: {}", e))?;
-    
+
     log::info!("✅ Archivo añadido al asset protocol scope: {}", path);
     Ok(())
 }
@@ -431,17 +426,18 @@ pub async fn allow_asset_directory(
     recursive: bool,
 ) -> Result<(), String> {
     log::info!("allow_asset_directory: {}, recursive: {}", path, recursive);
-    
+
     let path_buf = PathBuf::from(&path);
-    
+
     if !path_buf.exists() || !path_buf.is_dir() {
         return Err(format!("El directorio no existe: {}", path));
     }
-    
+
     let asset_scope = app_handle.asset_protocol_scope();
-    asset_scope.allow_directory(&path_buf, recursive)
+    asset_scope
+        .allow_directory(&path_buf, recursive)
         .map_err(|e| format!("Error añadiendo directorio al asset scope: {}", e))?;
-    
+
     log::info!("✅ Directorio añadido al asset protocol scope: {}", path);
     Ok(())
 }
@@ -450,13 +446,13 @@ pub async fn allow_asset_directory(
 #[tauri::command]
 pub async fn read_audio_file(path: String) -> Result<AudioBlobResponse, String> {
     log::info!("read_audio_file: {}", path);
-    
+
     let path_buf = PathBuf::from(&path);
-    
+
     if !path_buf.exists() {
         return Err(format!("El archivo no existe: {}", path));
     }
-    
+
     let mime_type = match path_buf.extension().and_then(|e| e.to_str()) {
         Some("mp3") => "audio/mpeg",
         Some("flac") => "audio/flac",
@@ -465,13 +461,17 @@ pub async fn read_audio_file(path: String) -> Result<AudioBlobResponse, String> 
         Some("m4a") | Some("aac") => "audio/mp4",
         Some("opus") => "audio/opus",
         _ => "audio/mpeg",
-    }.to_string();
-    
-    let data = fs::read(&path_buf)
-        .map_err(|e| format!("Error leyendo archivo: {}", e))?;
-    
-    log::info!("✅ Audio file read: {} bytes, mime: {}", data.len(), mime_type);
-    
+    }
+    .to_string();
+
+    let data = fs::read(&path_buf).map_err(|e| format!("Error leyendo archivo: {}", e))?;
+
+    log::info!(
+        "✅ Audio file read: {} bytes, mime: {}",
+        data.len(),
+        mime_type
+    );
+
     Ok(AudioBlobResponse { data, mime_type })
 }
 
@@ -486,7 +486,7 @@ mod tests {
             state: "playing".to_string(),
             is_playing: true,
         };
-        
+
         let json = serde_json::to_string(&response).unwrap();
         assert!(json.contains("playing"));
         assert!(json.contains("true"));
@@ -504,7 +504,7 @@ mod tests {
             current_position: 10.5,
             duration: 180.0,
         };
-        
+
         assert_eq!(response.current_position, 10.5);
         assert_eq!(response.duration, 180.0);
     }
@@ -515,7 +515,7 @@ mod tests {
             data: vec![1, 2, 3, 4],
             mime_type: "audio/mpeg".to_string(),
         };
-        
+
         assert_eq!(response.data.len(), 4);
         assert_eq!(response.mime_type, "audio/mpeg");
     }
@@ -524,7 +524,7 @@ mod tests {
     fn test_audio_player_state() {
         let state = AudioPlayerState::new();
         assert!(!state.is_active());
-        
+
         let (tx, _rx) = mpsc::channel();
         state.set_control_tx(tx);
         assert!(state.is_active());

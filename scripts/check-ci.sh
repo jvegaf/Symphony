@@ -76,18 +76,33 @@ echo "║           🚀 SYMPHONY CI CHECK - LOCAL VALIDATION              ║"
 echo "╚════════════════════════════════════════════════════════════════╝"
 echo ""
 
-# Detect OS
+# Detect OS and distribution
+# AIDEV-NOTE: Detecta el sistema operativo y la distribución Linux específica
+# para poder verificar dependencias correctamente en cada plataforma
 OS="unknown"
+DISTRO="unknown"
+
 if [[ "$OSTYPE" == "linux-gnu"* ]]; then
-    OS="ubuntu-latest"
+    OS="linux"
+    # Detect Linux distribution
+    if [ -f /etc/os-release ]; then
+        . /etc/os-release
+        DISTRO="$ID"
+    elif [ -f /etc/arch-release ]; then
+        DISTRO="arch"
+    elif [ -f /etc/debian_version ]; then
+        DISTRO="debian"
+    fi
 elif [[ "$OSTYPE" == "darwin"* ]]; then
     OS="macos"
+    DISTRO="macos"
 elif [[ "$OSTYPE" == "msys" ]] || [[ "$OSTYPE" == "win32" ]]; then
-    OS="windows-latest"
+    OS="windows"
+    DISTRO="windows"
 fi
 
 echo -e "${BLUE}📋 Configuración:${NC}"
-echo "  Sistema operativo: $OS"
+echo "  Sistema operativo: $OS ($DISTRO)"
 echo "  Frontend checks:   $RUN_FRONTEND"
 echo "  Backend checks:    $RUN_BACKEND"
 echo "  Build app:         $RUN_BUILD"
@@ -168,48 +183,106 @@ if [ "$RUN_BACKEND" = true ]; then
     echo -e "${YELLOW}🦀 BACKEND CHECKS (RUST)${NC}"
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     
-    # Check system dependencies (Ubuntu only)
-    if [ "$OS" = "ubuntu-latest" ]; then
+    # Check system dependencies (Linux only)
+    # AIDEV-NOTE: Verifica dependencias según la distribución Linux detectada
+    if [ "$OS" = "linux" ]; then
         echo ""
-        echo -e "${BLUE}${ARROW} Verificando dependencias del sistema (Ubuntu)${NC}"
         
-        MISSING_DEPS=()
-        
-        # Check for required packages
-        for pkg in libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf; do
-            if ! dpkg -s "$pkg" &> /dev/null; then
-                MISSING_DEPS+=("$pkg")
-            fi
-        done
-        
-        if [ ${#MISSING_DEPS[@]} -ne 0 ]; then
-            echo -e "${YELLOW}⚠ Las siguientes dependencias no están instaladas:${NC}"
-            for dep in "${MISSING_DEPS[@]}"; do
-                echo "  - $dep"
-            done
-            echo ""
-            echo -e "${YELLOW}Instálalas con:${NC}"
-            echo "  sudo apt-get update"
-            echo "  sudo apt-get install -y ${MISSING_DEPS[*]}"
-            echo ""
-            read -p "¿Deseas continuar de todas formas? [y/N] " -n 1 -r
-            echo
-            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-                exit 1
-            fi
-        else
-            echo -e "${GREEN}${CHECK} Todas las dependencias están instaladas${NC}"
-        fi
+        case "$DISTRO" in
+            ubuntu|debian|linuxmint|pop)
+                echo -e "${BLUE}${ARROW} Verificando dependencias del sistema (Debian/Ubuntu)${NC}"
+                MISSING_DEPS=()
+                
+                # Check for required packages
+                for pkg in libgtk-3-dev libwebkit2gtk-4.0-dev libappindicator3-dev librsvg2-dev patchelf; do
+                    if ! dpkg -s "$pkg" &> /dev/null; then
+                        MISSING_DEPS+=("$pkg")
+                    fi
+                done
+                
+                if [ ${#MISSING_DEPS[@]} -ne 0 ]; then
+                    echo -e "${YELLOW}⚠ Las siguientes dependencias no están instaladas:${NC}"
+                    for dep in "${MISSING_DEPS[@]}"; do
+                        echo "  - $dep"
+                    done
+                    echo ""
+                    echo -e "${YELLOW}Instálalas con:${NC}"
+                    echo "  sudo apt-get update"
+                    echo "  sudo apt-get install -y ${MISSING_DEPS[*]}"
+                    echo ""
+                    read -p "¿Deseas continuar de todas formas? [y/N] " -n 1 -r
+                    echo
+                    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                        exit 1
+                    fi
+                else
+                    echo -e "${GREEN}${CHECK} Todas las dependencias están instaladas${NC}"
+                fi
+                ;;
+                
+            arch|manjaro|endeavouros|cachyos|garuda)
+                echo -e "${BLUE}${ARROW} Verificando dependencias del sistema (Arch Linux)${NC}"
+                MISSING_DEPS=()
+                
+                # Check for required packages (Arch package names)
+                for pkg in gtk3 webkit2gtk libappindicator-gtk3 librsvg; do
+                    if ! pacman -Qi "$pkg" &> /dev/null; then
+                        MISSING_DEPS+=("$pkg")
+                    fi
+                done
+                
+                if [ ${#MISSING_DEPS[@]} -ne 0 ]; then
+                    echo -e "${YELLOW}⚠ Las siguientes dependencias no están instaladas:${NC}"
+                    for dep in "${MISSING_DEPS[@]}"; do
+                        echo "  - $dep"
+                    done
+                    echo ""
+                    echo -e "${YELLOW}Instálalas con:${NC}"
+                    echo "  sudo pacman -S ${MISSING_DEPS[*]}"
+                    echo ""
+                    read -p "¿Deseas continuar de todas formas? [y/N] " -n 1 -r
+                    echo
+                    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+                        exit 1
+                    fi
+                else
+                    echo -e "${GREEN}${CHECK} Todas las dependencias están instaladas${NC}"
+                fi
+                ;;
+                
+            fedora|rhel|centos)
+                echo -e "${BLUE}${ARROW} Verificando dependencias del sistema (Fedora/RHEL)${NC}"
+                echo -e "${YELLOW}⚠ Verifica manualmente que tienes instaladas las siguientes dependencias:${NC}"
+                echo "  - gtk3-devel webkit2gtk4.0-devel libappindicator-gtk3-devel librsvg2-devel"
+                echo ""
+                echo -e "${YELLOW}Instálalas con:${NC}"
+                echo "  sudo dnf install gtk3-devel webkit2gtk4.0-devel libappindicator-gtk3-devel librsvg2-devel"
+                echo ""
+                ;;
+                
+            *)
+                echo -e "${YELLOW}⚠ Distribución Linux '$DISTRO' no reconocida${NC}"
+                echo -e "${YELLOW}  Verifica manualmente que tienes instaladas las dependencias de Tauri:${NC}"
+                echo "  - GTK 3"
+                echo "  - WebKit2GTK"
+                echo "  - libappindicator"
+                echo "  - librsvg"
+                echo ""
+                echo -e "${BLUE}  Ver: https://tauri.app/v1/guides/getting-started/prerequisites${NC}"
+                echo ""
+                ;;
+        esac
     fi
     
     # Formatting check
-    run_step "Format check (rustfmt)" "cd src-tauri && cargo fmt --all -- --check" || true
+    # AIDEV-NOTE: Usar subshell (paréntesis) para cd, así el directorio se restaura automáticamente
+    run_step "Format check (rustfmt)" "(cd src-tauri && cargo fmt --all -- --check)" || true
     
     # Clippy
-    run_step "Clippy (linter)" "cd src-tauri && cargo clippy --all-targets --all-features -- -D warnings" || true
+    run_step "Clippy (linter)" "(cd src-tauri && cargo clippy --all-targets --all-features -- -D warnings)" || true
     
     # Tests
-    run_step "Unit tests (Backend)" "cd src-tauri && cargo test --all-features" || true
+    run_step "Unit tests (Backend)" "(cd src-tauri && cargo test --all-features)" || true
 fi
 
 # ============================================================================
@@ -223,7 +296,8 @@ if [ "$RUN_BUILD" = true ]; then
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     
     # Backend build (release mode)
-    run_step "Build backend (release)" "cd src-tauri && cargo build --release" || true
+    # AIDEV-NOTE: Usar subshell (paréntesis) para cd, así el directorio se restaura automáticamente
+    run_step "Build backend (release)" "(cd src-tauri && cargo build --release)" || true
     
     # Full Tauri build (optional, commented out by default - takes long time)
     # echo ""

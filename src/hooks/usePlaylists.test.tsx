@@ -15,7 +15,6 @@ import {
   useUpdateTrackMetadata,
 } from "./usePlaylists";
 import type { Playlist } from "../types/playlist";
-import type { Track } from "../types/library";
 
 // Mock de Tauri
 vi.mock("@tauri-apps/api/core", () => ({
@@ -27,14 +26,14 @@ const mockInvoke = vi.mocked(invoke);
 // Datos de prueba
 const mockPlaylists: Playlist[] = [
   {
-    id: 1,
+    id: "1",
     name: "My Playlist",
     description: "Test playlist",
     date_created: "2024-01-01",
     date_modified: "2024-01-01",
   },
   {
-    id: 2,
+    id: "2",
     name: "Another Playlist",
     description: null,
     date_created: "2024-01-02",
@@ -43,27 +42,6 @@ const mockPlaylists: Playlist[] = [
 ];
 
 const mockPlaylist: Playlist = mockPlaylists[0];
-
-const mockTrack: Track = {
-  id: 1,
-  path: "/music/track.mp3",
-  title: "Test Track",
-  artist: "Test Artist",
-  album: "Test Album",
-  genre: "Electronic",
-  year: 2024,
-  duration: 180.0,
-  bitrate: 320,
-  sample_rate: 44100,
-  file_size: 8388608,
-  bpm: 128.0,
-  key: "Am",
-  rating: 4,
-  play_count: 0,
-  last_played: null,
-  date_added: "2024-01-01",
-  date_modified: "2024-01-01",
-};
 
 // Wrapper para React Query
 const createWrapper = () => {
@@ -126,20 +104,20 @@ describe("usePlaylists hooks", () => {
     it("debería obtener una playlist por ID", async () => {
       vi.mocked(mockInvoke).mockResolvedValue(mockPlaylist);
 
-      const { result } = renderHook(() => useGetPlaylist(1), {
+      const { result } = renderHook(() => useGetPlaylist("1"), {
         wrapper: createWrapper(),
       });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(mockInvoke).toHaveBeenCalledWith("get_playlist", { id: 1 });
+      expect(mockInvoke).toHaveBeenCalledWith("get_playlist", { id: "1" });
       expect(result.current.data).toEqual(mockPlaylist);
     });
 
     it("debería manejar playlist no encontrada", async () => {
       vi.mocked(mockInvoke).mockRejectedValue(new Error("Playlist not found"));
 
-      const { result } = renderHook(() => useGetPlaylist(999), {
+      const { result } = renderHook(() => useGetPlaylist("999"), {
         wrapper: createWrapper(),
       });
 
@@ -193,7 +171,7 @@ describe("usePlaylists hooks", () => {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate({ name: "Failed Playlist" });
+      result.current.mutate({ name: "Test Playlist" });
 
       await waitFor(() => expect(result.current.isError).toBe(true));
     });
@@ -208,7 +186,7 @@ describe("usePlaylists hooks", () => {
       });
 
       result.current.mutate({
-        id: 1,
+        id: "1",
         name: "Updated Playlist",
         description: "Updated description",
       });
@@ -216,7 +194,7 @@ describe("usePlaylists hooks", () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(mockInvoke).toHaveBeenCalledWith("update_playlist", {
-        id: 1,
+        id: "1",
         name: "Updated Playlist",
         description: "Updated description",
       });
@@ -230,14 +208,14 @@ describe("usePlaylists hooks", () => {
       });
 
       result.current.mutate({
-        id: 1,
+        id: "1",
         name: "New Name",
       });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(mockInvoke).toHaveBeenCalledWith("update_playlist", {
-        id: 1,
+        id: "1",
         name: "New Name",
         description: undefined,
       });
@@ -250,7 +228,7 @@ describe("usePlaylists hooks", () => {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate({ id: 1, name: "Failed" });
+      result.current.mutate({ id: "1", name: "Failed" });
 
       await waitFor(() => expect(result.current.isError).toBe(true));
     });
@@ -264,11 +242,11 @@ describe("usePlaylists hooks", () => {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate(1);
+      result.current.mutate("1");
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-      expect(mockInvoke).toHaveBeenCalledWith("delete_playlist", { id: 1 });
+      expect(mockInvoke).toHaveBeenCalledWith("delete_playlist", { id: "1" });
     });
 
     it("debería manejar errores al eliminar", async () => {
@@ -280,7 +258,7 @@ describe("usePlaylists hooks", () => {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate(999);
+      result.current.mutate("999");
 
       await waitFor(() => expect(result.current.isError).toBe(true));
     });
@@ -294,13 +272,13 @@ describe("usePlaylists hooks", () => {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate({ playlist_id: 1, track_id: 5 });
+      result.current.mutate({ playlist_id: "1", track_id: "5" });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(mockInvoke).toHaveBeenCalledWith("add_track_to_playlist", {
-        playlist_id: 1,
-        track_id: 5,
+        playlist_id: "1",
+        track_id: "5",
       });
     });
 
@@ -311,7 +289,7 @@ describe("usePlaylists hooks", () => {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate({ playlist_id: 1, track_id: 999 });
+      result.current.mutate({ playlist_id: "1", track_id: "999" });
 
       await waitFor(() => expect(result.current.isError).toBe(true));
     });
@@ -325,13 +303,13 @@ describe("usePlaylists hooks", () => {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate({ playlist_id: 1, track_id: 5 });
+      result.current.mutate({ playlist_id: "1", track_id: "5" });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(mockInvoke).toHaveBeenCalledWith("remove_track_from_playlist", {
-        playlist_id: 1,
-        track_id: 5,
+        playlist_id: "1",
+        track_id: "5",
       });
     });
 
@@ -344,7 +322,7 @@ describe("usePlaylists hooks", () => {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate({ playlist_id: 1, track_id: 999 });
+      result.current.mutate({ playlist_id: "1", track_id: "999" });
 
       await waitFor(() => expect(result.current.isError).toBe(true));
     });
@@ -358,13 +336,13 @@ describe("usePlaylists hooks", () => {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate({ playlist_id: 1, track_ids: [3, 1, 2] });
+      result.current.mutate({ playlist_id: "1", track_ids: ["3", "1", "2"] });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(mockInvoke).toHaveBeenCalledWith("reorder_playlist_tracks", {
-        playlist_id: 1,
-        track_ids: [3, 1, 2],
+        playlist_id: "1",
+        track_ids: ["3", "1", "2"],
       });
     });
 
@@ -375,12 +353,12 @@ describe("usePlaylists hooks", () => {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate({ playlist_id: 1, track_ids: [] });
+      result.current.mutate({ playlist_id: "1", track_ids: [] });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(mockInvoke).toHaveBeenCalledWith("reorder_playlist_tracks", {
-        playlist_id: 1,
+        playlist_id: "1",
         track_ids: [],
       });
     });
@@ -392,7 +370,7 @@ describe("usePlaylists hooks", () => {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate({ playlist_id: 1, track_ids: [1, 2] });
+      result.current.mutate({ playlist_id: "1", track_ids: ["1", "2"] });
 
       await waitFor(() => expect(result.current.isError).toBe(true));
     });
@@ -407,7 +385,7 @@ describe("usePlaylists hooks", () => {
       });
 
       result.current.mutate({
-        id: 1,
+        id: "1",
         title: "New Title",
         artist: "New Artist",
         rating: 5,
@@ -416,7 +394,7 @@ describe("usePlaylists hooks", () => {
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(mockInvoke).toHaveBeenCalledWith("update_track_metadata", {
-        id: 1,
+        id: "1",
         title: "New Title",
         artist: "New Artist",
         rating: 5,
@@ -430,12 +408,12 @@ describe("usePlaylists hooks", () => {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate({ id: 1, rating: 3 });
+      result.current.mutate({ id: "1", rating: 3 });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(mockInvoke).toHaveBeenCalledWith("update_track_metadata", {
-        id: 1,
+        id: "1",
         rating: 3,
       });
     });
@@ -448,7 +426,7 @@ describe("usePlaylists hooks", () => {
       });
 
       const fullUpdate = {
-        id: 1,
+        id: "1",
         title: "Full Title",
         artist: "Full Artist",
         album: "Full Album",
@@ -478,7 +456,7 @@ describe("usePlaylists hooks", () => {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate({ id: 1, rating: 10 }); // Invalid rating
+      result.current.mutate({ id: "1", rating: 10 }); // Invalid rating
 
       await waitFor(() => expect(result.current.isError).toBe(true));
     });

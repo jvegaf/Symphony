@@ -1,11 +1,10 @@
 /// Procesamiento de señales digitales (DSP) para análisis de audio
-/// 
+///
 /// Este módulo contiene funciones de bajo nivel para calcular características
 /// de waveform usando diferentes métodos de peak detection.
-/// 
+///
 /// AIDEV-NOTE: Basado en la implementación de Musicat
 /// Ref: https://github.com/basharovV/musicat/blob/main/src/data/WaveformGenerator.ts
-
 use serde::{Deserialize, Serialize};
 
 /// Método para calcular los peaks de waveform
@@ -46,10 +45,10 @@ fn calculate_peak(samples: &[f32]) -> f32 {
 }
 
 /// Calcula el Root Mean Square (RMS)
-/// 
+///
 /// RMS es más perceptualmente relevante que el peak simple porque
 /// representa mejor cómo percibimos el "volumen" del audio.
-/// 
+///
 /// Formula: sqrt(sum(x^2) / n)
 fn calculate_rms(samples: &[f32]) -> f32 {
     let sum_of_squares: f32 = samples.iter().map(|&s| s * s).sum();
@@ -109,7 +108,7 @@ mod tests {
     fn test_normalize_peaks() {
         let mut peaks = vec![0.5, 1.0, 0.25, 0.75];
         normalize_peaks(&mut peaks);
-        
+
         assert_eq!(peaks[0], 0.5);
         assert_eq!(peaks[1], 1.0); // máximo
         assert_eq!(peaks[2], 0.25);
@@ -129,7 +128,7 @@ mod tests {
         let samples = vec![0.0, 0.0, 1.0, 0.0];
         let peak = calculate_peak_value(&samples, PeakMethod::Peak);
         let rms = calculate_peak_value(&samples, PeakMethod::Rms);
-        
+
         assert_eq!(peak, 1.0);
         assert!(rms < peak);
         assert_eq!(rms, 0.5); // sqrt(1/4) = 0.5

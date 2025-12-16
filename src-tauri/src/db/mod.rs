@@ -1,14 +1,13 @@
+mod connection;
+pub mod migrations;
 /// Módulo de base de datos para Symphony
-/// 
+///
 /// Gestiona la conexión, migraciones y operaciones CRUD
 /// sobre SQLite para metadatos de pistas, playlists y configuración.
-
 pub mod models;
 pub mod queries;
-pub mod migrations;
-mod connection;
 
-pub use connection::{Database, get_connection};
+pub use connection::{get_connection, Database};
 
 use rusqlite::Result;
 

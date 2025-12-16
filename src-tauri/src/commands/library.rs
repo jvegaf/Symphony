@@ -3,14 +3,20 @@ use std::sync::Arc;
 use tauri::{AppHandle, Manager, State};
 use tokio::sync::Mutex;
 
-use crate::library::{LibraryImporter, ImportResult, MetadataExtractor};
-use crate::library::metadata::TrackMetadata;
-use crate::db::queries;
 use crate::db::models::Track;
+use crate::db::queries;
+use crate::library::metadata::TrackMetadata;
+use crate::library::{ImportResult, LibraryImporter, MetadataExtractor};
 
 /// Estado global del importador de biblioteca
 pub struct LibraryState {
     importer: Arc<Mutex<LibraryImporter>>,
+}
+
+impl Default for LibraryState {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl LibraryState {
@@ -22,10 +28,10 @@ impl LibraryState {
 }
 
 /// Importa una biblioteca musical desde una ruta
-/// 
+///
 /// Escanea recursivamente el directorio, extrae metadatos
 /// de archivos de audio e inserta en la base de datos.
-/// 
+///
 /// Emite eventos:
 /// - `library:import-progress` con progreso actual
 /// - `library:import-complete` con resultado final
@@ -36,7 +42,7 @@ pub async fn import_library(
     path: String,
 ) -> Result<ImportResult, String> {
     let library_path = PathBuf::from(&path);
-    
+
     // Validar que el path existe
     if !library_path.exists() {
         return Err(format!("Ruta no encontrada: {}", path));
@@ -53,14 +59,18 @@ pub async fn import_library(
         log::warn!("No se pudo añadir directorio al asset scope: {}", e);
         // No fallamos, continuamos con la importación
     } else {
-        log::info!("Directorio añadido al asset protocol scope: {:?}", library_path);
+        log::info!(
+            "Directorio añadido al asset protocol scope: {:?}",
+            library_path
+        );
     }
 
     // Obtener importador
     let importer = library_state.importer.lock().await;
-    
+
     // Iniciar importación
-    importer.import_library(app_handle, &library_path)
+    importer
+        .import_library(app_handle, &library_path)
         .await
         .map_err(|e| e.to_string())
 }
@@ -68,55 +78,47 @@ pub async fn import_library(
 /// Obtiene todas las pistas de la biblioteca
 #[tauri::command]
 pub async fn get_all_tracks() -> Result<Vec<Track>, String> {
-    let db = crate::db::get_connection()
-        .map_err(|e| e.to_string())?;
-    queries::get_all_tracks(&db.conn)
-        .map_err(|e| e.to_string())
+    let db = crate::db::get_connection().map_err(|e| e.to_string())?;
+    queries::get_all_tracks(&db.conn).map_err(|e| e.to_string())
 }
 
 /// Busca pistas por título, artista o álbum
 #[tauri::command]
 pub async fn search_tracks(query: String) -> Result<Vec<Track>, String> {
-    let db = crate::db::get_connection()
-        .map_err(|e| e.to_string())?;
-    queries::search_tracks(&db.conn, &query)
-        .map_err(|e| e.to_string())
+    let db = crate::db::get_connection().map_err(|e| e.to_string())?;
+    queries::search_tracks(&db.conn, &query).map_err(|e| e.to_string())
 }
 
 /// Obtiene una pista por ID (UUID)
 #[tauri::command]
 pub async fn get_track_by_id(id: String) -> Result<Track, String> {
-    let db = crate::db::get_connection()
-        .map_err(|e| e.to_string())?;
-    queries::get_track(&db.conn, &id)
-        .map_err(|e| e.to_string())
+    let db = crate::db::get_connection().map_err(|e| e.to_string())?;
+    queries::get_track(&db.conn, &id).map_err(|e| e.to_string())
 }
 
 /// Obtiene estadísticas de la biblioteca
 #[tauri::command]
 pub async fn get_library_stats() -> Result<LibraryStats, String> {
-    let db = crate::db::get_connection()
-        .map_err(|e| e.to_string())?;
-    let tracks = queries::get_all_tracks(&db.conn)
-        .map_err(|e| e.to_string())?;
+    let db = crate::db::get_connection().map_err(|e| e.to_string())?;
+    let tracks = queries::get_all_tracks(&db.conn).map_err(|e| e.to_string())?;
 
     let total_tracks = tracks.len();
     let total_duration: f64 = tracks.iter().map(|t| t.duration).sum();
     let total_size: i64 = tracks.iter().map(|t| t.file_size).sum();
-    
+
     // Contar artistas y álbumes únicos
     let mut artists = std::collections::HashSet::new();
     let mut albums = std::collections::HashSet::new();
-    
+
     // Calcular distribución de ratings [0, 1, 2, 3, 4, 5]
     let mut rating_distribution = vec![0usize; 6]; // índices 0-5 para ratings 0-5
-    
+
     for track in tracks {
         artists.insert(track.artist.clone());
         if let Some(album) = track.album {
             albums.insert(album);
         }
-        
+
         // Contar rating (si es None, se considera 0)
         let rating = track.rating.unwrap_or(0) as usize;
         if rating <= 5 {
@@ -146,27 +148,24 @@ pub struct UpdateTrackMetadataRequest {
     pub year: Option<i32>,
     pub genre: Option<String>,
     pub bpm: Option<f64>,
-    pub key: Option<String>,      // Tonalidad musical (ej: "Am", "C#m")
+    pub key: Option<String>, // Tonalidad musical (ej: "Am", "C#m")
     pub rating: Option<i32>,
-    pub comment: Option<String>,  // Comentarios del usuario
+    pub comment: Option<String>, // Comentarios del usuario
 }
 
 /// Actualiza metadatos de una pista
-/// 
+///
 /// AIDEV-NOTE: Ahora escribe tags físicamente al archivo usando lofty (como SongUpdater.update_song_from_tag en Python)
 /// 1. Actualiza la base de datos SQLite
 /// 2. Escribe tags ID3v2/MP4/Vorbis al archivo físico
 #[tauri::command]
-pub async fn update_track_metadata(
-    request: UpdateTrackMetadataRequest,
-) -> Result<(), String> {
-    let db = crate::db::get_connection()
-        .map_err(|e| e.to_string())?;
-    
+pub async fn update_track_metadata(request: UpdateTrackMetadataRequest) -> Result<(), String> {
+    let db = crate::db::get_connection().map_err(|e| e.to_string())?;
+
     // Paso 1: Obtener el track actual para conocer su ruta
-    let track = queries::get_track(&db.conn, &request.id)
-        .map_err(|e| format!("Track not found: {}", e))?;
-    
+    let track =
+        queries::get_track(&db.conn, &request.id).map_err(|e| format!("Track not found: {}", e))?;
+
     // Paso 2: Actualizar base de datos
     queries::update_track_metadata(
         &db.conn,
@@ -180,11 +179,11 @@ pub async fn update_track_metadata(
         request.rating,
     )
     .map_err(|e| e.to_string())?;
-    
+
     // Paso 3: Escribir tags físicamente al archivo (nuevo comportamiento)
     let extractor = MetadataExtractor::new();
     let file_path = Path::new(&track.path);
-    
+
     // Crear TrackMetadata con los valores actualizados (merge con valores existentes)
     let metadata_to_write = TrackMetadata {
         path: track.path.clone(),
@@ -193,7 +192,10 @@ pub async fn update_track_metadata(
         album: request.album.or(track.album),
         year: request.year.or(track.year),
         genre: request.genre.or(track.genre),
-        bpm: request.bpm.map(|b| b as i32).or(track.bpm.map(|b| b as i32)),
+        bpm: request
+            .bpm
+            .map(|b| b as i32)
+            .or(track.bpm.map(|b| b as i32)),
         key: request.key.or(track.key),
         rating: request.rating.or(track.rating),
         comment: request.comment,
@@ -202,18 +204,23 @@ pub async fn update_track_metadata(
         bitrate: track.bitrate,
         sample_rate: track.sample_rate as u32,
         channels: 2, // Asumimos stereo, no lo tenemos en DB
-        format: file_path.extension()
+        format: file_path
+            .extension()
             .and_then(|e| e.to_str())
             .unwrap_or("unknown")
             .to_lowercase(),
         artwork: None,
     };
-    
+
     // Escribir tags al archivo físico
-    extractor.write_metadata(file_path, &metadata_to_write)
+    extractor
+        .write_metadata(file_path, &metadata_to_write)
         .map_err(|e| format!("Failed to write tags to file: {}", e))?;
-    
-    log::info!("Metadatos actualizados en DB y archivo físico para track {}", request.id);
+
+    log::info!(
+        "Metadatos actualizados en DB y archivo físico para track {}",
+        request.id
+    );
     Ok(())
 }
 
@@ -235,7 +242,7 @@ mod tests {
     #[test]
     fn test_library_state_new() {
         let _state = LibraryState::new();
-        assert!(true); // Estado se crea correctamente
+        // Estado se crea correctamente si no hay panic
     }
 
     #[test]

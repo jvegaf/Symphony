@@ -49,6 +49,7 @@ pub use crate::audio::dsp::PeakMethod;
 pub const WAVEFORM_PEAK_METHOD: PeakMethod = PeakMethod::Rms;
 
 #[cfg(test)]
+#[allow(clippy::assertions_on_constants)]
 mod tests {
     use super::*;
 

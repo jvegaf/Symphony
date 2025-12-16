@@ -8,11 +8,11 @@ import { Star } from "lucide-react";
 import type { Track } from "../types/library";
 
 interface TrackDetailProps {
-  trackId: number;
+  trackId: string; // AIDEV-NOTE: UUID v4, no number
 }
 
 interface UpdateTrackMetadataRequest {
-  track_id: number;
+  track_id: string; // AIDEV-NOTE: UUID v4, no number
   metadata: {
     title: string;
     artist: string;
@@ -52,7 +52,8 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId }) => {
   } = useQuery<Track>({
     queryKey: ["track", trackId],
     queryFn: async () => {
-      const result = await invoke<Track>("get_track", { id: trackId });
+      // AIDEV-NOTE: Comando correcto es get_track_by_id con parámetro 'id'
+      const result = await invoke<Track>("get_track_by_id", { id: trackId });
       return result;
     },
   });

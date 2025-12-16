@@ -4,8 +4,8 @@
  */
 
 import { useMemo } from 'react';
-import { cn } from '@/utils/cn';
-import type { Loop } from '@/types/analysis';
+import { cn } from '../../utils/cn';
+import type { Loop } from '../../types/analysis';
 
 export interface LoopEditorProps {
   /** Lista de loops */
@@ -19,11 +19,11 @@ export interface LoopEditorProps {
   /** Callback cuando se hace click en un loop */
   onLoopClick?: (loop: Loop) => void;
   /** Callback cuando se arrastra el inicio de un loop */
-  onLoopStartDrag?: (loopId: number, newStart: number) => void;
+  onLoopStartDrag?: (loopId: string, newStart: number) => void;
   /** Callback cuando se arrastra el fin de un loop */
-  onLoopEndDrag?: (loopId: number, newEnd: number) => void;
+  onLoopEndDrag?: (loopId: string, newEnd: number) => void;
   /** ID del loop seleccionado */
-  selectedLoopId?: number;
+  selectedLoopId?: string;
   /** Clase CSS adicional */
   className?: string;
 }

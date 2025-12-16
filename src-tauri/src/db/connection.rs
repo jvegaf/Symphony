@@ -11,16 +11,16 @@ pub struct Database {
 
 impl Database {
     /// Crea una nueva conexión a la base de datos
-    /// 
+    ///
     /// La base de datos se crea en el directorio de configuración de la aplicación.
     /// Para tests, usa conexión en memoria.
     pub fn new() -> Result<Self> {
         let db_path = Self::get_db_path();
         let conn = Connection::open(&db_path)?;
-        
+
         // Habilitar foreign keys
         conn.execute_batch("PRAGMA foreign_keys = ON;")?;
-        
+
         Ok(Database { conn })
     }
 
@@ -38,7 +38,7 @@ impl Database {
         {
             PathBuf::from(":memory:")
         }
-        
+
         #[cfg(not(test))]
         {
             // AIDEV-NOTE: Usar función centralizada de paths.rs
@@ -50,7 +50,7 @@ impl Database {
 }
 
 /// Obtiene una conexión global a la base de datos
-/// 
+///
 /// NOTA: Esta es una implementación simple. Para producción,
 /// considerar usar un pool de conexiones.
 pub fn get_connection() -> Result<Database> {

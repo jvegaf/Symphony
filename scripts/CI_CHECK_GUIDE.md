@@ -73,9 +73,11 @@ Ejecuta:
 - Node.js 22
 - npm dependencies instaladas (`npm ci`)
 
-### Backend (Ubuntu/Linux)
+### Backend (Linux)
 - Rust toolchain (stable)
-- System dependencies:
+- System dependencies (el script detectará automáticamente tu distribución):
+
+**Ubuntu/Debian:**
   ```bash
   sudo apt-get update
   sudo apt-get install -y \
@@ -86,7 +88,17 @@ Ejecuta:
     patchelf
   ```
 
-El script verificará automáticamente si las dependencias están instaladas.
+**Arch Linux/Manjaro/CachyOS:**
+  ```bash
+  sudo pacman -S gtk3 webkit2gtk libappindicator-gtk3 librsvg
+  ```
+
+**Fedora/RHEL:**
+  ```bash
+  sudo dnf install gtk3-devel webkit2gtk4.0-devel libappindicator-gtk3-devel librsvg2-devel
+  ```
+
+El script verificará automáticamente si las dependencias están instaladas y te proporcionará los comandos específicos para tu distribución.
 
 ## 📊 Output
 
@@ -104,7 +116,7 @@ El script muestra:
 ╚════════════════════════════════════════════════════════════════╝
 
 📋 Configuración:
-  Sistema operativo: ubuntu-latest
+  Sistema operativo: linux (arch)
   Frontend checks:   true
   Backend checks:    true
   Build app:         true
@@ -197,6 +209,7 @@ chmod +x .git/hooks/pre-commit
 ### Diferencias con GitHub Actions
 
 - **Sistema operativo:** Solo valida para tu OS actual (no matriz multi-OS)
+- **Distribución:** Detecta automáticamente Ubuntu, Debian, Arch, Manjaro, CachyOS, Fedora, RHEL
 - **Full build:** No ejecuta `npm run tauri build` por defecto (toma 5-10 min)
 - **Coverage upload:** No sube a Codecov (solo verifica threshold local)
 - **Artifacts:** No genera artifacts
@@ -245,11 +258,18 @@ cd /path/to/Symphony
 ./scripts/check-ci.sh
 ```
 
-### Dependencias del sistema faltantes (Ubuntu)
-El script te dirá exactamente qué paquetes instalar:
+### Dependencias del sistema faltantes
+El script detecta automáticamente tu distribución Linux y te proporciona los comandos específicos.
+
+**Para Ubuntu/Debian:**
 ```bash
 sudo apt-get update
 sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.0-dev ...
+```
+
+**Para Arch Linux:**
+```bash
+sudo pacman -S gtk3 webkit2gtk libappindicator-gtk3 librsvg
 ```
 
 ### Tests muy lentos

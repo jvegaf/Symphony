@@ -145,13 +145,17 @@ export const useSearchTracks = (query: string, enabled = true) => {
  * ```
  */
 export const useGetTrack = (id: string, enabled = true) => {
+  // AIDEV-NOTE: Validar que el ID sea un UUID válido o al menos no sea "0"
+  // UUIDs son strings de 36 caracteres (incluyendo guiones) o números válidos
+  const isValidId = id.length > 0 && id !== "0";
+  
   return useQuery<Track, Error>({
     queryKey: ["tracks", "byId", id],
     queryFn: async () => {
       const track = await invoke<Track>("get_track_by_id", { id });
       return track;
     },
-    enabled: enabled && id.length > 0,
+    enabled: enabled && isValidId,
     staleTime: 10 * 60 * 1000, // 10 minutos
   });
 };

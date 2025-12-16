@@ -3,7 +3,6 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import React from "react";
 import { TrackDetail } from "./TrackDetail";
 import type { Track } from "../types/library";
 
@@ -15,19 +14,18 @@ vi.mock("@tauri-apps/api/core", () => ({
 const mockInvoke = vi.mocked(invoke);
 
 const mockTrack: Track = {
-  id: 1,
+  id: "1",
   path: "/music/test.mp3",
   title: "Test Track",
   artist: "Test Artist",
   album: "Test Album",
   duration: 180.5,
-  file_size: 5000000,
-  format: "MP3",
+  fileSize: 5000000,
   bitrate: 320,
-  sample_rate: 44100,
-  channels: 2,
-  has_artwork: false,
-  added_at: "2024-01-01T00:00:00Z",
+  sampleRate: 44100,
+  playCount: 0,
+  dateAdded: "2024-01-01T00:00:00Z",
+  dateModified: "2024-01-01T00:00:00Z",
   year: 2024,
   genre: "Rock",
   rating: 4,
@@ -40,15 +38,16 @@ describe("TrackDetail", () => {
   beforeEach(() => {
     queryClient = new QueryClient({
       defaultOptions: {
-        queries: { retry: false, cacheTime: 0, staleTime: 0 },
+        queries: { retry: false, gcTime: 0, staleTime: 0 },
         mutations: { retry: false },
       },
     });
     vi.clearAllMocks();
 
     // Mock por defecto
-    mockInvoke.mockImplementation(async (command: string, args?: any) => {
-      if (command === "get_track") {
+    // AIDEV-NOTE: Comando correcto es get_track_by_id, no get_track
+    mockInvoke.mockImplementation(async (command: string, _args?: any) => {
+      if (command === "get_track_by_id") {
         return Promise.resolve(mockTrack);
       }
       if (command === "update_track_metadata") {
@@ -62,7 +61,8 @@ describe("TrackDetail", () => {
     queryClient.clear();
   });
 
-  const renderComponent = (trackId: number) => {
+  // AIDEV-NOTE: trackId debe ser string (UUID), no number
+  const renderComponent = (trackId: string) => {
     return render(
       <QueryClientProvider client={queryClient}>
         <TrackDetail trackId={trackId} />
@@ -71,7 +71,7 @@ describe("TrackDetail", () => {
   };
 
   it("debería renderizar metadatos del track", async () => {
-    renderComponent(1);
+    renderComponent("1");
 
     await waitFor(() => {
       expect(screen.getByDisplayValue("Test Track")).toBeInTheDocument();
@@ -85,18 +85,18 @@ describe("TrackDetail", () => {
       () => new Promise(() => {}) // Never resolves
     );
 
-    renderComponent(1);
+    renderComponent("1");
 
     expect(screen.getByText(/cargando/i)).toBeInTheDocument();
   });
 
   it("debería mostrar error state si falla la carga", async () => {
     mockInvoke.mockImplementation((cmd: string) => {
-      if (cmd === "get_track") return Promise.reject(new Error("Track not found"));
+      if (cmd === "get_track_by_id") return Promise.reject(new Error("Track not found"));
       return Promise.resolve(null);
     });
 
-    renderComponent(1);
+    renderComponent("1");
 
     await waitFor(() => {
       expect(screen.getByText(/error al cargar/i)).toBeInTheDocument();
@@ -104,7 +104,7 @@ describe("TrackDetail", () => {
   });
 
   it("debería permitir editar título", async () => {
-    renderComponent(1);
+    renderComponent("1");
 
     await waitFor(() => {
       expect(screen.getByDisplayValue("Test Track")).toBeInTheDocument();
@@ -118,7 +118,7 @@ describe("TrackDetail", () => {
   });
 
   it("debería permitir editar artista", async () => {
-    renderComponent(1);
+    renderComponent("1");
 
     await waitFor(() => {
       expect(screen.getByDisplayValue("Test Artist")).toBeInTheDocument();
@@ -132,7 +132,7 @@ describe("TrackDetail", () => {
   });
 
   it("debería permitir editar año", async () => {
-    renderComponent(1);
+    renderComponent("1");
 
     await waitFor(() => {
       expect(screen.getByDisplayValue("2024")).toBeInTheDocument();
@@ -146,7 +146,7 @@ describe("TrackDetail", () => {
   });
 
   it("debería mostrar rating con estrellas", async () => {
-    renderComponent(1);
+    renderComponent("1");
 
     await waitFor(() => {
       expect(screen.getByDisplayValue("Test Track")).toBeInTheDocument();
@@ -158,7 +158,7 @@ describe("TrackDetail", () => {
   });
 
   it("debería actualizar rating al hacer click en estrella", async () => {
-    renderComponent(1);
+    renderComponent("1");
 
     await waitFor(() => {
       expect(screen.getByDisplayValue("Test Track")).toBeInTheDocument();
@@ -171,7 +171,7 @@ describe("TrackDetail", () => {
     // Verificar que se llame al comando de actualización
     await waitFor(() => {
       expect(mockInvoke).toHaveBeenCalledWith("update_track_metadata", {
-        track_id: 1,
+        track_id: "1",
         metadata: expect.objectContaining({
           rating: 3,
         }),
@@ -180,7 +180,7 @@ describe("TrackDetail", () => {
   });
 
   it("debería guardar cambios al hacer click en botón Guardar", async () => {
-    renderComponent(1);
+    renderComponent("1");
 
     await waitFor(() => {
       expect(screen.getByDisplayValue("Test Track")).toBeInTheDocument();
@@ -202,7 +202,7 @@ describe("TrackDetail", () => {
     // Verificar llamada al comando
     await waitFor(() => {
       expect(mockInvoke).toHaveBeenCalledWith("update_track_metadata", {
-        track_id: 1,
+        track_id: "1",
         metadata: {
           title: "Track Editado",
           artist: "Artista Editado",
@@ -216,7 +216,7 @@ describe("TrackDetail", () => {
   });
 
   it("debería mostrar mensaje de éxito después de guardar", async () => {
-    renderComponent(1);
+    renderComponent("1");
 
     await waitFor(() => {
       expect(screen.getByDisplayValue("Test Track")).toBeInTheDocument();
@@ -237,7 +237,7 @@ describe("TrackDetail", () => {
   });
 
   it("debería validar que rating esté entre 0 y 5", async () => {
-    renderComponent(1);
+    renderComponent("1");
 
     await waitFor(() => {
       expect(screen.getByDisplayValue("Test Track")).toBeInTheDocument();
@@ -251,7 +251,7 @@ describe("TrackDetail", () => {
 
     await waitFor(() => {
       expect(mockInvoke).toHaveBeenCalledWith("update_track_metadata", {
-        track_id: 1,
+        track_id: "1",
         metadata: expect.objectContaining({
           rating: 5,
         }),

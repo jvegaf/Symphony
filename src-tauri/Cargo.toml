@@ -1,8 +1,8 @@
 [package]
 name = "symphony"
-version = "0.4.0"
-description = "A Tauri App"
-authors = ["you"]
+version = "0.4.1"
+description = "The Old School Music Manager"
+authors = ["Jose Vega"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -36,21 +36,20 @@ tokio-util = "0.7"
 # Audio dependencies
 # AIDEV-NOTE: Arquitectura de audio estilo Musicat - symphonia (decode) + cpal (output) + rb (ring buffer)
 symphonia = { version = "0.5", features = ["mp3", "flac", "wav", "ogg", "aac"] }
-cpal = "0.15.3"           # Salida de audio directa (reemplaza rodio)
-rb = "0.4.1"              # Ring buffer SPSC para desacoplar decode de playback
-atomic-wait = "1.1.0"     # Pause/resume eficiente sin spin-lock
-rubato = "0.15"           # Sample rate conversion (resampling)
+cpal = "0.15.3"                                                                  # Salida de audio directa (reemplaza rodio)
+rb = "0.4.1"                                                                     # Ring buffer SPSC para desacoplar decode de playback
+atomic-wait = "1.1.0"                                                            # Pause/resume eficiente sin spin-lock
+rubato = "0.15"                                                                  # Sample rate conversion (resampling)
 hound = "3.5"
 tauri-plugin-log = "2.7.1"
 log = "0.4.29"
 
 # Metadata dependencies
 # AIDEV-NOTE: lofty para lectura/escritura de tags ID3v2, ID3v1, APEv2, Vorbis Comments, MP4
-lofty = "0.22"           # Equivalente Rust de mutagen (lectura + escritura de metadatos)
-id3 = "1.14"             # Para lectura directa de frames POPM (Popularimeter)
+lofty = "0.22" # Equivalente Rust de mutagen (lectura + escritura de metadatos)
+id3 = "1.14"   # Para lectura directa de frames POPM (Popularimeter)
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
 tokio-test = "0.4"
 tempfile = "3.8"
-

@@ -3,25 +3,25 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CuePointEditor } from './CuePointEditor';
-import type { CuePoint } from '@/types/analysis';
+import type { CuePoint } from '../../types/analysis';
 
 describe('CuePointEditor', () => {
   const mockCuePoints: CuePoint[] = [
     {
-      id: 1,
+      id: "1",
       trackId: 'track1',
       position: 30,
       label: 'Intro',
-      color: null,
+      // AIDEV-NOTE: No color - debe usar color por defecto del tipo 'intro' (#10b981)
       type: 'intro',
       hotkey: 1,
       createdAt: '2024-01-01T00:00:00Z',
     },
     {
-      id: 2,
+      id: "2",
       trackId: 'track1',
       position: 90,
       label: 'Drop',
@@ -31,13 +31,12 @@ describe('CuePointEditor', () => {
       createdAt: '2024-01-01T00:01:00Z',
     },
     {
-      id: 3,
+      id: "3",
       trackId: 'track1',
       position: 150,
       label: 'Outro',
-      color: null,
+      color: '#0000ff',
       type: 'outro',
-      hotkey: null,
       createdAt: '2024-01-01T00:02:00Z',
     },
   ];
@@ -127,9 +126,10 @@ describe('CuePointEditor', () => {
     
     await user.click(firstCueGroup);
     
+    // AIDEV-NOTE: IDs son strings (UUID), no números
     expect(onCuePointClick).toHaveBeenCalledWith(
       expect.objectContaining({
-        id: 1,
+        id: "1",
         label: 'Intro',
       })
     );
@@ -137,7 +137,7 @@ describe('CuePointEditor', () => {
 
   it('debería resaltar cue point seleccionado', () => {
     const { container } = render(
-      <CuePointEditor {...defaultProps} selectedCuePointId={2} />
+      <CuePointEditor {...defaultProps} selectedCuePointId="2" />
     );
     
     const lines = container.querySelectorAll('line');

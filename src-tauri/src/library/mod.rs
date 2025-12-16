@@ -1,7 +1,7 @@
-pub mod scanner;
-pub mod metadata;
-pub mod importer;
 pub mod error;
+pub mod importer;
+pub mod metadata;
+pub mod scanner;
 
-pub use importer::{LibraryImporter, ImportResult};
+pub use importer::{ImportResult, LibraryImporter};
 pub use metadata::MetadataExtractor;

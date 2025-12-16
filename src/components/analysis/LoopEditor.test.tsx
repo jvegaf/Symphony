@@ -3,15 +3,15 @@
  */
 
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LoopEditor } from './LoopEditor';
-import type { Loop } from '@/types/analysis';
+import type { Loop } from '../../types/analysis';
 
 describe('LoopEditor', () => {
   const mockLoops: Loop[] = [
     {
-      id: 1,
+      id: "1",
       trackId: 'track1',
       label: 'Verse',
       loopStart: 30,
@@ -20,7 +20,7 @@ describe('LoopEditor', () => {
       createdAt: '2024-01-01T00:00:00Z',
     },
     {
-      id: 2,
+      id: "2",
       trackId: 'track1',
       label: 'Chorus',
       loopStart: 90,
@@ -29,9 +29,9 @@ describe('LoopEditor', () => {
       createdAt: '2024-01-01T00:01:00Z',
     },
     {
-      id: 3,
+      id: "3",
       trackId: 'track1',
-      label: null,
+      label: "Loop 3",
       loopStart: 150,
       loopEnd: 165,
       isActive: true,
@@ -103,7 +103,8 @@ describe('LoopEditor', () => {
     
     expect(textContents).toContain('Verse');
     expect(textContents).toContain('Chorus');
-    expect(textContents).toContain('Loop'); // Default label para loop sin nombre
+    // AIDEV-NOTE: El tercer loop tiene label "Loop 3", no "Loop"
+    expect(textContents).toContain('Loop 3');
   });
 
   it('debería mostrar duración de loops formateada', () => {
@@ -140,9 +141,10 @@ describe('LoopEditor', () => {
     const firstRect = container.querySelectorAll('rect')[0];
     await user.click(firstRect);
     
+    // AIDEV-NOTE: IDs son strings (UUID), no números
     expect(onLoopClick).toHaveBeenCalledWith(
       expect.objectContaining({
-        id: 1,
+        id: "1",
         label: 'Verse',
       })
     );
@@ -150,7 +152,7 @@ describe('LoopEditor', () => {
 
   it('debería resaltar loop seleccionado', () => {
     const { container } = render(
-      <LoopEditor {...defaultProps} selectedLoopId={2} />
+      <LoopEditor {...defaultProps} selectedLoopId="2" />
     );
     
     const rects = container.querySelectorAll('rect');
@@ -182,7 +184,7 @@ describe('LoopEditor', () => {
 
   it('debería calcular duración correctamente para loops cortos', () => {
     const shortLoop: Loop = {
-      id: 4,
+      id: "4",
       trackId: 'track1',
       label: 'Short',
       loopStart: 0,

@@ -2,6 +2,7 @@ use rusqlite::{Connection, Result};
 
 /// Versión actual del esquema
 /// AIDEV-NOTE: Versión 3 migra todos los IDs de INTEGER a TEXT (UUID)
+#[allow(dead_code)]
 const CURRENT_VERSION: i32 = 3;
 
 /// Ejecuta todas las migraciones pendientes
@@ -37,11 +38,10 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
 
 /// Obtiene la versión actual del esquema
 fn get_current_version(conn: &Connection) -> Result<i32> {
-    let version: Result<i32> = conn.query_row(
-        "SELECT MAX(version) FROM schema_version",
-        [],
-        |row| row.get(0),
-    );
+    let version: Result<i32> =
+        conn.query_row("SELECT MAX(version) FROM schema_version", [], |row| {
+            row.get(0)
+        });
 
     match version {
         Ok(v) => Ok(v),
@@ -174,7 +174,7 @@ fn migration_001_initial_schema(conn: &Connection) -> Result<()> {
             value TEXT NOT NULL,
             value_type TEXT NOT NULL
         );
-        "
+        ",
     )?;
 
     Ok(())
@@ -198,7 +198,7 @@ fn migration_002_update_analysis_tables(conn: &Connection) -> Result<()> {
         );
 
         CREATE INDEX idx_beatgrids_track ON beatgrids(track_id);
-        "
+        ",
     )?;
 
     // Drop y recrear tabla cue_points con nuevos campos
@@ -220,7 +220,7 @@ fn migration_002_update_analysis_tables(conn: &Connection) -> Result<()> {
 
         CREATE INDEX idx_cue_points_track ON cue_points(track_id);
         CREATE INDEX idx_cue_points_position ON cue_points(position);
-        "
+        ",
     )?;
 
     // Drop y recrear tabla loops con nuevos campos
@@ -241,7 +241,7 @@ fn migration_002_update_analysis_tables(conn: &Connection) -> Result<()> {
 
         CREATE INDEX idx_loops_track ON loops(track_id);
         CREATE INDEX idx_loops_start ON loops(loop_start);
-        "
+        ",
     )?;
 
     Ok(())
@@ -376,7 +376,7 @@ fn migration_003_uuid_migration(conn: &Connection) -> Result<()> {
             value TEXT NOT NULL,
             value_type TEXT NOT NULL
         );
-        "
+        ",
     )?;
 
     Ok(())
@@ -398,7 +398,7 @@ mod tests {
     fn test_schema_version() {
         let db = Database::new_in_memory().unwrap();
         run_migrations(&db.conn).unwrap();
-        
+
         let version = get_current_version(&db.conn).unwrap();
         assert_eq!(version, 3);
     }
@@ -410,17 +410,29 @@ mod tests {
 
         // Verificar que todas las tablas existen
         let tables = vec![
-            "tracks", "waveforms", "beatgrids", "cue_points",
-            "loops", "playlists", "playlist_tracks", "settings"
+            "tracks",
+            "waveforms",
+            "beatgrids",
+            "cue_points",
+            "loops",
+            "playlists",
+            "playlist_tracks",
+            "settings",
         ];
 
         for table in tables {
-            let count: i32 = db.conn.query_row(
-                &format!("SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='{}'", table),
-                [],
-                |row| row.get(0),
-            ).unwrap();
-            
+            let count: i32 = db
+                .conn
+                .query_row(
+                    &format!(
+                        "SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name='{}'",
+                        table
+                    ),
+                    [],
+                    |row| row.get(0),
+                )
+                .unwrap();
+
             assert_eq!(count, 1, "Table {} should exist", table);
         }
     }
