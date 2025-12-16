@@ -108,10 +108,19 @@ pub async fn get_library_stats() -> Result<LibraryStats, String> {
     let mut artists = std::collections::HashSet::new();
     let mut albums = std::collections::HashSet::new();
     
+    // Calcular distribución de ratings [0, 1, 2, 3, 4, 5]
+    let mut rating_distribution = vec![0usize; 6]; // índices 0-5 para ratings 0-5
+    
     for track in tracks {
         artists.insert(track.artist.clone());
         if let Some(album) = track.album {
             albums.insert(album);
+        }
+        
+        // Contar rating (si es None, se considera 0)
+        let rating = track.rating.unwrap_or(0) as usize;
+        if rating <= 5 {
+            rating_distribution[rating] += 1;
         }
     }
 
@@ -121,6 +130,7 @@ pub async fn get_library_stats() -> Result<LibraryStats, String> {
         total_albums: albums.len(),
         total_duration_hours: total_duration / 3600.0,
         total_size_gb: total_size as f64 / 1_073_741_824.0,
+        rating_distribution,
     })
 }
 
@@ -215,6 +225,7 @@ pub struct LibraryStats {
     pub total_albums: usize,
     pub total_duration_hours: f64,
     pub total_size_gb: f64,
+    pub rating_distribution: Vec<usize>, // Distribución de ratings [0-5 stars]
 }
 
 #[cfg(test)]
@@ -235,12 +246,14 @@ mod tests {
             total_albums: 200,
             total_duration_hours: 72.5,
             total_size_gb: 8.3,
+            rating_distribution: vec![100, 200, 300, 250, 100, 50], // 0-5 stars
         };
 
         let json = serde_json::to_string(&stats).unwrap();
         assert!(json.contains("\"total_tracks\":1000"));
         assert!(json.contains("\"total_artists\":150"));
         assert!(json.contains("\"total_duration_hours\":72.5"));
+        assert!(json.contains("\"rating_distribution\""));
     }
 
     // Tests asíncronos de comandos requieren setup completo de Tauri

@@ -2,12 +2,14 @@ pub mod db;
 pub mod audio;
 pub mod library;
 pub mod commands;
+pub mod utils;
 
 use commands::audio::AudioPlayerState;
 use commands::library::LibraryState;
 use std::sync::{Arc, Mutex};
 use db::Database;
 use audio::WaveformState;
+use utils::paths::{ensure_app_dirs, get_log_path, get_db_path};
 
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
@@ -17,24 +19,33 @@ fn greet(name: &str) -> String {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // Configurar logger y mostrar ruta del archivo de log
-    let log_file_path = if let Some(log_dir) = dirs::data_local_dir() {
-        let log_path = log_dir.join("symphony").join("symphony.log");
-        eprintln!("╔══════════════════════════════════════════════════════════════════╗");
-        eprintln!("║ 🔍 LOG FILE: {:?}", log_path);
-        eprintln!("║ Para ver logs en tiempo real:");
-        eprintln!("║   tail -f {:?}", log_path);
-        eprintln!("╚══════════════════════════════════════════════════════════════════╝");
-        Some(log_path)
-    } else {
-        None
+    // AIDEV-NOTE: Asegurar que existan todos los directorios de configuración
+    // antes de iniciar la aplicación (~/.config/symphony/)
+    let config_dir = match ensure_app_dirs() {
+        Ok(dir) => dir,
+        Err(e) => {
+            eprintln!("❌ Error creando directorios de configuración: {}", e);
+            panic!("Cannot create configuration directories: {}", e);
+        }
     };
+
+    let log_file_path = get_log_path();
+    let db_path = get_db_path();
+
+    eprintln!("╔══════════════════════════════════════════════════════════════════╗");
+    eprintln!("║ 📁 CONFIG DIR: {:?}", config_dir);
+    eprintln!("║ 🔍 LOG FILE:   {:?}", log_file_path);
+    eprintln!("║ 💾 DATABASE:   {:?}", db_path);
+    eprintln!("║ ");
+    eprintln!("║ Para ver logs en tiempo real:");
+    eprintln!("║   tail -f {:?}", log_file_path);
+    eprintln!("╚══════════════════════════════════════════════════════════════════╝");
     
     log::info!("==================== SYMPHONY STARTING ====================");
     log::info!("Iniciando Symphony...");
-    if let Some(ref path) = log_file_path {
-        log::info!("📝 Logs guardándose en: {:?}", path);
-    }
+    log::info!("📁 Directorio de configuración: {:?}", config_dir);
+    log::info!("📝 Logs guardándose en: {:?}", log_file_path);
+    log::info!("💾 Base de datos en: {:?}", db_path);
 
     // Inicializar base de datos y ejecutar migraciones
     if let Err(e) = db::initialize() {
@@ -61,11 +72,6 @@ pub fn run() {
     // Connection para waveform (necesita tokio::sync::Mutex para async)
     // AIDEV-NOTE: Usamos una segunda conexión para waveform porque las async operations
     // necesitan tokio::sync::Mutex en lugar de std::sync::Mutex
-    let db_path = dirs::data_local_dir()
-        .expect("No local data directory")
-        .join("symphony")
-        .join("symphony.db");
-    
     let waveform_db = Arc::new(tokio::sync::Mutex::new(
         rusqlite::Connection::open(&db_path).expect("Failed to open DB for waveform")
     ));
@@ -73,8 +79,8 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(
             tauri_plugin_log::Builder::new()
-                // AIDEV-NOTE: Configuración de logging mejorada
-                // - LogDir: Guarda en archivo ~/.local/share/symphony/symphony.log
+                // AIDEV-NOTE: Configuración de logging centralizada
+                // - LogDir: Guarda en archivo ~/.config/symphony/symphony.log (XDG Base Directory)
                 // - Webview: Muestra en consola del navegador (F12)
                 // - Stdout: Muestra en terminal (solo en desarrollo)
                 .targets([

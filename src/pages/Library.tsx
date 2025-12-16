@@ -50,9 +50,25 @@ export const Library = () => {
               🔴 NUEVA VERSIÓN - Biblioteca Musical
             </h1>
             {stats && stats.totalTracks > 0 && (
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {stats.totalTracks} pistas • {stats.totalSizeGb?.toFixed(2) ?? '0.00'} GB
-              </p>
+              <div className="mt-1 space-y-1">
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  {stats.totalTracks} pistas • {stats.totalSizeGb?.toFixed(2) ?? '0.00'} GB
+                </p>
+                {stats.ratingDistribution && stats.ratingDistribution.some((count: number) => count > 0) && (
+                  <p className="text-xs text-gray-500 dark:text-gray-500 flex items-center gap-2">
+                    <span>Ratings:</span>
+                    {stats.ratingDistribution.map((count: number, rating: number) => {
+                      if (count === 0 || rating === 0) return null; // Skip 0-star and empty counts
+                      return (
+                        <span key={`rating-${rating}`} className="flex items-center gap-0.5">
+                          <span className="text-yellow-500">{"★".repeat(rating)}</span>
+                          <span className="text-gray-600 dark:text-gray-400">({count})</span>
+                        </span>
+                      );
+                    })}
+                  </p>
+                )}
+              </div>
             )}
           </div>
           <Button

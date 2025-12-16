@@ -1,4 +1,6 @@
 import type { Track } from "../../types/library";
+import { StarRating } from "../ui/StarRating";
+import { useUpdateTrackRating } from "../../hooks/useLibrary";
 
 interface TrackTableProps {
   tracks: Track[];
@@ -25,11 +27,6 @@ const formatDate = (dateString: string): string => {
   return `${day}/${month}/${year}`;
 };
 
-const Rating = ({ rating }: { rating: number }) => {
-  const stars = "★".repeat(rating) + "☆".repeat(5 - rating);
-  return <span className="text-gray-400 dark:text-gray-600">{stars}</span>;
-};
-
 export const TrackTable = ({
   tracks,
   selectedTrack,
@@ -37,6 +34,9 @@ export const TrackTable = ({
   onTrackDoubleClick,
   isLoading,
 }: TrackTableProps) => {
+  // AIDEV-NOTE: Hook para actualizar rating en DB y archivo MP3
+  const { mutate: updateRating } = useUpdateTrackRating();
+
   if (isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -62,7 +62,7 @@ export const TrackTable = ({
 
   return (
     <div className="flex-1 overflow-auto">
-      <table className="w-full text-left text-xs whitespace-nowrap">
+      <table className="w-full text-left text-sm whitespace-nowrap">
         <thead className="sticky top-0 bg-gray-100 dark:bg-gray-800 z-10">
           <tr className="border-b border-gray-200/50 dark:border-gray-700/50">
             <th className="p-2 w-8">
@@ -147,8 +147,17 @@ export const TrackTable = ({
                     </span>
                   )}
                 </td>
-                <td className={`p-2 ${isSelected ? "text-primary font-medium" : ""}`}>
-                  <Rating rating={track.rating ?? 0} />
+                <td className="p-2">
+                  <StarRating
+                    value={track.rating ?? 0}
+                    readOnly={false}
+                    size="md"
+                    onChange={(newRating) => {
+                      if (track.id) {
+                        updateRating({ trackId: track.id, rating: newRating });
+                      }
+                    }}
+                  />
                 </td>
                 <td className={`p-2 ${isSelected ? "text-primary font-medium" : ""}`}>
                   {track.genre ?? ""}

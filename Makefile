@@ -258,7 +258,23 @@ tag-milestone: ## Crear tag de milestone (ejemplo: make tag-milestone VERSION=3)
 
 ##@ CI/CD
 
-ci-test: ## Simular tests de CI localmente
+ci-check: ## Validar workflows de GitHub Actions localmente (recomendado antes de push)
+	@echo "$(BLUE)Validando workflows de CI...$(NC)"
+	@./scripts/check-ci.sh
+
+ci-check-fast: ## Validación rápida (sin coverage ni build)
+	@echo "$(BLUE)Validación rápida de CI...$(NC)"
+	@./scripts/check-ci.sh --fast
+
+ci-check-frontend: ## Validar solo checks de frontend
+	@echo "$(BLUE)Validando frontend...$(NC)"
+	@./scripts/check-ci.sh --frontend
+
+ci-check-backend: ## Validar solo checks de backend
+	@echo "$(BLUE)Validando backend...$(NC)"
+	@./scripts/check-ci.sh --backend
+
+ci-test: ## Simular tests de CI localmente (legacy, usar ci-check)
 	@echo "$(BLUE)Simulando CI/CD tests...$(NC)"
 	$(MAKE) lint
 	$(MAKE) type-check

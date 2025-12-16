@@ -191,8 +191,8 @@ impl LibraryImporter {
             sample_rate: 44100, // TODO: Extraer de AudioMetadata
             file_size,
             bpm: metadata.bpm.map(|b| b as f64),
-            key: None,
-            rating: None,
+            key: metadata.key.clone(),
+            rating: metadata.rating, // ✅ USAR EL RATING DE LOS METADATOS
             play_count: 0,
             last_played: None,
             date_added: now.clone(),
@@ -318,6 +318,9 @@ mod tests {
         assert_eq!(track.artist, "Test Artist");
         assert_eq!(track.album, Some("Test Album".to_string()));
         assert_eq!(track.duration, 180.0);
+        assert_eq!(track.bpm, Some(128.0));
+        assert_eq!(track.key, Some("Am".to_string()));
+        assert_eq!(track.rating, Some(5), "Rating should be preserved from metadata");
         assert!(track.file_size > 0);
     }
 

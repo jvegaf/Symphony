@@ -375,7 +375,7 @@
 
 ---
 
-**Última actualización:** 13 dic 2025
-**Versión actual:** v0.3.0 (Milestone 2 completado)
-**Próxima versión:** v0.4.0 (Milestone 3 - Playlists y Edición)
+**Última actualización:** 16 dic 2025
+**Versión actual:** v0.4.0 (Milestone 3 completado)
+**Próxima versión:** v0.5.0 (Milestone 4 - Análisis avanzado)
 

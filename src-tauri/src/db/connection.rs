@@ -1,6 +1,9 @@
 use rusqlite::{Connection, Result};
 use std::path::PathBuf;
 
+#[cfg(not(test))]
+use crate::utils::paths::{ensure_app_dirs, get_db_path as get_app_db_path};
+
 /// Wrapper para la conexión de base de datos SQLite
 pub struct Database {
     pub conn: Connection,
@@ -38,12 +41,10 @@ impl Database {
         
         #[cfg(not(test))]
         {
-            let config_dir = dirs::config_dir()
-                .unwrap_or_else(|| PathBuf::from("."))
-                .join("symphony");
-            
-            std::fs::create_dir_all(&config_dir).ok();
-            config_dir.join("symphony.db")
+            // AIDEV-NOTE: Usar función centralizada de paths.rs
+            // Asegura que el directorio existe antes de retornar la ruta
+            ensure_app_dirs().expect("No se pudo crear el directorio de configuración");
+            get_app_db_path()
         }
     }
 }

@@ -1,6 +1,8 @@
-import React, { useState, useMemo } from "react";
+import type React from "react";
+import { useMemo, useState } from "react";
 import type { Track } from "../types/library";
-import { useSearchTracks } from "../hooks/useLibrary";
+import { useSearchTracks, useUpdateTrackRating } from "../hooks/useLibrary";
+import { StarRating } from "./ui/StarRating";
 
 export interface TrackListProps {
   tracks: Track[];
@@ -17,14 +19,12 @@ const formatDuration = (seconds: number): string => {
   const mins = Math.floor(seconds / 60);
   const secs = Math.floor(seconds % 60);
   return `${mins.toString().padStart(2, "0")}:${secs
-    .toString()
-    .padStart(2, "0")}`;
+  .toString()
+  .padStart(2, "0")}`;
 };
 
-const renderRating = (rating: number | null | undefined): string => {
-  if (!rating || rating === 0) return "-";
-  return "⭐".repeat(Math.min(Math.max(rating, 0), 5));
-};
+// AIDEV-NOTE: Eliminada función renderRating (ahora se usa StarRating component)
+
 
 export const TrackList: React.FC<TrackListProps> = ({
   tracks: initialTracks,
@@ -37,17 +37,26 @@ export const TrackList: React.FC<TrackListProps> = ({
   const [sortColumn, setSortColumn] = useState<SortColumn>("title");
   const [sortOrder, setSortOrder] = useState<SortOrder>("asc");
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [ratingFilter, setRatingFilter] = useState<number>(0); // 0 = all, 1-5 = min rating
 
   const { data: searchResults, isLoading: isSearching } = useSearchTracks(
     searchQuery,
     searchQuery.length >= 2
   );
 
+  // Hook para actualizar rating
+  const { mutate: updateRating } = useUpdateTrackRating();
+
   const displayTracks = useMemo(() => {
     const tracksToDisplay =
       searchQuery.length >= 2 ? searchResults || [] : initialTracks;
 
-    return tracksToDisplay.slice().sort((a, b) => {
+    // Apply rating filter
+    const filteredTracks = ratingFilter > 0
+      ? tracksToDisplay.filter(track => (track.rating ?? 0) >= ratingFilter)
+      : tracksToDisplay;
+
+    return filteredTracks.slice().sort((a, b) => {
       let aValue: string | number | null | undefined = a[sortColumn];
       let bValue: string | number | null | undefined = b[sortColumn];
 
@@ -68,7 +77,7 @@ export const TrackList: React.FC<TrackListProps> = ({
 
       return 0;
     });
-  }, [initialTracks, searchResults, searchQuery, sortColumn, sortOrder]);
+  }, [initialTracks, searchResults, searchQuery, sortColumn, sortOrder, ratingFilter]);
 
   const handleSort = (column: SortColumn) => {
     if (sortColumn === column) {
@@ -97,6 +106,11 @@ export const TrackList: React.FC<TrackListProps> = ({
   const TrackRow: React.FC<{ track: Track; index: number }> = ({ track, index }) => {
     const isSelected = selectedIndex === index;
 
+    const handleRatingChange = (newRating: number) => {
+      if (!track.id) return;
+      updateRating({ trackId: track.id, rating: newRating });
+    };
+
     return (
       <div
         className={`
@@ -111,20 +125,38 @@ export const TrackList: React.FC<TrackListProps> = ({
         onClick={() => handleRowClick(index)}
         onDoubleClick={() => handleRowDoubleClick(index)}
         role="row"
+        tabIndex={0}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            handleRowClick(index);
+          }
+        }}
       >
-        <div className="flex-1 truncate font-medium">{track.title}</div>
-        <div className="w-48 truncate text-gray-400">{track.artist}</div>
-        <div className="w-48 truncate text-gray-400">
+        <div className="flex-1 truncate font-medium text-base">{track.title}</div>
+        <div className="w-48 truncate text-gray-400 text-base">{track.artist}</div>
+        <div className="w-48 truncate text-gray-400 text-base">
           {track.album || "-"}
         </div>
-        <div className="w-20 text-right text-gray-400">
+        <div className="w-20 text-right text-gray-400 text-base">
           {formatDuration(track.duration)}
         </div>
-        <div className="w-16 text-right text-gray-400">
+        <div className="w-16 text-right text-gray-400 text-base">
           {track.bpm?.toFixed(0) || "-"}
         </div>
-        <div className="w-24 text-center text-yellow-500">
-          {renderRating(track.rating)}
+        <div 
+          className="w-32 flex justify-center"
+          onClick={(e) => e.stopPropagation()} // Evitar que se seleccione la fila al clickear rating
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.stopPropagation();
+            }
+          }}
+        >
+          <StarRating
+            value={track.rating}
+            onChange={handleRatingChange}
+            size="md"
+          />
         </div>
       </div>
     );
@@ -138,6 +170,7 @@ export const TrackList: React.FC<TrackListProps> = ({
     const isActive = sortColumn === column;
     return (
       <button
+        type="button"
         className={`
           px-4 py-2 text-left font-medium
           ${width || "flex-1"}
@@ -145,7 +178,6 @@ export const TrackList: React.FC<TrackListProps> = ({
           hover:text-white transition-colors
         `}
         onClick={() => handleSort(column)}
-        aria-sort={isActive ? (sortOrder === "asc" ? "ascending" : "descending") : "none"}
       >
         {label}
         {isActive && (
@@ -192,15 +224,28 @@ export const TrackList: React.FC<TrackListProps> = ({
 
   return (
     <div className="flex flex-col bg-gray-900 dark:bg-slate-950 rounded-lg overflow-hidden">
-      <div className="p-4 bg-gray-800">
+      <div className="p-4 bg-gray-800 flex gap-4">
         <input
           type="text"
           placeholder="Buscar pistas (mínimo 2 caracteres)..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="flex-1 px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
           aria-label="Buscar pistas"
         />
+        <select
+          value={ratingFilter}
+          onChange={(e) => setRatingFilter(Number(e.target.value))}
+          className="px-4 py-2 bg-gray-700 text-white rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          aria-label="Filtrar por rating"
+        >
+          <option value={0}>Todos los ratings</option>
+          <option value={1}>★ y superior</option>
+          <option value={2}>★★ y superior</option>
+          <option value={3}>★★★ y superior</option>
+          <option value={4}>★★★★ y superior</option>
+          <option value={5}>★★★★★</option>
+        </select>
       </div>
 
       <div className="flex items-center border-b-2 border-gray-700 bg-gray-800 dark:bg-slate-900">
@@ -209,7 +254,7 @@ export const TrackList: React.FC<TrackListProps> = ({
         <SortButton column="album" label="Álbum" width="w-48" />
         <SortButton column="duration" label="Duración" width="w-20" />
         <SortButton column="bpm" label="BPM" width="w-16" />
-        <SortButton column="rating" label="Rating" width="w-24" />
+        <SortButton column="rating" label="Rating" width="w-32" />
       </div>
 
       <div 
@@ -226,7 +271,8 @@ export const TrackList: React.FC<TrackListProps> = ({
       <div className="p-3 bg-gray-800 border-t border-gray-700">
         <span className="text-sm text-gray-400">
           {displayTracks.length} pista{displayTracks.length !== 1 ? "s" : ""}
-          {searchQuery.length >= 2 && ` (filtradas)`}
+          {searchQuery.length >= 2 && ` (búsqueda)`}
+          {ratingFilter > 0 && ` (rating ≥ ${ratingFilter}★)`}
         </span>
       </div>
     </div>

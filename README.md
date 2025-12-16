@@ -3,7 +3,7 @@
 Aplicación de escritorio profesional para gestionar bibliotecas musicales con importación, reproducción, análisis de audio y herramientas de organización avanzadas.
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![Version](https://img.shields.io/badge/version-0.1.0-blue)]()
+[![Version](https://img.shields.io/badge/version-0.4.0-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 
 ## ✨ Características
@@ -12,9 +12,22 @@ Aplicación de escritorio profesional para gestionar bibliotecas musicales con i
 - 🎵 **Reproducción Integrada:** Player completo con waveform interactivo (canvas propio, streaming progresivo, seek visual, feedback instantáneo). Ver [docs/waveform-implementation.md](./docs/waveform-implementation.md) para detalles.
 - 📊 **Análisis de Audio:** Beatgrids automáticos, cue points y loops personalizados
 - 📋 **Playlists:** Gestión completa con drag & drop
-- ✏️ **Edición de Metadatos:** Editor integrado con rating de pistas
+- ✏️ **Edición de Metadatos:** Editor integrado con rating de pistas (nuevo sistema visual de estrellas, mejoras UX v0.4.0)
 - 🔄 **Conversión de Audio:** Opcional a MP3 durante importación
 - 🌙 **Modo Oscuro:** Interfaz optimizada para uso prolongado
+
+## ⭐️ Novedades v0.4.0
+
+- ⭐️ **Sistema de rating visual mejorado:**
+  - Componente de estrellas con hover preciso (rellena hasta la estrella seleccionada)
+  - Tamaños ajustados (sm=16px, md=20px, lg=28px) y sin espacios entre estrellas (gap-0)
+  - Mejor integración en tablas y editor de metadatos
+  - Cobertura de tests completa (20/20 tests StarRating)
+- 🚦 **Script de chequeo CI local (`scripts/check-ci.sh`):**
+  - Valida workflows de CI antes de hacer push
+  - Modos: --fast, --frontend, --backend
+  - Checks: types, lint, tests, coverage, rustfmt, clippy, cargo tests
+  - Documentación: [scripts/CI_CHECK_GUIDE.md](./scripts/CI_CHECK_GUIDE.md)
 
 ## 🛠️ Stack Tecnológico
 
@@ -24,6 +37,24 @@ Aplicación de escritorio profesional para gestionar bibliotecas musicales con i
 - **Base de Datos:** SQLite
 - **State Management:** Zustand / Jotai
 - **Data Fetching:** TanStack Query
+
+## 🚧 Desarrollo
+
+### Script de chequeo CI local (opcional)
+
+Puedes validar todos los checks de CI localmente antes de hacer push usando:
+
+```bash
+./scripts/check-ci.sh         # Todos los checks (frontend + backend)
+./scripts/check-ci.sh --fast  # Modo rápido (sin coverage ni build)
+./scripts/check-ci.sh --frontend  # Solo frontend
+./scripts/check-ci.sh --backend   # Solo backend
+```
+
+- Documentación completa: [scripts/CI_CHECK_GUIDE.md](./scripts/CI_CHECK_GUIDE.md)
+- Alias en Makefile: `make ci-check`, `make ci-check-fast`, etc.
+- **Ahorra 5-15 minutos por commit** evitando errores en GitHub Actions
+
 
 ## 📋 Requisitos
 

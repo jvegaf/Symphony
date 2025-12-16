@@ -61,6 +61,7 @@ export interface LibraryStats {
   totalAlbums: number;
   totalDurationHours: number;
   totalSizeGb: number;
+  ratingDistribution: number[]; // [count_0_stars, count_1_star, ..., count_5_stars]
 }
 
 /**

@@ -1,12 +1,13 @@
+import type { UnlistenFn } from "@tauri-apps/api/event";
+import { listen } from "@tauri-apps/api/event";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
-import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { useEffect, useState } from "react";
 import type {
-  Track,
   ImportProgress,
   ImportResult,
   LibraryStats,
+  Track,
 } from "../types/library";
 
 /**
@@ -180,10 +181,114 @@ export const useLibraryStats = () => {
           totalAlbums: 0,
           totalDurationHours: 0,
           totalSizeGb: 0,
+          ratingDistribution: [0, 0, 0, 0, 0, 0], // [0-5 stars]
         };
       }
     },
     staleTime: 5 * 60 * 1000, // 5 minutos
     retry: false, // No reintentar automáticamente
+  });
+};
+
+/**
+ * Payload para actualizar metadatos de un track
+ * AIDEV-NOTE: Debe coincidir con UpdateTrackMetadataRequest en Rust
+ */
+interface UpdateTrackMetadataRequest {
+  id: string;
+  title?: string;
+  artist?: string;
+  album?: string;
+  year?: number;
+  genre?: string;
+  bpm?: number;
+  key?: string;
+  rating?: number; // 0-5 estrellas
+  comment?: string;
+}
+
+/**
+ * Hook para actualizar rating de un track
+ * 
+ * AIDEV-NOTE: Actualiza tanto la DB como el archivo físico MP3 (frame POPM)
+ * El backend convierte automáticamente 0-5 estrellas → 0-255 POPM
+ * 
+ * @example
+ * ```tsx
+ * const { mutate: updateRating } = useUpdateTrackRating();
+ * 
+ * const handleRatingChange = (trackId: string, rating: number) => {
+ *   updateRating({ trackId, rating });
+ * };
+ * ```
+ */
+export const useUpdateTrackRating = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    void,
+    Error,
+    { trackId: string; rating: number }
+  >({
+    mutationFn: async ({ trackId, rating }) => {
+      // Validar rating en frontend (0-5)
+      const clampedRating = Math.max(0, Math.min(rating, 5));
+      
+      const request: UpdateTrackMetadataRequest = {
+        id: trackId,
+        rating: clampedRating,
+      };
+
+      await invoke<void>("update_track_metadata", { request });
+    },
+    onSuccess: (_, variables) => {
+      // Invalidar queries para refrescar UI
+      queryClient.invalidateQueries({ queryKey: ["tracks"] });
+      queryClient.invalidateQueries({
+        queryKey: ["tracks", "byId", variables.trackId],
+      });
+    },
+    onError: (error) => {
+      console.error("Error updating track rating:", error);
+    },
+  });
+};
+
+/**
+ * Hook para actualizar metadatos completos de un track
+ * 
+ * @example
+ * ```tsx
+ * const { mutate: updateMetadata } = useUpdateTrackMetadata();
+ * 
+ * updateMetadata({
+ *   trackId: "uuid",
+ *   title: "New Title",
+ *   artist: "New Artist",
+ *   rating: 5
+ * });
+ * ```
+ */
+export const useUpdateTrackMetadata = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    void,
+    Error,
+    UpdateTrackMetadataRequest
+  >({
+    mutationFn: async (request) => {
+      await invoke<void>("update_track_metadata", { request });
+    },
+    onSuccess: (_, variables) => {
+      // Invalidar queries para refrescar UI
+      queryClient.invalidateQueries({ queryKey: ["tracks"] });
+      queryClient.invalidateQueries({
+        queryKey: ["tracks", "byId", variables.id],
+      });
+    },
+    onError: (error) => {
+      console.error("Error updating track metadata:", error);
+    },
   });
 };

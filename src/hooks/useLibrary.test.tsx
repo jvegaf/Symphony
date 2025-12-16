@@ -324,6 +324,7 @@ describe("useLibraryStats", () => {
       totalAlbums: 200,
       totalDurationHours: 72.5,
       totalSizeGb: 8.3,
+      ratingDistribution: [100, 200, 300, 250, 100, 50], // 0-5 stars
     };
     mockInvoke.mockResolvedValue(mockStats);
 
@@ -357,6 +358,7 @@ describe("useLibraryStats", () => {
       totalAlbums: 0,
       totalDurationHours: 0,
       totalSizeGb: 0,
+      ratingDistribution: [0, 0, 0, 0, 0, 0],
     });
   });
 });

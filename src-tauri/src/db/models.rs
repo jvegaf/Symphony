@@ -18,6 +18,7 @@ pub struct Track {
     pub file_size: i64,
     pub bpm: Option<f64>,
     pub key: Option<String>,
+    /// Rating en estrellas (0-5). Se convierte a/desde POPM (0-255) en tags ID3v2
     pub rating: Option<i32>,
     pub play_count: i32,
     pub last_played: Option<String>,

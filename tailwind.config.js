@@ -5,6 +5,11 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}",
   ],
   darkMode: 'class',
+  safelist: [
+    'text-primary',
+    'text-gray-600',
+    'text-gray-500',
+  ],
   theme: {
     extend: {
       colors: {

@@ -21,7 +21,7 @@ vi.mock("react-window", () => ({
 
 const mockTracks: Track[] = [
   {
-    id: 1,
+    id: "1",
     path: "/music/track1.mp3",
     title: "Amazing Song",
     artist: "Cool Artist",
@@ -36,7 +36,7 @@ const mockTracks: Track[] = [
     dateModified: new Date().toISOString(),
   },
   {
-    id: 2,
+    id: "2",
     path: "/music/track2.flac",
     title: "Beautiful Track",
     artist: "Great Band",
@@ -51,7 +51,7 @@ const mockTracks: Track[] = [
     dateModified: new Date().toISOString(),
   },
   {
-    id: 3,
+    id: "3",
     path: "/music/track3.wav",
     title: "Energetic Beat",
     artist: "Cool Artist",
@@ -398,9 +398,14 @@ describe("TrackList", () => {
       wrapper: createWrapper(),
     });
 
-    const rows = screen.getAllByRole("row");
-    expect(rows[0]).toHaveTextContent("⭐⭐⭐⭐⭐"); // 5 estrellas
-    expect(rows[1]).toHaveTextContent("⭐⭐⭐"); // 3 estrellas
+    // StarRating component usa botones con aria-label "X stars"
+    // Track 1 (5 stars): tiene botones "1 star", "2 stars", "3 stars", "4 stars", "5 stars"
+    // Track 2 (3 stars): tiene botones "1 star", "2 stars", "3 stars", "4 stars", "5 stars"
+    const oneStarButtons = screen.getAllByLabelText("1 star");
+    expect(oneStarButtons.length).toBe(2); // 2 tracks
+    
+    const fiveStarButtons = screen.getAllByLabelText("5 stars");
+    expect(fiveStarButtons.length).toBe(2); // Both tracks have a 5-star button
   });
 
   it("debería mostrar '-' cuando no hay rating", () => {
@@ -415,9 +420,13 @@ describe("TrackList", () => {
       wrapper: createWrapper(),
     });
 
-    const rows = screen.getAllByRole("row");
-    // Debería mostrar "-" para rating vacío
-    expect(rows[0]).toHaveTextContent("-");
+    // StarRating con value undefined muestra 0 estrellas, pero los botones siguen existiendo
+    const oneStarButton = screen.getByLabelText("1 star");
+    expect(oneStarButton).toBeInTheDocument();
+    
+    // Verificar que el slider tiene aria-valuenow="0"
+    const ratingSlider = screen.getByRole("slider", { name: "Rating" });
+    expect(ratingSlider).toHaveAttribute("aria-valuenow", "0");
   });
 
   it("debería permitir ordenar por rating", async () => {
@@ -439,10 +448,95 @@ describe("TrackList", () => {
     const rows = screen.getAllByRole("row");
     // Verificar que se ordenó por rating (2, 3, 5)
     expect(rows[0]).toHaveTextContent("Track A");
-    expect(rows[0]).toHaveTextContent("⭐⭐");
     expect(rows[1]).toHaveTextContent("Track C");
-    expect(rows[1]).toHaveTextContent("⭐⭐⭐");
     expect(rows[2]).toHaveTextContent("Track B");
-    expect(rows[2]).toHaveTextContent("⭐⭐⭐⭐⭐");
+  });
+
+  it("debería filtrar por rating mínimo", async () => {
+    const tracksWithRating: Track[] = [
+      { ...mockTracks[0], title: "Track A", rating: 2 },
+      { ...mockTracks[1], title: "Track B", rating: 5 },
+      { ...mockTracks[2], title: "Track C", rating: 3 },
+    ];
+
+    render(<TrackList tracks={tracksWithRating} />, {
+      wrapper: createWrapper(),
+    });
+
+    const filterSelect = screen.getByLabelText("Filtrar por rating");
+    
+    // Filtrar por rating >= 3
+    await userEvent.selectOptions(filterSelect, "3");
+    
+    const rows = screen.getAllByRole("row");
+    // Solo deben aparecer Track B (5★) y Track C (3★)
+    expect(rows.length).toBe(2);
+    expect(screen.getByText("Track B")).toBeInTheDocument();
+    expect(screen.getByText("Track C")).toBeInTheDocument();
+    expect(screen.queryByText("Track A")).not.toBeInTheDocument();
+  });
+
+  it("debería mostrar todas las pistas cuando el filtro es 0", async () => {
+    const tracksWithRating: Track[] = [
+      { ...mockTracks[0], title: "Track A", rating: 2 },
+      { ...mockTracks[1], title: "Track B", rating: 5 },
+      { ...mockTracks[2], title: "Track C", rating: 0 },
+    ];
+
+    render(<TrackList tracks={tracksWithRating} />, {
+      wrapper: createWrapper(),
+    });
+
+    const filterSelect = screen.getByLabelText("Filtrar por rating");
+    
+    // Valor por defecto debería ser 0 (todos)
+    expect(filterSelect).toHaveValue("0");
+    
+    const rows = screen.getAllByRole("row");
+    // Deben aparecer las 3 pistas
+    expect(rows.length).toBe(3);
+  });
+
+  it("debería mostrar contador de filtro en footer", async () => {
+    const tracksWithRating: Track[] = [
+      { ...mockTracks[0], title: "Track A", rating: 2 },
+      { ...mockTracks[1], title: "Track B", rating: 5 },
+      { ...mockTracks[2], title: "Track C", rating: 3 },
+    ];
+
+    render(<TrackList tracks={tracksWithRating} />, {
+      wrapper: createWrapper(),
+    });
+
+    const filterSelect = screen.getByLabelText("Filtrar por rating");
+    
+    // Filtrar por rating >= 4
+    await userEvent.selectOptions(filterSelect, "4");
+    
+    await waitFor(() => {
+      expect(screen.getByText(/1 pista.*rating ≥ 4★/)).toBeInTheDocument();
+    });
+  });
+
+  it("debería filtrar pistas sin rating cuando se aplica filtro", async () => {
+    const tracksWithRating: Track[] = [
+      { ...mockTracks[0], title: "Track A", rating: undefined },
+      { ...mockTracks[1], title: "Track B", rating: 5 },
+      { ...mockTracks[2], title: "Track C", rating: 3 },
+    ];
+
+    render(<TrackList tracks={tracksWithRating} />, {
+      wrapper: createWrapper(),
+    });
+
+    const filterSelect = screen.getByLabelText("Filtrar por rating");
+    
+    // Filtrar por rating >= 1
+    await userEvent.selectOptions(filterSelect, "1");
+    
+    const rows = screen.getAllByRole("row");
+    // Track A (undefined rating) no debe aparecer
+    expect(rows.length).toBe(2);
+    expect(screen.queryByText("Track A")).not.toBeInTheDocument();
   });
 });
