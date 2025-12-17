@@ -94,12 +94,25 @@ export function WaveformViewer({
   // AIDEV-NOTE: Se actualiza cada vez que cambien los peaks (streaming progresivo!)
   // Usa `duration` prop directamente, no del hook (puede ser undefined si shouldGenerate=false)
   useEffect(() => {
-    // AIDEV-NOTE: Solo loguear cuando hay cambios relevantes
+    // AIDEV-NOTE: Debug detallado para diagnosticar problema de sincronización
     if (peaks && duration) {
-      console.log('🔍 WaveformViewer effect - ready to render:', {
+      const containerWidth = containerRef.current?.offsetWidth || 0;
+      const peaksPerSecond = peaks.length / duration;
+      const pxPerPeak = containerWidth / peaks.length;
+      const barSpacing = 1; // barWidth(1) + barGap(0) - ACTUALIZADO
+      const requiredWidth = peaks.length * barSpacing;
+      
+      console.log('🔍 WaveformViewer - Diagnóstico de Sincronización:', {
         hasContainer: !!containerRef.current,
+        containerWidth: containerWidth + 'px',
         peaksLength: peaks.length,
-        duration,
+        duration: duration.toFixed(2) + 's',
+        peaksPerSecond: peaksPerSecond.toFixed(2),
+        pxPerPeak: pxPerPeak.toFixed(2) + 'px',
+        barSpacing: barSpacing + 'px (barWidth=1 + barGap=0)',
+        requiredWidth: requiredWidth + 'px',
+        fitsInCanvas: containerWidth >= requiredWidth ? '✅ SÍ' : '❌ NO',
+        overflow: containerWidth >= requiredWidth ? '0px' : (requiredWidth - containerWidth) + 'px',
       });
     }
     
@@ -118,8 +131,11 @@ export function WaveformViewer({
         progressColor,
         cursorColor: '#60a5fa',
         cursorWidth: 2,
-        barWidth: 2,
-        barGap: 1,
+        // AIDEV-NOTE: Ajustado para mejor sincronización tiempo/espacio
+        // barWidth=1 + barGap=0 permite ~2x más peaks en mismo ancho
+        // Con WAVEFORM_WINDOW_SIZE=16384 → ~484 peaks/180s → fit perfecto en 1920px
+        barWidth: 1,
+        barGap: 0,
         normalize: true,
         interact: true, // Permitir click para seek
         // AIDEV-NOTE: Activar hover para resaltar posición bajo el cursor

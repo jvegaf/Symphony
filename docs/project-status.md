@@ -1,15 +1,15 @@
-# Estado del Proyecto Symphony - 13 dic 2025
+# Estado del Proyecto Symphony - 17 dic 2025
 
 ## 🎯 Resumen Ejecutivo
 
 **Symphony** es una aplicación de escritorio para gestionar bibliotecas musicales profesionales, con funcionalidades de importación, reproducción, análisis de audio y herramientas avanzadas de organización.
 
 ### Progreso General
-- **Milestones completados:** 3 de 8 (37.5%)
-- **Tests totales:** 222 (153 frontend + 69 backend)
+- **Milestones completados:** 4 de 8 (50%) ✅
+- **Tests totales:** 448 (320 frontend + 128 backend)
 - **Cobertura:** 80%+ en todos los módulos
-- **Commits:** 16 (excluyendo merge commits)
-- **Tags:** milestone-0, milestone-1, milestone-2
+- **Commits:** 20+ (excluyendo merge commits)
+- **Tags:** milestone-0, milestone-1, milestone-2, milestone-3, milestone-4
 
 ## ✅ Milestones Completados
 
@@ -166,56 +166,91 @@
 ### Componentes Implementados
 
 **Backend Rust (src-tauri/src/):**
-- audio/decoder.rs - Decodificación de audio
-- audio/player.rs - Reproducción de audio
-- audio/waveform.rs - Generación de waveforms
+- audio/decoder.rs - Decodificación de audio (Symphonia)
+- audio/player.rs - Reproducción de audio (Rodio)
+- audio/waveform.rs - Generación y cache de waveforms
+- audio/beatgrid_detector.rs - Análisis automático de BPM ✨ M4
 - audio/error.rs - Errores de audio
-- library/scanner.rs - Escaneo de carpetas
+- library/scanner.rs - Escaneo recursivo de carpetas
 - library/metadata.rs - Extracción de metadatos
-- library/importer.rs - Importación de biblioteca
+- library/importer.rs - Importación con progreso
 - library/error.rs - Errores de biblioteca
+- playlists/manager.rs - CRUD de playlists ✨ M3
+- playlists/tracks.rs - Gestión de pistas en playlists ✨ M3
+- playlists/error.rs - Errores de playlists ✨ M3
+- db/queries/library.rs - Queries de biblioteca
+- db/queries/analysis.rs - Queries de análisis ✨ M4
 - commands/audio.rs - Comandos Tauri audio (8)
 - commands/library.rs - Comandos Tauri biblioteca (5)
-- db/ - Base de datos SQLite (8 tablas)
+- commands/playlists.rs - Comandos Tauri playlists (9) ✨ M3
+- commands/analysis.rs - Comandos Tauri análisis (12) ✨ M4
 
 **Frontend React (src/):**
-- components/Button.tsx - Botón base
-- components/Input.tsx - Input base
-- components/Card.tsx - Card base
+- components/ui/Button.tsx - Botón base
+- components/ui/Input.tsx - Input base
+- components/ui/Card.tsx - Card base
+- components/ui/StarRating.tsx - Rating con estrellas ✨ M3
 - components/AudioPlayer.tsx - Reproductor de audio
 - components/WaveformViewer.tsx - Visualizador de waveform
+- components/WaveformCanvas.tsx - Canvas de waveform ✨ M4
 - components/ImportDialog.tsx - Diálogo de importación
-- components/TrackList.tsx - Lista de pistas
+- components/TrackList.tsx - Lista virtualizada de pistas
+- components/PlaylistManager.tsx - Gestión de playlists ✨ M3
+- components/PlaylistDetail.tsx - Detalle con drag & drop ✨ M3
+- components/TrackDetail.tsx - Editor de metadatos ✨ M3
+- components/layout/PlayerSection.tsx - Sección de reproductor ✨ M4
+- components/analysis/BeatgridOverlay.tsx - Overlay de beatgrid ✨ M4
+- components/analysis/CuePointEditor.tsx - Editor de cue points ✨ M4
+- components/analysis/LoopEditor.tsx - Editor de loops ✨ M4
 - hooks/useTheme.ts - Hook de tema
 - hooks/useAudioPlayer.ts - Hook de reproducción
 - hooks/useLibrary.ts - 5 hooks de biblioteca
+- hooks/usePlaylists.ts - 9 hooks de playlists ✨ M3
+- hooks/useAnalysis.ts - 11 hooks de análisis ✨ M4
+- hooks/useWaveform.ts - Hook de waveform ✨ M4
 - utils/cn.ts - Utilidad de clases CSS
 - types/audio.ts - Tipos de audio
 - types/library.ts - Tipos de biblioteca
+- types/playlist.ts - Tipos de playlists ✨ M3
+- types/analysis.ts - Tipos de análisis ✨ M4
+- types/waveform.ts - Tipos de waveform ✨ M4
 
 ### Cobertura de Tests
 
 | Módulo | Tests | Cobertura |
 |--------|-------|-----------|
-| **Frontend** | **153** | **80%+** |
-| - Componentes UI | 49 | 95%+ |
+| **Frontend** | **320** | **80%+** |
+| - Componentes UI base | 49 | 95%+ |
 | - AudioPlayer | 18 | 100% |
-| - WaveformViewer | 15 | 100% |
+| - WaveformViewer | 23 | 100% |
 | - ImportDialog | 13 | 100% |
 | - TrackList | 23 | 100% |
+| - PlaylistManager | 7 | 100% |
+| - PlaylistDetail | 10 | 100% |
+| - TrackDetail | 11 | 100% |
+| - PlayerSection | 26 | 100% |
 | - useAudioPlayer | 12 | 100% |
 | - useLibrary | 14 | 100% |
+| - usePlaylists | 24 | 100% |
+| - useAnalysis | 22 | 100% |
 | - Utilidades | 9 | 100% |
-| **Backend** | **69** | **80%+** |
+| - Types | 8 | 100% |
+| **Backend** | **128** | **80%+** |
 | - audio/decoder | 13 | 92% |
 | - audio/player | 11 | 88% |
 | - audio/waveform | 8 | 85% |
+| - audio/beatgrid_detector | 14 | 90% |
 | - library/scanner | 10 | 91% |
 | - library/metadata | 11 | 89% |
 | - library/importer | 7 | 84% |
-| - commands | 7 | 81% |
-| - db | 16 | 94% |
-| **TOTAL** | **222** | **80%+** |
+| - playlists/manager | 40 | 87% |
+| - playlists/tracks | 43 | 89% |
+| - db/queries (library) | 16 | 94% |
+| - db/queries (analysis) | 30 | 92% |
+| - commands (audio) | 5 | 81% |
+| - commands (library) | 2 | 80% |
+| - commands (analysis) | 12 | 85% |
+| **TOTAL** | **448** | **80%+** |
 
 ### Base de Datos
 
@@ -239,45 +274,52 @@
 
 **Migraciones:** Sistema versionado con rollback
 
+### Milestone 3 - Playlists y Edición de Metadatos (13 dic 2025)
+**Estado:** 100% completado ✅
+
+**Backend (Rust):**
+- **PlaylistManager**: CRUD completo de playlists
+- **TrackManager**: Gestión de pistas en playlists (add, remove, reorder)
+- **Comandos Tauri**: 9 comandos + 1 update_track_metadata
+- **Tests:** 83 tests (manager, tracks, error handling)
+
+**Frontend (React + TypeScript):**
+- **usePlaylists**: 9 hooks personalizados (queries + mutations)
+- **PlaylistManager**: Grid de playlists con diálogos CRUD
+- **PlaylistDetail**: Drag & drop con @dnd-kit, auto-save
+- **TrackDetail**: Editor de metadatos con star rating
+- **Tests:** 52 tests (24 hooks + 28 componentes)
+
+**Tests:** 322 totales (170 frontend + 152 backend)
+**Tag:** milestone-3
+
+---
+
+### Milestone 4 - Análisis Avanzado (17 dic 2025)
+**Estado:** 100% completado ✅
+
+**Backend (Rust):**
+- **BeatgridDetector**: Análisis automático de BPM con confianza
+- **Analysis Queries**: CRUD para beatgrids, cue points, loops
+- **Comandos Tauri**: 12 comandos de análisis
+- **Bug Fix Crítico**: Agregado sync_db (3ra conexión DB)
+- **Tests:** 56 tests (14 detector + 30 queries + 12 commands)
+
+**Frontend (React + TypeScript):**
+- **useAnalysis**: 11 hooks con enabled guards
+- **BeatgridOverlay**: Overlay visual sobre waveform
+- **CuePointEditor**: Marcadores de cue points
+- **PlayerSection**: Integración completa (análisis BPM + 4 cue points + overlays)
+- **Tests:** 48 tests (8 types + 22 hooks + 26 PlayerSection)
+
+**Tests:** 448 totales (320 frontend + 128 backend)
+**Tag:** milestone-4
+
 ---
 
 ## 🔄 Siguiente Milestone
 
-### Milestone 3 - Playlists y Edición (Semana 6)
-**Estado:** Pendiente
-
-**Objetivos:**
-1. CRUD completo de playlists
-   - Backend: Comandos para create, read, update, delete
-   - Frontend: Componentes PlaylistManager, PlaylistDetail
-2. Drag & drop functionality
-   - Reordenamiento de pistas en playlist
-   - Agregar pistas de biblioteca a playlist
-3. Editor de metadatos
-   - Edición en línea de campos
-   - Actualización en base de datos
-   - Sincronización con archivos (opcional)
-4. Sistema de rating
-   - Rating de 0-5 estrellas
-   - Persistencia en BD
-   - Filtrado por rating
-
-**Estimación:**
-- Duración: 1-2 días
-- Tests esperados: +60 (30 frontend + 30 backend)
-- Componentes nuevos: 4-5 (PlaylistManager, PlaylistDetail, TrackEditor, RatingStars)
-
----
-
-## 🚀 Roadmap Restante
-
-### Milestone 4 - Análisis Avanzado (Semana 7)
-- Generación y edición de beatgrids
-- Sistema de cue points avanzado
-- Gestión de loops
-- Interfaz de edición sobre waveform
-
-### Milestone 5 - Settings y Conversión (Semana 8)
+### Milestone 5 - Settings y Conversión (Planeado)
 - Panel de configuración completo
 - Conversión a MP3 opcional
 - Gestión de preferencias
@@ -299,13 +341,22 @@
 - **Virtualización**: react-window para listas grandes (10k+ pistas)
 - **Batch Operations**: Inserts por lotes para mejor performance
 - **Event-Driven Progress**: Progreso en tiempo real con eventos
+- **Triple DB Connection**: Tres conexiones SQLite especializadas
+  - `db: Arc<Mutex<Database>>` - Queries de biblioteca
+  - `waveform_db: Arc<tokio::sync::Mutex<Connection>>` - Operaciones async de waveform
+  - `sync_db: Mutex<Connection>` - Comandos de análisis y playlists
+- **UUID-based IDs**: UUIDs v4 (strings) para análisis (mejor compatibilidad cross-platform)
 
 ### Performance
 - **Waveform Cache**: Almacenamiento en SQLite para evitar regeneración
+- **Waveform Streaming**: Generación progresiva con chunking para tracks largos
+- **Canvas Rendering**: WaveformCanvas con RAF para rendering optimizado
 - **Batch Inserts**: Importación de 50-100 pistas/seg
 - **List Virtualization**: Renderizado eficiente de 10k+ items
 - **Query Caching**: Reducción de llamadas innecesarias a backend
 - **Debounced Search**: Búsqueda optimizada con debounce de 300ms
+- **BPM Detection**: Análisis de envolvente de energía con downsampling
+- **Query Enabled Guards**: Evita queries innecesarias con condiciones `enabled`
 
 ### Testing
 - **TDD Approach**: Tests primero, código después
@@ -330,6 +381,20 @@
 5. **State updates en tests**: Uso de waitFor() para actualizaciones async
 6. **Import progress events**: Cleanup de listeners en useEffect
 
+### Milestone 3
+1. **useLibrary hooks error handling**: Retornar valores por defecto en vez de propagar error
+2. **QueryClient cache entre tests**: Implementado `queryClient.clear()` en `afterEach`
+3. **Drag & drop performance**: Uso de @dnd-kit con SortableContext para auto-save
+4. **Star rating hover precision**: Solo rellenar estrellas hasta la posición seleccionada
+
+### Milestone 4
+1. **CRÍTICO - State not managed for db**: Agregado `sync_db: Mutex<Connection>` como 3ra conexión
+   - Razón: Comandos de análisis y playlists requieren `State<'_, Mutex<Connection>>`
+   - Solución: Tres conexiones DB (db, waveform_db, sync_db) con propósitos específicos
+2. **Query hooks ejecutándose con trackId vacío**: Agregado `enabled: trackId.length > 0`
+3. **Waveform test expectations**: Actualizado test para reflejar opciones de WaveSurfer
+4. **UUID migration**: Cambio de IDs numéricos a UUID v4 strings para analysis tables
+
 ---
 
 ## 📚 Documentación
@@ -343,6 +408,10 @@
 - `docs/API.md` - Documentación de API Tauri
 - `CHANGELOG.md` - Registro de cambios
 - `docs/milestone-2-summary.md` - Resumen técnico Milestone 2
+- `docs/milestone-3-summary.md` - Resumen técnico Milestone 3
+- `docs/milestone-4-summary.md` - Resumen técnico Milestone 4
+- `WAVEFORM_SYNC_FIX.md` - Fix de sincronización de waveform
+- `WAVEFORM_TEST_GUIDE.md` - Guía de testing de waveform
 
 ### Instrucciones de Desarrollo
 - `.github/instructions/react-typescript.instructions.md`
@@ -363,6 +432,11 @@
 5. **Batch Operations**: Critical para performance con grandes datasets
 6. **Documentation**: Documentación continua > documentación al final
 7. **Conventional Commits**: Facilita seguimiento y changelog automático
+8. **Tauri State Management**: Los comandos necesitan tipos exactos para `State<'_, T>` - no asumir compatibilidad
+9. **Query Enabled Guards**: Siempre validar condiciones antes de ejecutar queries (evita llamadas innecesarias)
+10. **Drag & Drop Libraries**: @dnd-kit es más flexible y performante que react-beautiful-dnd
+11. **UUID vs Numbers**: UUIDs (strings) son mejores para IDs cross-platform (evita problemas i64/JavaScript)
+12. **Database Connections**: Múltiples conexiones DB con diferentes propósitos (sync/async/waveform) mejora arquitectura
 
 ---
 
@@ -370,12 +444,12 @@
 
 - **Repositorio:** (interno)
 - **CI/CD:** GitHub Actions workflows
-- **Tags:** milestone-0, milestone-1, milestone-2
+- **Tags:** milestone-0, milestone-1, milestone-2, milestone-3, milestone-4
 - **Cobertura:** `npm run coverage` / `cargo tarpaulin`
 
 ---
 
-**Última actualización:** 16 dic 2025
-**Versión actual:** v0.4.0 (Milestone 3 completado)
-**Próxima versión:** v0.5.0 (Milestone 4 - Análisis avanzado)
+**Última actualización:** 17 dic 2025
+**Versión actual:** v0.4.1 (Milestone 4 completado) ✅
+**Próxima versión:** v0.5.0 (Milestone 5 - Settings y Conversión)
 

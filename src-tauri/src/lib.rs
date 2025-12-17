@@ -76,6 +76,12 @@ pub fn run() {
         rusqlite::Connection::open(&db_path).expect("Failed to open DB for waveform"),
     ));
 
+    // AIDEV-NOTE: Conexión sync para comandos de análisis y playlists
+    // Estos comandos usan std::sync::Mutex<Connection> directamente
+    let sync_db = std::sync::Mutex::new(
+        rusqlite::Connection::open(&db_path).expect("Failed to open DB for sync commands"),
+    );
+
     tauri::Builder::default()
         .plugin(
             tauri_plugin_log::Builder::new()
@@ -103,6 +109,7 @@ pub fn run() {
         .manage(LibraryState::new())
         .manage(waveform_state)
         .manage(waveform_db)
+        .manage(sync_db) // AIDEV-NOTE: Para comandos de análisis y playlists
         .manage(db)
         .invoke_handler(tauri::generate_handler![
             greet,
@@ -119,6 +126,7 @@ pub fn run() {
             commands::audio::seek_to_position,
             commands::audio::get_waveform,
             commands::audio::cancel_waveform,
+            commands::audio::clear_waveform_cache,
             commands::audio::decode_audio_metadata,
             commands::audio::read_audio_file,
             commands::audio::allow_asset_file,

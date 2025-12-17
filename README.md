@@ -3,7 +3,7 @@
 Aplicación de escritorio profesional para gestionar bibliotecas musicales con importación, reproducción, análisis de audio y herramientas de organización avanzadas.
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![Version](https://img.shields.io/badge/version-0.4.0-blue)]()
+[![Version](https://img.shields.io/badge/version-0.4.1-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 
 ## ✨ Características
@@ -16,18 +16,20 @@ Aplicación de escritorio profesional para gestionar bibliotecas musicales con i
 - 🔄 **Conversión de Audio:** Opcional a MP3 durante importación
 - 🌙 **Modo Oscuro:** Interfaz optimizada para uso prolongado
 
-## ⭐️ Novedades v0.4.0
+## ⭐️ Novedades v0.4.1
 
-- ⭐️ **Sistema de rating visual mejorado:**
-  - Componente de estrellas con hover preciso (rellena hasta la estrella seleccionada)
-  - Tamaños ajustados (sm=16px, md=20px, lg=28px) y sin espacios entre estrellas (gap-0)
-  - Mejor integración en tablas y editor de metadatos
-  - Cobertura de tests completa (20/20 tests StarRating)
-- 🚦 **Script de chequeo CI local (`scripts/check-ci.sh`):**
-  - Valida workflows de CI antes de hacer push
-  - Modos: --fast, --frontend, --backend
-  - Checks: types, lint, tests, coverage, rustfmt, clippy, cargo tests
-  - Documentación: [scripts/CI_CHECK_GUIDE.md](./scripts/CI_CHECK_GUIDE.md)
+- 📊 **Análisis Avanzado de Audio (Milestone 4 COMPLETO):**
+  - Análisis automático de BPM con detector de beatgrid (confianza visual 0-100%)
+  - 4 cue points con hotkeys (1-4): crear en playback, saltar, eliminar (right-click)
+  - Overlays visuales: beatgrid lines y cue point markers sobre waveform
+  - Integración completa en PlayerSection con UI intuitiva
+  - 104 nuevos tests (56 backend + 48 frontend) - **Total: 448 tests** ✅
+- 🔧 **Bug Fix Crítico:**
+  - Agregada tercera conexión DB (sync_db) para comandos de análisis
+  - Resuelto error "state not managed for field `db`"
+- 📚 **Documentación:**
+  - Guías de debugging: waveform sync fix, test guide
+  - Script de limpieza de cache de waveform
 
 ## 🛠️ Stack Tecnológico
 
@@ -180,21 +182,23 @@ make check
 
 ## 🎯 Estado del Proyecto
 
-**Progreso General:** 37.5% (3 de 8 milestones completados)
+**Progreso General:** 50% (4 de 8 milestones completados)
 
 ### ✅ Milestones Completados
 - **Milestone 0:** Setup Inicial (68 tests)
-- **Milestone 1:** Core Audio - Decodificación, reproducción, waveforms (82 tests)
-- **Milestone 2:** Importación de Biblioteca - Scanner, metadata, importación (222 tests)
+- **Milestone 1:** Core Audio - Decodificación, reproducción, waveforms (103 tests)
+- **Milestone 2:** Importación de Biblioteca - Scanner, metadata, importación (187 tests)
+- **Milestone 3:** Playlists y Edición - CRUD, drag & drop, rating (322 tests)
+- **Milestone 4:** Análisis Avanzado - Beatgrids, cue points, loops (448 tests) ✅ NEW
 
 ### 🔄 Siguiente Milestone
-- **Milestone 3:** Playlists y Edición - CRUD, drag & drop, editor de metadatos
+- **Milestone 5:** Settings y Conversión - Sistema de configuración, conversión a MP3
 
 ### 📊 Estadísticas Actuales
-- **Tests Totales:** 222 (153 frontend + 69 backend)
+- **Tests Totales:** 448 (320 frontend + 128 backend)
 - **Cobertura:** 80%+ en todos los módulos
-- **Componentes React:** 9
-- **Comandos Tauri:** 13
+- **Componentes React:** 15+
+- **Comandos Tauri:** 30+
 - **Formatos Soportados:** MP3, FLAC, WAV, OGG, M4A, AAC
 
 Ver [project-status.md](./docs/project-status.md) y [implementation-plan.md](./docs/implementation-plan.md) para detalles completos.

@@ -1,6 +1,25 @@
+/**
+ * Sección del reproductor con waveform y análisis
+ * 
+ * AIDEV-NOTE: Integra los componentes de análisis (Milestone 4):
+ * - BeatgridOverlay: muestra grid de beats sobre el waveform
+ * - CuePointEditor: muestra y permite editar cue points
+ * - LoopEditor: muestra y permite editar loops (futuro)
+ * - Botones de cue points funcionales
+ */
+
+import { useState, useRef, useCallback, useEffect } from "react";
 import type { Track } from "../../types/library";
 import { useAudioPlayer } from "../../hooks/useAudioPlayer";
+import { 
+  useGetBeatgrid, 
+  useAnalyzeBeatgrid, 
+  useGetCuePoints, 
+  useCreateCuePoint,
+  useDeleteCuePoint,
+} from "../../hooks/useAnalysis";
 import { WaveformCanvas } from "../WaveformCanvas";
+import { BeatgridOverlay, CuePointEditor } from "../analysis";
 import { Toast } from "../Toast";
 
 interface PlayerSectionProps {
@@ -15,6 +34,37 @@ const formatDuration = (seconds: number): string => {
 
 export const PlayerSection = ({ track }: PlayerSectionProps) => {
   const { play, pause, resume, stop, seek, isPlaying, position, duration, error, state } = useAudioPlayer();
+  
+  // Ref para obtener dimensiones del waveform
+  const waveformContainerRef = useRef<HTMLDivElement>(null);
+  const [waveformDimensions, setWaveformDimensions] = useState({ width: 0, height: 64 });
+  
+  // Estado para cue point seleccionado (para futura implementación de edición)
+  const [selectedCuePointId, _setSelectedCuePointId] = useState<string | undefined>();
+  
+  // AIDEV-NOTE: Si no hay track, no hacer queries a la DB
+  const trackId = track?.id ?? '';
+  
+  // Analysis hooks - solo cargar si hay track
+  const { data: beatgrid } = useGetBeatgrid(trackId);
+  const { data: cuePoints = [] } = useGetCuePoints(trackId);
+  const analyzeBeatgrid = useAnalyzeBeatgrid();
+  const createCuePoint = useCreateCuePoint();
+  const deleteCuePoint = useDeleteCuePoint();
+
+  // Actualizar dimensiones del waveform
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (waveformContainerRef.current) {
+        const rect = waveformContainerRef.current.getBoundingClientRect();
+        setWaveformDimensions({ width: rect.width, height: 64 });
+      }
+    };
+    
+    updateDimensions();
+    window.addEventListener('resize', updateDimensions);
+    return () => window.removeEventListener('resize', updateDimensions);
+  }, []);
 
   const handlePlayPause = async () => {
     if (!track) return;
@@ -30,6 +80,47 @@ export const PlayerSection = ({ track }: PlayerSectionProps) => {
     } catch (error) {
       console.error("Error al controlar reproducción:", error);
     }
+  };
+
+  // Crear cue point en posición actual
+  const handleCreateCuePoint = useCallback(async (hotkey?: number) => {
+    if (!trackId || position === undefined) return;
+    
+    try {
+      await createCuePoint.mutateAsync({
+        trackId: trackId,
+        position: position,
+        label: hotkey ? `Cue ${hotkey}` : `Cue @ ${formatDuration(position)}`,
+        type: 'cue',
+        hotkey: hotkey,
+      });
+    } catch (err) {
+      console.error("Error creando cue point:", err);
+    }
+  }, [trackId, position, createCuePoint]);
+
+  // Click en cue point para hacer seek
+  const handleCuePointClick = useCallback((cuePoint: { position: number }) => {
+    seek(cuePoint.position);
+  }, [seek]);
+
+  // Analizar beatgrid
+  const handleAnalyzeBeatgrid = useCallback(async () => {
+    if (!trackId || !track) return;
+    
+    try {
+      await analyzeBeatgrid.mutateAsync({
+        trackId: trackId,
+        trackPath: track.path,
+      });
+    } catch (err) {
+      console.error("Error analizando beatgrid:", err);
+    }
+  }, [trackId, track, analyzeBeatgrid]);
+
+  // Obtener cue points por hotkey (1-4 para la UI)
+  const getCuePointByHotkey = (hotkey: number) => {
+    return cuePoints.find(cp => cp.hotkey === hotkey);
   };
 
   // AIDEV-NOTE: Siempre renderizar el mismo layout (altura fija)
@@ -87,6 +178,18 @@ export const PlayerSection = ({ track }: PlayerSectionProps) => {
           >
             <span className="material-icons">stop</span>
           </button>
+          {/* Analyze Beatgrid Button */}
+          <button 
+            type="button"
+            onClick={handleAnalyzeBeatgrid}
+            disabled={!track || analyzeBeatgrid.isPending}
+            title="Analizar BPM"
+            className="p-2 rounded-full hover:bg-gray-200/50 dark:hover:bg-gray-700/50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <span className="material-icons">
+              {analyzeBeatgrid.isPending ? "hourglass_top" : "speed"}
+            </span>
+          </button>
           <button 
             type="button"
             disabled={!track}
@@ -99,9 +202,15 @@ export const PlayerSection = ({ track }: PlayerSectionProps) => {
 
       {/* Tags - ALTURA FIJA: siempre ocupa mismo espacio */}
       <div className="mt-3 flex space-x-2 text-xs" style={{ minHeight: '28px' }}>
-        {track?.bpm && (
-          <div className="bg-gray-200 dark:bg-gray-800 rounded px-2 py-1">
-            {track.bpm}BPM
+        {/* Mostrar BPM del beatgrid analizado o del metadata */}
+        {(beatgrid?.bpm || track?.bpm) && (
+          <div className={`rounded px-2 py-1 ${beatgrid?.bpm ? 'bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200' : 'bg-gray-200 dark:bg-gray-800'}`}>
+            {beatgrid?.bpm?.toFixed(1) || track?.bpm}BPM
+            {beatgrid?.confidence && (
+              <span className="ml-1 text-xs opacity-75">
+                ({beatgrid.confidence.toFixed(0)}%)
+              </span>
+            )}
           </div>
         )}
         {track?.key && (
@@ -121,10 +230,13 @@ export const PlayerSection = ({ track }: PlayerSectionProps) => {
         )}
       </div>
 
-      {/* Waveform Viewer - Canvas SIEMPRE visible (64px fijo) */}
-      {/* AIDEV-NOTE: Canvas con altura fija para evitar saltos de layout.
-          Solo genera si track existe Y está reproduciendo/pausado. */}
-      <div className="mt-3">
+      {/* Waveform con overlays - CONTENEDOR RELATIVO */}
+      {/* AIDEV-NOTE: El contenedor es relative para que los overlays se posicionen absolute */}
+      <div 
+        ref={waveformContainerRef}
+        className="mt-3 relative"
+      >
+        {/* Waveform Canvas */}
         <WaveformCanvas
           trackId={track?.id}
           trackPath={track?.path}
@@ -134,6 +246,32 @@ export const PlayerSection = ({ track }: PlayerSectionProps) => {
           onSeek={seek}
           shouldGenerate={!!track && (state === "playing" || state === "paused")}
         />
+        
+        {/* Beatgrid Overlay - solo si hay beatgrid */}
+        {beatgrid && waveformDimensions.width > 0 && (
+          <BeatgridOverlay
+            duration={track?.duration ?? 0}
+            bpm={beatgrid.bpm}
+            offset={beatgrid.offset}
+            width={waveformDimensions.width}
+            height={waveformDimensions.height}
+            confidence={beatgrid.confidence}
+            showBeatNumbers={false}
+            className="pointer-events-none"
+          />
+        )}
+        
+        {/* Cue Point Editor - solo si hay cue points */}
+        {cuePoints.length > 0 && waveformDimensions.width > 0 && (
+          <CuePointEditor
+            cuePoints={cuePoints}
+            duration={track?.duration ?? 0}
+            width={waveformDimensions.width}
+            height={waveformDimensions.height}
+            selectedCuePointId={selectedCuePointId}
+            onCuePointClick={handleCuePointClick}
+          />
+        )}
       </div>
 
       {/* Time - ALTURA FIJA */}
@@ -142,27 +280,63 @@ export const PlayerSection = ({ track }: PlayerSectionProps) => {
         <span className="font-mono">{formatDuration(duration > 0 ? duration : (track?.duration ?? 0))}</span>
       </div>
 
-      {/* Cue Points - ALTURA FIJA */}
+      {/* Cue Points - FUNCIONALES */}
       <div className="mt-2 flex items-center justify-between">
         <div className="flex space-x-2">
+          {/* Dropdown Cues */}
           <button 
             type="button"
             disabled={!track}
             className="bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1 rounded text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Cues
+            Cues ({cuePoints.length})
             <span className="material-icons text-base ml-1">arrow_drop_down</span>
           </button>
-          {[1, 2, 3, 4].map((i) => (
-            <button
-              key={i}
-              type="button"
-              disabled={!track}
-              className="bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 w-20 py-1 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <span className="material-icons text-base">add</span>
-            </button>
-          ))}
+          
+          {/* Cue Point Buttons 1-4 */}
+          {[1, 2, 3, 4].map((hotkey) => {
+            const cuePoint = getCuePointByHotkey(hotkey);
+            const hasCue = !!cuePoint;
+            
+            return (
+              <button
+                key={hotkey}
+                type="button"
+                disabled={!track}
+                onClick={() => {
+                  if (hasCue && cuePoint) {
+                    // Si existe, hacer seek
+                    handleCuePointClick(cuePoint);
+                  } else {
+                    // Si no existe, crear en posición actual
+                    handleCreateCuePoint(hotkey);
+                  }
+                }}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  if (hasCue && cuePoint && trackId) {
+                    // Click derecho para eliminar
+                    deleteCuePoint.mutate({ id: cuePoint.id, trackId: trackId });
+                  }
+                }}
+                title={hasCue && cuePoint
+                  ? `Cue ${hotkey}: ${formatDuration(cuePoint.position)} (click derecho para eliminar)`
+                  : `Click para crear Cue ${hotkey} en ${formatDuration(position)}`
+                }
+                className={`w-20 py-1 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
+                  hasCue 
+                    ? 'bg-blue-500 text-white hover:bg-blue-600' 
+                    : 'bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 hover:bg-gray-300 dark:hover:bg-gray-700'
+                }`}
+              >
+                {hasCue ? (
+                  <span className="font-bold">{hotkey}</span>
+                ) : (
+                  <span className="material-icons text-base">add</span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

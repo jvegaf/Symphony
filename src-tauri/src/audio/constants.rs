@@ -36,7 +36,11 @@ pub const PLAY_VALUE: u32 = 0;
 // ============================================================================
 
 /// Tamaño de ventana para calcular peaks de waveform (en samples)
-/// AIDEV-NOTE: Valor de Musicat - 8192 samples por peak
+///
+/// AIDEV-NOTE: 8192 samples por peak es el valor estándar (estilo Musicat)
+/// - 44100 Hz ÷ 8192 = ~5.38 peaks/segundo
+/// - Genera buen detalle visual
+/// - El canvas se encarga de escalar/resamplear según su ancho
 pub const WAVEFORM_WINDOW_SIZE: usize = 8192;
 
 /// Número de peaks por paquete de streaming

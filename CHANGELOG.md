@@ -5,6 +5,124 @@ Todos los cambios notables de Symphony se documentan aquí.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/),
 y este proyecto sigue [Semantic Versioning](https://semver.org/es/).
 
+## [0.4.1] - 2025-12-17
+
+### 📊 Milestone 4 - Análisis Avanzado (Completado 100%)
+
+#### Backend Analysis
+- Implementado módulo completo de análisis de audio (`src-tauri/src/audio/beatgrid_detector.rs`)
+  - Detector de BPM automático con análisis de envolvente de energía
+  - Cálculo de confianza del análisis (0.0-1.0)
+  - Detección de offset para sincronización de beatgrid
+  - **Tests:** 14 tests (detección, validación, casos límite)
+
+- Implementadas queries de base de datos (`src-tauri/src/db/queries/analysis.rs`)
+  - CRUD completo para beatgrids (create, get, update, delete)
+  - CRUD completo para cue points (create, get_all, update, delete, get_by_hotkey)
+  - CRUD completo para loops (create, get_all, update, delete, activate/deactivate)
+  - Migrations: UUIDs para IDs (compatibilidad frontend/backend)
+  - **Tests:** 30 tests (queries CRUD, validación, constraints)
+
+- Implementados 12 comandos Tauri (`src-tauri/src/commands/analysis.rs`)
+  - Beatgrids: `analyze_beatgrid`, `get_beatgrid`, `update_beatgrid`, `delete_beatgrid`
+  - Cue Points: `create_cue_point`, `get_cue_points`, `update_cue_point`, `delete_cue_point`
+  - Loops: `create_loop`, `get_loops`, `update_loop`, `delete_loop`
+  - Gestión de estado con `State<'_, Mutex<Connection>>`
+  - **Tests:** 12 tests (comandos con mocks, error handling)
+
+- **BUG FIX CRÍTICO:** Agregado tercer managed database connection
+  - `sync_db: Mutex<Connection>` para comandos de análisis y playlists
+  - Resuelve error "state not managed for field `db`"
+  - Arquitectura final: 3 conexiones (db, waveform_db, sync_db)
+
+#### Frontend Analysis
+- Implementados tipos TypeScript (`src/types/analysis.ts`)
+  - Interfaces: `Beatgrid`, `CuePoint`, `Loop`
+  - Enums: `CueType` (Cue, Load, Grid, Loop)
+  - UUIDs como strings (migración desde numbers)
+  - **Tests:** 8 tests (validación de tipos, serialización)
+
+- Implementados 11 hooks personalizados (`src/hooks/useAnalysis.ts`)
+  - Queries:
+    - `useGetBeatgrid(trackId)`: Obtiene beatgrid (cache 5 min, enabled guard)
+    - `useGetCuePoints(trackId)`: Obtiene cue points (cache 2 min, enabled guard)
+    - `useGetLoops(trackId)`: Obtiene loops (cache 2 min, enabled guard)
+  - Mutations:
+    - `useAnalyzeBeatgrid()`: Analiza BPM e invalida beatgrid
+    - `useUpdateBeatgrid()`, `useDeleteBeatgrid()`
+    - `useCreateCuePoint()`, `useUpdateCuePoint()`, `useDeleteCuePoint()`
+    - `useCreateLoop()`, `useUpdateLoop()`, `useDeleteLoop()`
+  - Invalidación automática de queries relacionadas
+  - **Tests:** 22 tests (queries, mutations, cache invalidation, enabled logic)
+
+- Implementados componentes de análisis visual:
+  - `BeatgridOverlay.tsx`: Overlay de beatgrid sobre waveform (126 líneas)
+    - Renderizado de líneas de beat grid
+    - Sincronización con zoom y dimensiones de waveform
+    - Posicionamiento absoluto sobre canvas
+  - `CuePointEditor.tsx`: Marcadores de cue points (157 líneas)
+    - Marcadores visuales en posiciones de cue
+    - Click para saltar a cue point
+    - Tooltips con información de cue
+  - `LoopEditor.tsx`: Regiones de loop (220 líneas)
+    - Visualización de regiones de loop
+    - Activación/desactivación de loops
+    - Edición de posiciones
+
+- **INTEGRACIÓN UI COMPLETA:** PlayerSection con análisis (`src/components/layout/PlayerSection.tsx`)
+  - Botón de análisis de beatgrid (icono hourglass durante análisis)
+  - Display de BPM:
+    - BPM analizado con badge verde y % de confianza
+    - BPM de metadata con badge gris (fallback)
+  - 4 botones de cue points (hotkeys 1-4):
+    - Click en botón vacío → Crea cue point en posición actual
+    - Click en botón lleno → Salta a posición de cue
+    - Right-click en botón lleno → Elimina cue point
+    - Estados visuales: Blue (filled) / Gray (empty)
+    - Tooltips con posición y acciones disponibles
+  - Overlays visuales sobre waveform:
+    - `BeatgridOverlay` muestra grid cuando existe beatgrid
+    - `CuePointEditor` muestra marcadores de cue points
+  - ResizeObserver para tracking de dimensiones de waveform
+  - **Tests:** 26 tests (análisis, cue points, overlays, interacción)
+
+#### Database Migrations
+- Migración UUID v4 (strings) para IDs de analysis
+- Schema actualizado: `beatgrids`, `cue_points`, `loops`
+- Constraints y foreign keys preservados
+- Compatibilidad frontend/backend garantizada
+
+#### Documentación
+- Actualizado `docs/milestone-4-summary.md`:
+  - Versión: v0.4.0 → v0.4.1
+  - Documentación completa de integración UI
+  - Test results: 448 tests (320 frontend + 128 backend)
+  - Bug fix documentation (sync_db)
+  - Total time: 20 horas
+
+- Creados documentos de debugging:
+  - `WAVEFORM_SYNC_FIX.md`: Fix de sincronización de waveform
+  - `WAVEFORM_TEST_GUIDE.md`: Guía de testing de waveform
+  - `scripts/clear-waveform-cache.sh`: Script de limpieza de cache
+
+**Tests Milestone 4 Backend:** +56 tests (14 detector + 30 queries + 12 commands)  
+**Tests Milestone 4 Frontend:** +48 tests (8 types + 22 hooks + 26 PlayerSection)  
+**Tests Totales:** 448 passed (128 backend + 320 frontend)  
+**Cobertura:** 80%+ en todos los módulos ✅
+
+#### ✅ Milestone 4 Completado al 100%
+- Todas las tareas completadas
+- 104 nuevos tests (56 backend + 48 frontend)
+- Backend: beatgrid detection, analysis CRUD, comandos completos
+- Frontend: hooks, overlays, integración UI completa
+- BPM analysis con confianza visual
+- 4 cue points con hotkeys funcionales
+- Arquitectura de 3 conexiones DB
+- Documentación completa
+- Tag: milestone-4
+
+---
+
 ## [0.4.0] - 2025-12-16
 
 ### Mejoras Visuales - Sistema de Rating ⭐️
