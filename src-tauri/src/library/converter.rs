@@ -350,8 +350,8 @@ mod tests {
 
         // Si ffmpeg está instalado, debe retornar Ok
         // Si no, debe retornar ConversionError
-        if result.is_err() {
-            match result.unwrap_err() {
+        if let Err(err) = result {
+            match err {
                 LibraryError::ConversionError(msg) => {
                     assert!(msg.contains("ffmpeg"));
                 }
