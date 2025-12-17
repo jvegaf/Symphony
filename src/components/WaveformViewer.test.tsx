@@ -5,7 +5,8 @@
  * - Usa useWaveform hook para obtener peaks
  * - WaveSurfer.load("", [peaks], duration) en vez de .load(url)
  * - Solo visualización, no playback
- * - Eventos: 'ready', 'interaction' (no 'play', 'pause', etc.)
+ * - Eventos: 'ready', 'click' (no 'play', 'pause', ni 'interaction')
+ * - Usa 'click' porque 'interaction' requiere audio cargado
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
@@ -138,7 +139,7 @@ describe("WaveformViewer", () => {
     expect(mockLoad).toHaveBeenCalledWith("", [mockPeaks], 180);
   });
 
-  it("debería registrar event listeners (ready, interaction)", () => {
+  it("debería registrar event listeners (ready, click)", () => {
     render(
       <WaveformViewer
         trackId="test-uuid"
@@ -148,9 +149,10 @@ describe("WaveformViewer", () => {
       />
     );
 
-    // AIDEV-NOTE: Solo 'ready' e 'interaction' (seek), no playback events
+    // AIDEV-NOTE: Solo 'ready' y 'click' (seek), no playback events
+    // Usa 'click' en lugar de 'interaction' porque usamos peaks sin audio (url='')
     expect(mockOn).toHaveBeenCalledWith("ready", expect.any(Function));
-    expect(mockOn).toHaveBeenCalledWith("interaction", expect.any(Function));
+    expect(mockOn).toHaveBeenCalledWith("click", expect.any(Function));
   });
 
   it("debería llamar a onReady callback cuando WaveSurfer emite ready", () => {
@@ -186,11 +188,13 @@ describe("WaveformViewer", () => {
       />
     );
 
-    // Simular evento interaction con tiempo = 45.5 segundos
-    const interactionCallback = mockOn.mock.calls.find(
-      (call) => call[0] === "interaction"
+    // Simular evento click con relativeX = 0.2527 (45.5 / 180 = 0.2527)
+    // El evento 'click' recibe relativeX (0-1), no el tiempo directamente
+    const clickCallback = mockOn.mock.calls.find(
+      (call) => call[0] === "click"
     )?.[1];
-    interactionCallback?.(45.5);
+    const relativeX = 45.5 / 180; // 0.2527...
+    clickCallback?.(relativeX);
 
     expect(onSeek).toHaveBeenCalledWith(45.5);
   });

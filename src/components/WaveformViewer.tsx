@@ -150,8 +150,14 @@ export function WaveformViewer({
       });
 
       // Evento de click para seek
-      wavesurfer.on('interaction', (time) => {
-        onSeekRef.current?.(time);
+      // AIDEV-NOTE: Usar 'click' en lugar de 'interaction' porque 'interaction'
+      // solo funciona cuando hay audio cargado. Como usamos peaks sin audio (url=''),
+      // necesitamos el evento 'click' que funciona con visualización solamente.
+      wavesurfer.on('click', (relativeX) => {
+        if (duration) {
+          const time = relativeX * duration;
+          onSeekRef.current?.(time);
+        }
       });
 
       // AIDEV-NOTE: Cargar SOLO peaks sin audio (estilo Musicat)

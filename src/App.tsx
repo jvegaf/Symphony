@@ -7,6 +7,7 @@ import { Header, PlayerSection, Sidebar, TrackTable } from "./components/layout"
 import { useAudioPlayer } from "./hooks/useAudioPlayer";
 import { useGetAllTracks, useImportLibrary } from "./hooks/useLibrary";
 import { BenchmarkPage } from "./pages/Benchmark";
+import { Settings } from "./pages/Settings";
 import type { ImportProgress, Track } from "./types/library";
 import { logger } from "./utils/logger";
 // AIDEV-NOTE: Import waveform debugger to expose window.debugWaveform()
@@ -16,6 +17,9 @@ function App() {
   const [activeTab, setActiveTab] = useState<"library" | "settings" | "import" | "export" | "tools" | "benchmark">("library");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
+  // AIDEV-NOTE: playingTrack es la pista que está reproduciéndose (double click)
+  // selectedTrack es la pista resaltada en la tabla (single click)
+  const [playingTrack, setPlayingTrack] = useState<Track | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState<ImportProgress>({
     current: 0,
@@ -83,7 +87,9 @@ function App() {
       console.log(`%c[${timestamp}] Calling play() with path: ${track.path}`, 'background: #00ff00; color: #000; padding: 2px;');
       await logger.info(`[${timestamp}] Calling play() with path: ${track.path}`);
       await play(track.path);
-      setSelectedTrack(track);
+      // AIDEV-NOTE: Solo actualizar playingTrack (no selectedTrack) en double click
+      // Esto hace que PlayerSection solo muestre info de la pista reproduciéndose
+      setPlayingTrack(track);
       console.log(`%c[${timestamp}] ✅ Play successful`, 'background: #00ff00; color: #000; font-weight: bold; padding: 4px;');
       await logger.info(`[${timestamp}] ✅ Play successful`);
     } catch (error) {
@@ -121,6 +127,8 @@ function App() {
         
         {activeTab === "benchmark" ? (
           <BenchmarkPage />
+        ) : activeTab === "settings" ? (
+          <Settings />
         ) : (
           <div className="flex flex-1 overflow-hidden">
             <Sidebar
@@ -130,7 +138,7 @@ function App() {
             />
             
             <div className="flex-1 flex flex-col overflow-hidden">
-              <PlayerSection track={selectedTrack} />
+              <PlayerSection track={playingTrack} />
               
               <TrackTable
                 tracks={filteredTracks}

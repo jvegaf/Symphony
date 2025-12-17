@@ -73,9 +73,13 @@ export const CuePointEditor: React.FC<CuePointEditorProps> = ({
     return null;
   }
 
+  // AIDEV-NOTE: Patrón de pointer-events para overlays SVG:
+  // - SVG container: pointer-events-none → pasa clicks al waveform debajo
+  // - Elementos <g>: pointer-events-auto → captura clicks en marcadores
+  // Esto permite seek en el waveform y clicks en cue points simultáneamente
   return (
     <svg
-      className={cn('absolute inset-0', className)}
+      className={cn('absolute inset-0 pointer-events-none', className)}
       width={width}
       height={height}
       xmlns="http://www.w3.org/2000/svg"
@@ -89,7 +93,7 @@ export const CuePointEditor: React.FC<CuePointEditorProps> = ({
             key={marker.id}
             onClick={() => onCuePointClick?.(marker)}
             className={cn(
-              'cursor-pointer transition-all',
+              'cursor-pointer transition-all pointer-events-auto',
               onCuePointDrag && 'hover:opacity-80'
             )}
           >
