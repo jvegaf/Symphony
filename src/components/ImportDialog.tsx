@@ -61,7 +61,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
     progress.total > 0 ? (progress.current / progress.total) * 100 : 0;
 
   return (
-    <div className="p-6 bg-white dark:bg-gray-900 rounded-lg shadow-lg max-w-md w-full">
+    <div className="p-6 bg-white dark:bg-gray-900 rounded-lg shadow-lg max-w-md w-full" data-testid="import-dialog">
       <h2 className="text-2xl font-bold mb-4 text-gray-900 dark:text-white">
         Importar Biblioteca
       </h2>
@@ -69,6 +69,8 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
       {/* Selección de carpeta */}
       <div className="mb-4">
         <button
+          type="button"
+          data-testid="select-folder-button"
           onClick={handleSelectFolder}
           disabled={isPending}
           className="w-full px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
@@ -77,7 +79,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
         </button>
 
         {selectedPath && (
-          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 truncate">
+          <p className="mt-2 text-sm text-gray-600 dark:text-gray-400 truncate" data-testid="selected-path">
             {selectedPath}
           </p>
         )}
@@ -86,6 +88,8 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
       {/* Botón de importar */}
       {selectedPath && !isPending && (
         <button
+          type="button"
+          data-testid="import-button"
           onClick={handleImport}
           className="w-full px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 mb-4"
         >
@@ -95,10 +99,10 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
 
       {/* Progreso */}
       {isPending && (
-        <div className="mb-4">
+        <div className="mb-4" data-testid="import-progress">
           <div className="flex justify-between text-sm text-gray-700 dark:text-gray-300 mb-2">
-            <span className="capitalize">{progress.phase}</span>
-            <span>
+            <span className="capitalize" data-testid="import-phase">{progress.phase}</span>
+            <span data-testid="import-count">
               {progress.current} / {progress.total}
             </span>
           </div>
@@ -111,6 +115,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
               aria-valuenow={progressPercentage}
               aria-valuemin={0}
               aria-valuemax={100}
+              data-testid="import-progress-bar"
             />
           </div>
 
@@ -125,6 +130,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
         <div
           className="p-3 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded mb-4"
           role="alert"
+          data-testid="import-error"
         >
           <p className="font-semibold">Error:</p>
           <p className="text-sm">{error.message}</p>
@@ -136,6 +142,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({
         <div
           className="p-3 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 rounded"
           role="status"
+          data-testid="import-complete"
         >
           <p className="font-semibold">✓ Importación completada</p>
         </div>

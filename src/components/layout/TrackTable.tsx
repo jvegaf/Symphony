@@ -39,7 +39,7 @@ export const TrackTable = ({
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center" data-testid="track-table-loading">
         <div className="text-center text-gray-400">
           <span className="material-icons text-4xl animate-spin">refresh</span>
           <p className="mt-2">Cargando pistas...</p>
@@ -50,7 +50,7 @@ export const TrackTable = ({
 
   if (tracks.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center">
+      <div className="flex-1 flex items-center justify-center" data-testid="track-table-empty">
         <div className="text-center text-gray-400 dark:text-gray-500">
           <span className="material-icons text-6xl mb-4">library_music</span>
           <h2 className="text-xl font-semibold mb-2">No hay pistas en tu biblioteca</h2>
@@ -61,7 +61,7 @@ export const TrackTable = ({
   }
 
   return (
-    <div className="flex-1 overflow-auto">
+    <div className="flex-1 overflow-auto" data-testid="track-table">
       <table className="w-full text-left text-sm whitespace-nowrap">
         <thead className="sticky top-0 bg-gray-100 dark:bg-gray-800 z-10">
           <tr className="border-b border-gray-200/50 dark:border-gray-700/50">
@@ -94,6 +94,8 @@ export const TrackTable = ({
             return (
               <tr
                 key={track.id ?? track.path}
+                data-testid="track-row"
+                data-track-id={track.id}
                 onClick={() => onTrackSelect(track)}
                 onDoubleClick={() => onTrackDoubleClick(track)}
                 className={`
@@ -125,16 +127,16 @@ export const TrackTable = ({
                 <td className={`p-2 ${isSelected ? "text-primary font-medium" : ""}`}>
                   {formatDate(track.dateAdded)}
                 </td>
-                <td className={`p-2 ${isSelected ? "text-primary font-medium" : ""}`}>
+                <td className={`p-2 ${isSelected ? "text-primary font-medium" : ""}`} data-testid="track-title">
                   {track.title}
                 </td>
-                <td className={`p-2 ${isSelected ? "text-primary font-medium" : ""}`}>
+                <td className={`p-2 ${isSelected ? "text-primary font-medium" : ""}`} data-testid="track-artist">
                   {track.artist}
                 </td>
-                <td className={`p-2 ${isSelected ? "text-primary font-medium" : ""}`}>
+                <td className={`p-2 ${isSelected ? "text-primary font-medium" : ""}`} data-testid="track-album">
                   {track.album ?? ""}
                 </td>
-                <td className={`p-2 ${isSelected ? "text-primary font-medium" : ""}`}>
+                <td className={`p-2 ${isSelected ? "text-primary font-medium" : ""}`} data-testid="track-duration">
                   {formatDuration(track.duration)}
                 </td>
                 <td className={`p-2 ${isSelected ? "text-primary font-medium" : ""}`}>

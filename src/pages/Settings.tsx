@@ -118,7 +118,7 @@ export const Settings = () => {
   }
 
   return (
-    <div className="h-screen bg-white dark:bg-slate-950 flex flex-col">
+    <div className="h-screen bg-white dark:bg-slate-950 flex flex-col" data-testid="settings-page">
       {/* Header */}
       <div className="border-b border-gray-200 dark:border-gray-800 px-6 py-4">
         <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">⚙️ Configuración</h1>
@@ -134,6 +134,7 @@ export const Settings = () => {
             <button
               key={tab.id}
               type="button"
+              data-testid={`settings-tab-${tab.id}`}
               onClick={() => setActiveTab(tab.id)}
               className={`
                 py-3 px-4 text-sm font-medium border-b-2 transition-colors
@@ -170,10 +171,10 @@ export const Settings = () => {
           {/* Action Buttons */}
           <Card className="p-6">
             <div className="flex items-center justify-between">
-              <Button variant="secondary" onClick={handleReset} disabled={isResetting}>
+              <Button variant="secondary" onClick={handleReset} disabled={isResetting} data-testid="settings-reset-button">
                 {isResetting ? '⏳ Reseteando...' : '🔄 Resetear a valores por defecto'}
               </Button>
-              <Button variant="primary" onClick={handleSave} disabled={isUpdating}>
+              <Button variant="primary" onClick={handleSave} disabled={isUpdating} data-testid="settings-save-button">
                 {isUpdating ? '⏳ Guardando...' : '💾 Guardar cambios'}
               </Button>
             </div>
@@ -208,6 +209,7 @@ const UISettingsTab = ({
         </label>
         <select
           id="theme"
+          data-testid="settings-theme-select"
           value={settings.ui.theme}
           onChange={(e) =>
             onChange({

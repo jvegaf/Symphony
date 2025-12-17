@@ -126,7 +126,7 @@ export const PlayerSection = ({ track }: PlayerSectionProps) => {
   // AIDEV-NOTE: Siempre renderizar el mismo layout (altura fija)
   // Si track es null, mostrar placeholders vacíos pero mantener estructura
   return (
-    <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50">
+    <div className="p-4 border-b border-gray-200/50 dark:border-gray-700/50" data-testid="player-section">
       {/* Error Toast */}
       {error && (
         <Toast
@@ -142,7 +142,7 @@ export const PlayerSection = ({ track }: PlayerSectionProps) => {
       {/* Track Info */}
       <div className="flex items-start">
         {/* Album Art */}
-        <div className="w-16 h-16 rounded mr-4 bg-gray-200 dark:bg-gray-800 flex items-center justify-center">
+        <div className="w-16 h-16 rounded mr-4 bg-gray-200 dark:bg-gray-800 flex items-center justify-center" data-testid="player-album-art">
           <span className="material-icons text-3xl text-gray-400">
             {track ? "album" : "library_music"}
           </span>
@@ -150,10 +150,10 @@ export const PlayerSection = ({ track }: PlayerSectionProps) => {
 
         {/* Track Details - ALTURA FIJA */}
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white truncate">
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-white truncate" data-testid="player-track-title">
             {track ? track.title : "Sin pista seleccionada"}
           </h1>
-          <p className="text-gray-500 dark:text-gray-400 truncate">
+          <p className="text-gray-500 dark:text-gray-400 truncate" data-testid="player-track-artist">
             {track ? track.artist : "—"}
           </p>
         </div>
@@ -162,6 +162,7 @@ export const PlayerSection = ({ track }: PlayerSectionProps) => {
         <div className="flex items-center space-x-2 text-gray-500 dark:text-gray-400">
           <button 
             type="button"
+            data-testid="play-pause-button"
             onClick={handlePlayPause}
             disabled={!track}
             className="p-2 rounded-full hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -172,6 +173,7 @@ export const PlayerSection = ({ track }: PlayerSectionProps) => {
           </button>
           <button 
             type="button"
+            data-testid="stop-button"
             onClick={() => stop()}
             disabled={!track}
             className="p-2 rounded-full hover:bg-gray-200/50 dark:hover:bg-gray-700/50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -181,6 +183,7 @@ export const PlayerSection = ({ track }: PlayerSectionProps) => {
           {/* Analyze Beatgrid Button */}
           <button 
             type="button"
+            data-testid="analyze-beatgrid-button"
             onClick={handleAnalyzeBeatgrid}
             disabled={!track || analyzeBeatgrid.isPending}
             title="Analizar BPM"
@@ -192,6 +195,7 @@ export const PlayerSection = ({ track }: PlayerSectionProps) => {
           </button>
           <button 
             type="button"
+            data-testid="info-button"
             disabled={!track}
             className="p-2 rounded-full hover:bg-gray-200/50 dark:hover:bg-gray-700/50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
@@ -235,6 +239,7 @@ export const PlayerSection = ({ track }: PlayerSectionProps) => {
       <div 
         ref={waveformContainerRef}
         className="mt-3 relative"
+        data-testid="waveform-container"
       >
         {/* Waveform Canvas */}
         <WaveformCanvas
@@ -276,8 +281,8 @@ export const PlayerSection = ({ track }: PlayerSectionProps) => {
 
       {/* Time - ALTURA FIJA */}
       <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mt-1">
-        <span className="font-mono font-bold text-blue-600">{formatDuration(position)}</span>
-        <span className="font-mono">{formatDuration(duration > 0 ? duration : (track?.duration ?? 0))}</span>
+        <span className="font-mono font-bold text-blue-600" data-testid="player-current-time">{formatDuration(position)}</span>
+        <span className="font-mono" data-testid="player-duration">{formatDuration(duration > 0 ? duration : (track?.duration ?? 0))}</span>
       </div>
 
       {/* Cue Points - FUNCIONALES */}

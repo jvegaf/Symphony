@@ -111,7 +111,7 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <div className="h-screen bg-background-dark flex flex-col overflow-hidden relative">
+      <div className="h-screen bg-background-dark flex flex-col overflow-hidden relative" data-testid="app-root">
         {/* Indicador de versión nueva */}
         <div className="absolute top-2 right-2 z-50 bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
           🔴 CÓDIGO NUEVO v2.0
