@@ -418,7 +418,10 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(windows, ignore = "Audio tests can fail on Windows CI without proper audio drivers")]
+    #[cfg_attr(
+        windows,
+        ignore = "Audio tests can fail on Windows CI without proper audio drivers"
+    )]
     fn test_cpal_output_creation_with_default_device() {
         let result = CpalAudioOutput::new(None, None, None, DEFAULT_VOLUME);
 
@@ -432,7 +435,10 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(windows, ignore = "Audio tests can fail on Windows CI without proper audio drivers")]
+    #[cfg_attr(
+        windows,
+        ignore = "Audio tests can fail on Windows CI without proper audio drivers"
+    )]
     fn test_cpal_output_volume_range() {
         if let Ok(mut output) = CpalAudioOutput::new(None, None, None, 0.5) {
             assert!((output.get_volume() - 0.5).abs() < 0.01);
@@ -445,7 +451,7 @@ mod tests {
 
             output.set_volume(1.5);
             assert!((output.get_volume() - 1.0).abs() < 0.01);
-            
+
             // Explicitly stop to clean up resources
             output.stop();
         }
@@ -459,7 +465,10 @@ mod tests {
     }
 
     #[test]
-    #[cfg_attr(windows, ignore = "Audio tests can fail on Windows CI without proper audio drivers")]
+    #[cfg_attr(
+        windows,
+        ignore = "Audio tests can fail on Windows CI without proper audio drivers"
+    )]
     fn test_audio_output_trait_methods() {
         if let Ok(mut output) = CpalAudioOutput::new(None, None, None, DEFAULT_VOLUME) {
             let _producer = output.get_producer();
@@ -468,14 +477,17 @@ mod tests {
 
             let _ = output.play();
             let _ = output.pause();
-            
+
             // Explicitly stop to clean up resources
             output.stop();
         }
     }
 
     #[test]
-    #[cfg_attr(windows, ignore = "Audio tests can fail on Windows CI without proper audio drivers")]
+    #[cfg_attr(
+        windows,
+        ignore = "Audio tests can fail on Windows CI without proper audio drivers"
+    )]
     fn test_volume_persistence() {
         if let Ok(mut output) = CpalAudioOutput::new(None, None, None, 0.3) {
             assert!((output.get_volume() - 0.3).abs() < 0.01);
@@ -488,7 +500,7 @@ mod tests {
 
             let _ = output.play();
             assert!((output.get_volume() - 0.7).abs() < 0.01);
-            
+
             // Explicitly stop to clean up resources
             output.stop();
         }
