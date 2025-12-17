@@ -14,6 +14,7 @@ NC := \033[0m # No Color
 # Variables
 NPM := npm
 CARGO := cargo
+CARGO_DIR := src-tauri
 TAURI := npm run tauri
 
 ##@ General
@@ -55,7 +56,7 @@ test: ## Ejecutar todos los tests (frontend + backend)
 	@echo "$(BLUE)Ejecutando tests de frontend...$(NC)"
 	$(NPM) test
 	@echo "$(BLUE)Ejecutando tests de backend...$(NC)"
-	cd src-tauri && $(CARGO) test
+	cd $(CARGO_DIR) && $(CARGO) test
 	@echo "$(GREEN)✓ Todos los tests completados$(NC)"
 
 test-frontend: ## Ejecutar solo tests de frontend (Vitest)
@@ -64,7 +65,7 @@ test-frontend: ## Ejecutar solo tests de frontend (Vitest)
 
 test-backend: ## Ejecutar solo tests de backend (cargo test)
 	@echo "$(BLUE)Ejecutando tests de backend...$(NC)"
-	cd src-tauri && $(CARGO) test
+	cd $(CARGO_DIR) && $(CARGO) test
 
 test-watch: ## Ejecutar tests en modo watch (frontend)
 	@echo "$(BLUE)Ejecutando tests en modo watch...$(NC)"
@@ -93,28 +94,28 @@ lint: ## Ejecutar linters (ESLint + clippy)
 	@echo "$(BLUE)Ejecutando ESLint...$(NC)"
 	$(NPM) run lint
 	@echo "$(BLUE)Ejecutando clippy...$(NC)"
-	$(CARGO) clippy -- -D warnings
+	cd $(CARGO_DIR) && $(CARGO) clippy -- -D warnings
 	@echo "$(GREEN)✓ Linting completado$(NC)"
 
 lint-fix: ## Ejecutar linters con auto-fix
 	@echo "$(BLUE)Ejecutando ESLint con fix...$(NC)"
 	$(NPM) run lint -- --fix
 	@echo "$(BLUE)Ejecutando clippy con fix...$(NC)"
-	$(CARGO) clippy --fix --allow-dirty --allow-staged
+	cd $(CARGO_DIR) && $(CARGO) clippy --fix --allow-dirty --allow-staged
 	@echo "$(GREEN)✓ Linting con fix completado$(NC)"
 
 format: ## Formatear código (Prettier + rustfmt)
 	@echo "$(BLUE)Formateando código frontend...$(NC)"
 	$(NPM) run format
 	@echo "$(BLUE)Formateando código backend...$(NC)"
-	$(CARGO) fmt
+	cd $(CARGO_DIR) && $(CARGO) fmt
 	@echo "$(GREEN)✓ Código formateado$(NC)"
 
 format-check: ## Verificar formateo sin modificar
 	@echo "$(BLUE)Verificando formato de frontend...$(NC)"
 	$(NPM) run format -- --check
 	@echo "$(BLUE)Verificando formato de backend...$(NC)"
-	$(CARGO) fmt -- --check
+	cd $(CARGO_DIR) && $(CARGO) fmt -- --check
 	@echo "$(GREEN)✓ Verificación de formato completada$(NC)"
 
 type-check: ## Verificar tipos de TypeScript
