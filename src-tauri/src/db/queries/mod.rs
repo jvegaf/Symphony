@@ -1,5 +1,6 @@
 pub mod analysis;
 pub mod playlists;
+pub mod settings;
 /// Módulo de queries separado por responsabilidades
 ///
 /// AIDEV-NOTE: Refactorizado desde queries.rs monolítico (2115 líneas)
@@ -9,4 +10,5 @@ pub mod tracks;
 // Re-exportar las funciones principales para compatibilidad
 pub use analysis::*;
 pub use playlists::*;
+pub use settings::*;
 pub use tracks::*;

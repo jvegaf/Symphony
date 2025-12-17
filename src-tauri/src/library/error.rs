@@ -22,6 +22,12 @@ pub enum LibraryError {
 
     /// Error al escanear directorio
     ScanError(String),
+
+    /// Error de conversión de audio
+    ConversionError(String),
+
+    /// Archivo no encontrado
+    FileNotFound(String),
 }
 
 impl fmt::Display for LibraryError {
@@ -33,6 +39,8 @@ impl fmt::Display for LibraryError {
             Self::MetadataExtractionFailed(msg) => write!(f, "Error extrayendo metadatos: {}", msg),
             Self::DatabaseError(msg) => write!(f, "Error de base de datos: {}", msg),
             Self::ScanError(msg) => write!(f, "Error escaneando: {}", msg),
+            Self::ConversionError(msg) => write!(f, "Error de conversión: {}", msg),
+            Self::FileNotFound(msg) => write!(f, "Archivo no encontrado: {}", msg),
         }
     }
 }
@@ -52,6 +60,7 @@ impl From<rusqlite::Error> for LibraryError {
 }
 
 pub type Result<T> = std::result::Result<T, LibraryError>;
+pub type LibraryResult<T> = std::result::Result<T, LibraryError>;
 
 #[cfg(test)]
 mod tests {

@@ -2,6 +2,7 @@ import { Card } from "../components/ui/Card";
 import { AudioPlayer } from "../components/AudioPlayer";
 import { WaveformViewer } from "../components/WaveformViewer";
 import { useGetTrack } from "../hooks/useLibrary";
+import { useAudioPlayer } from "../hooks/useAudioPlayer";
 
 interface PlayerPageProps {
   trackId?: string;
@@ -9,6 +10,11 @@ interface PlayerPageProps {
 
 export const Player = ({ trackId }: PlayerPageProps) => {
   const { data: track, isLoading } = useGetTrack(trackId || "", !!trackId);
+  const { seek, position, state, currentTrackPath } = useAudioPlayer();
+
+  // AIDEV-NOTE: Solo generar waveform si la pista está actualmente en reproducción
+  // Esto evita generar waveform al seleccionar (single click), solo al reproducir (double click)
+  const isCurrentTrackPlaying = track && currentTrackPath === track.path && (state === "playing" || state === "paused");
 
   if (!trackId) {
     return (
@@ -91,6 +97,9 @@ export const Player = ({ trackId }: PlayerPageProps) => {
             trackId={track.id}
             trackPath={track.path}
             duration={track.duration}
+            currentTime={position}
+            onSeek={seek}
+            shouldGenerate={isCurrentTrackPlaying}
           />
         </Card>
 

@@ -1093,18 +1093,289 @@ const updated = await invoke<Loop>("update_loop", {
 
 ---
 
-## Próximas Funciones (Roadmap)
+## Settings (Configuración)
 
-### En desarrollo (Milestone 5):
-- `seek` - Saltar a una posición específica en la pista
-- `get_position` - Obtener posición actual de reproducción
-- `set_volume` - Ajustar volumen de reproducción
+### get_setting
 
-### Planeadas (Milestone 6):
-- `convert_to_mp3` - Conversión de formato de audio
-- `normalize_audio` - Normalización de volumen
-- `export_playlist_m3u` - Exportar playlist a formato M3U
+Obtiene un ajuste de configuración específico por clave.
+
+**Parámetros:**
+- `key`: `string` - Clave del ajuste (ej: `"ui.theme"`, `"audio.sample_rate"`)
+
+**Retorno:**
+- `Promise<Setting>` - Objeto de configuración con `{ key, value, valueType }`
+- Lanza error si la clave no existe
+
+**Ejemplo:**
+```typescript
+const themeSetting = await invoke<Setting>("get_setting", {
+  key: "ui.theme"
+});
+console.log(themeSetting.value); // "dark" | "light" | "system"
+```
 
 ---
 
-*Última actualización: Diciembre 2025 (Milestone 4)*
+### get_all_settings
+
+Obtiene todos los ajustes de configuración.
+
+**Retorno:**
+- `Promise<Setting[]>` - Array de todos los ajustes
+
+**Ejemplo:**
+```typescript
+const allSettings = await invoke<Setting[]>("get_all_settings");
+// [{ key: "ui.theme", value: "dark", valueType: "string" }, ...]
+```
+
+---
+
+### update_setting
+
+Actualiza o crea un ajuste de configuración.
+
+**Parámetros:**
+- `key`: `string` - Clave del ajuste
+- `value`: `string` - Valor como string (se convertirá según valueType)
+- `valueType`: `"string" | "number" | "boolean" | "json"` - Tipo del valor
+
+**Retorno:**
+- `Promise<void>`
+
+**Ejemplo:**
+```typescript
+await invoke("update_setting", {
+  key: "ui.theme",
+  value: "dark",
+  valueType: "string"
+});
+
+await invoke("update_setting", {
+  key: "audio.sample_rate",
+  value: "96000",
+  valueType: "number"
+});
+
+await invoke("update_setting", {
+  key: "library.auto_scan_on_startup",
+  value: "true",
+  valueType: "boolean"
+});
+```
+
+**Notas:**
+- Si el ajuste no existe, se crea
+- Los valores se almacenan como strings en la BD pero se parsean según `valueType`
+
+---
+
+### update_settings (batch)
+
+Actualiza múltiples ajustes en una sola transacción.
+
+**Parámetros:**
+- `updates`: `Array<{ key: string, value: string, valueType: string }>`
+
+**Retorno:**
+- `Promise<void>`
+
+**Ejemplo:**
+```typescript
+await invoke("update_settings", {
+  updates: [
+    { key: "ui.theme", value: "dark", valueType: "string" },
+    { key: "ui.language", value: "es", valueType: "string" },
+    { key: "audio.sample_rate", value: "48000", valueType: "number" }
+  ]
+});
+```
+
+**Ventajas:**
+- Operación atómica (todo o nada)
+- Más eficiente que múltiples llamadas individuales
+
+---
+
+### reset_settings
+
+Resetea todos los ajustes a sus valores por defecto.
+
+**Retorno:**
+- `Promise<void>`
+
+**Ejemplo:**
+```typescript
+await invoke("reset_settings");
+// Todos los ajustes vuelven a valores por defecto (ej: theme="system", bitrate=320)
+```
+
+**Valores por defecto:**
+```typescript
+{
+  ui: {
+    theme: "system",
+    language: "es",
+    waveformResolution: 512
+  },
+  audio: {
+    outputDevice: "default",
+    sampleRate: 44100,
+    bufferSize: 2048
+  },
+  library: {
+    autoScanOnStartup: false,
+    scanIntervalHours: 24,
+    importFolder: ""
+  },
+  conversion: {
+    enabled: false,
+    autoConvert: false,
+    bitrate: 320,
+    outputFolder: "",
+    preserveStructure: true
+  }
+}
+```
+
+---
+
+## Conversion (Conversión de Audio)
+
+### Eventos Tauri (Conversión)
+
+- `conversion:progress` → `{ current_file: string, current_index: number, total_files: number, percentage: number, status: string }`
+
+**Ejemplo de suscripción:**
+```typescript
+import { listen } from '@tauri-apps/api/event';
+
+useEffect(() => {
+  const unlisten = await listen<ConversionProgress>('conversion:progress', (event) => {
+    setProgress(event.payload);
+  });
+  return () => { unlisten(); };
+}, []);
+```
+
+---
+
+### check_ffmpeg_installed
+
+Verifica si ffmpeg está instalado y disponible en el sistema.
+
+**Retorno:**
+- `Promise<boolean>` - `true` si ffmpeg está disponible, `false` en caso contrario
+
+**Ejemplo:**
+```typescript
+const hasFFmpeg = await invoke<boolean>("check_ffmpeg_installed");
+if (!hasFFmpeg) {
+  alert("Por favor instala ffmpeg para usar la conversión");
+}
+```
+
+**Notas:**
+- La conversión requiere ffmpeg instalado en el sistema
+- En Linux/macOS: `ffmpeg` debe estar en PATH
+- En Windows: `ffmpeg.exe` debe estar en PATH
+
+---
+
+### convert_track_to_mp3
+
+Convierte un archivo de audio a formato MP3.
+
+**Parámetros:**
+- `inputPath`: `string` - Ruta absoluta del archivo de entrada
+- `bitrate`: `number` - Bitrate en kbps (128, 192, 256, 320)
+- `outputFolder`: `string` - Carpeta de salida
+- `preserveStructure`: `boolean` - Si true, preserva el nombre del archivo original
+
+**Retorno:**
+- `Promise<ConversionResult>`
+  ```typescript
+  {
+    inputPath: string;
+    outputPath: string;  // Vacío si falló
+    success: boolean;
+    error?: string;      // Presente si success=false
+    durationMs: number;  // Tiempo que tomó la conversión
+  }
+  ```
+
+**Ejemplo:**
+```typescript
+const result = await invoke<ConversionResult>("convert_track_to_mp3", {
+  inputPath: "/music/song.flac",
+  bitrate: 320,
+  outputFolder: "/output/mp3",
+  preserveStructure: true
+});
+
+if (result.success) {
+  console.log(`Convertido a: ${result.outputPath}`);
+} else {
+  console.error(`Error: ${result.error}`);
+}
+```
+
+**Notas:**
+- Emite eventos `conversion:progress` durante la conversión
+- `preserveStructure: true` mantiene el nombre base del archivo
+- `preserveStructure: false` podría agregar sufijos (aún no implementado)
+
+---
+
+### batch_convert_to_mp3
+
+Convierte múltiples archivos a MP3 en lote.
+
+**Parámetros:**
+- `inputPaths`: `string[]` - Array de rutas absolutas de archivos
+- `bitrate`: `number` - Bitrate en kbps
+- `outputFolder`: `string` - Carpeta de salida
+- `preserveStructure`: `boolean` - Preservar estructura de nombres
+
+**Retorno:**
+- `Promise<ConversionResult[]>` - Array de resultados, uno por cada archivo
+
+**Ejemplo:**
+```typescript
+const results = await invoke<ConversionResult[]>("batch_convert_to_mp3", {
+  inputPaths: [
+    "/music/song1.flac",
+    "/music/song2.wav",
+    "/music/song3.aiff"
+  ],
+  bitrate: 320,
+  outputFolder: "/output/mp3",
+  preserveStructure: true
+});
+
+const successful = results.filter(r => r.success).length;
+const failed = results.filter(r => !r.success).length;
+console.log(`✅ ${successful} exitosos, ❌ ${failed} fallidos`);
+```
+
+**Ventajas:**
+- Procesa archivos en paralelo (mejora rendimiento)
+- Emite eventos de progreso para cada archivo
+- Continúa procesando aunque algunos archivos fallen
+
+**Formatos de entrada soportados:**
+- FLAC, WAV, AIFF, AAC, OGG, M4A, WMA, etc. (cualquier formato soportado por ffmpeg)
+
+---
+
+## Próximas Funciones (Roadmap)
+
+### Planeadas (Milestone 6+):
+- `normalize_audio` - Normalización de volumen
+- `export_playlist_m3u` - Exportar playlist a formato M3U
+- Análisis de tempo/BPM automático
+- Detección de clave musical (key detection)
+
+---
+
+*Última actualización: Diciembre 2025 (Milestone 5)*

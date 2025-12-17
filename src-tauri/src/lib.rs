@@ -161,6 +161,15 @@ pub fn run() {
             commands::analysis::get_loops,
             commands::analysis::update_loop,
             commands::analysis::delete_loop,
+            // Settings commands
+            commands::settings::get_setting,
+            commands::settings::get_all_settings,
+            commands::settings::update_setting,
+            commands::settings::reset_settings,
+            // Conversion commands
+            commands::conversion::convert_track_to_mp3,
+            commands::conversion::batch_convert_to_mp3,
+            commands::conversion::check_ffmpeg_installed,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
