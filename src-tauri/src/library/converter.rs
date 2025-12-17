@@ -1,12 +1,12 @@
+use crate::library::error::{LibraryError, LibraryResult};
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use crate::library::error::{LibraryError, LibraryResult};
 use tauri::{AppHandle, Emitter, Runtime};
 
 /// Opciones de conversión MP3
 #[derive(Debug, Clone)]
 pub struct ConversionOptions {
-    pub bitrate: u32,                  // 128, 192, 256, 320
+    pub bitrate: u32, // 128, 192, 256, 320
     pub output_folder: PathBuf,
     pub preserve_structure: bool,
     pub overwrite_existing: bool,
@@ -64,41 +64,43 @@ impl Mp3Converter {
         app_handle: &AppHandle<R>,
     ) -> LibraryResult<ConversionResult> {
         let start = std::time::Instant::now();
-        
+
         // Verificar que ffmpeg esté disponible
         Self::check_ffmpeg_available()?;
-        
+
         // Verificar que el archivo de entrada exista
         if !input_path.exists() {
-            return Err(LibraryError::FileNotFound(
-                input_path.display().to_string()
-            ));
+            return Err(LibraryError::FileNotFound(input_path.display().to_string()));
         }
-        
+
         // Generar path de salida
         let output_path = Self::generate_output_path(input_path, options)?;
-        
+
         // Verificar si ya existe
         if output_path.exists() && !options.overwrite_existing {
-            return Err(LibraryError::ConversionError(
-                format!("El archivo de salida ya existe: {}", output_path.display())
-            ));
+            return Err(LibraryError::ConversionError(format!(
+                "El archivo de salida ya existe: {}",
+                output_path.display()
+            )));
         }
-        
+
         // Crear directorio de salida si no existe
         if let Some(parent) = output_path.parent() {
             std::fs::create_dir_all(parent)?;
         }
-        
+
         // Emitir evento de inicio
-        let _ = app_handle.emit("conversion:progress", ConversionProgress {
-            current_file: input_path.display().to_string(),
-            current_index: 0,
-            total_files: 1,
-            percentage: 0.0,
-            status: ConversionStatus::Converting,
-        });
-        
+        let _ = app_handle.emit(
+            "conversion:progress",
+            ConversionProgress {
+                current_file: input_path.display().to_string(),
+                current_index: 0,
+                total_files: 1,
+                percentage: 0.0,
+                status: ConversionStatus::Converting,
+            },
+        );
+
         // Ejecutar ffmpeg
         let output = Command::new("ffmpeg")
             .arg("-i")
@@ -107,23 +109,26 @@ impl Mp3Converter {
             .arg("libmp3lame")
             .arg("-b:a")
             .arg(format!("{}k", options.bitrate))
-            .arg("-y")  // Overwrite without asking
+            .arg("-y") // Overwrite without asking
             .arg(&output_path)
             .output()
             .map_err(|e| LibraryError::ConversionError(e.to_string()))?;
-        
+
         let duration_ms = start.elapsed().as_millis() as u64;
-        
+
         if output.status.success() {
             // Emitir evento de completado
-            let _ = app_handle.emit("conversion:progress", ConversionProgress {
-                current_file: input_path.display().to_string(),
-                current_index: 1,
-                total_files: 1,
-                percentage: 100.0,
-                status: ConversionStatus::Complete,
-            });
-            
+            let _ = app_handle.emit(
+                "conversion:progress",
+                ConversionProgress {
+                    current_file: input_path.display().to_string(),
+                    current_index: 1,
+                    total_files: 1,
+                    percentage: 100.0,
+                    status: ConversionStatus::Complete,
+                },
+            );
+
             Ok(ConversionResult {
                 input_path: input_path.display().to_string(),
                 output_path: output_path.display().to_string(),
@@ -133,20 +138,23 @@ impl Mp3Converter {
             })
         } else {
             let error_msg = String::from_utf8_lossy(&output.stderr).to_string();
-            
+
             // Emitir evento de error
-            let _ = app_handle.emit("conversion:progress", ConversionProgress {
-                current_file: input_path.display().to_string(),
-                current_index: 1,
-                total_files: 1,
-                percentage: 0.0,
-                status: ConversionStatus::Failed,
-            });
-            
+            let _ = app_handle.emit(
+                "conversion:progress",
+                ConversionProgress {
+                    current_file: input_path.display().to_string(),
+                    current_index: 1,
+                    total_files: 1,
+                    percentage: 0.0,
+                    status: ConversionStatus::Failed,
+                },
+            );
+
             Err(LibraryError::ConversionError(error_msg))
         }
     }
-    
+
     /// Convierte múltiples archivos en batch
     pub fn convert_batch<R: Runtime>(
         input_paths: &[PathBuf],
@@ -155,17 +163,20 @@ impl Mp3Converter {
     ) -> LibraryResult<Vec<ConversionResult>> {
         let mut results = Vec::new();
         let total = input_paths.len();
-        
+
         for (index, path) in input_paths.iter().enumerate() {
             // Emitir progreso antes de cada archivo
-            let _ = app_handle.emit("conversion:progress", ConversionProgress {
-                current_file: path.display().to_string(),
-                current_index: index,
-                total_files: total,
-                percentage: (index as f64 / total as f64) * 100.0,
-                status: ConversionStatus::Converting,
-            });
-            
+            let _ = app_handle.emit(
+                "conversion:progress",
+                ConversionProgress {
+                    current_file: path.display().to_string(),
+                    current_index: index,
+                    total_files: total,
+                    percentage: (index as f64 / total as f64) * 100.0,
+                    status: ConversionStatus::Converting,
+                },
+            );
+
             match Self::convert_file(path, options, app_handle) {
                 Ok(result) => results.push(result),
                 Err(e) => {
@@ -179,39 +190,44 @@ impl Mp3Converter {
                 }
             }
         }
-        
+
         // Emitir evento final
-        let _ = app_handle.emit("conversion:progress", ConversionProgress {
-            current_file: String::new(),
-            current_index: total,
-            total_files: total,
-            percentage: 100.0,
-            status: ConversionStatus::Complete,
-        });
-        
+        let _ = app_handle.emit(
+            "conversion:progress",
+            ConversionProgress {
+                current_file: String::new(),
+                current_index: total,
+                total_files: total,
+                percentage: 100.0,
+                status: ConversionStatus::Complete,
+            },
+        );
+
         Ok(results)
     }
-    
+
     /// Verifica que ffmpeg esté disponible
     pub fn check_ffmpeg_available() -> LibraryResult<()> {
         let output = Command::new("ffmpeg")
             .arg("-version")
             .output()
-            .map_err(|_| LibraryError::ConversionError(
-                "ffmpeg no está instalado o no está en el PATH".to_string()
-            ))?;
-        
+            .map_err(|_| {
+                LibraryError::ConversionError(
+                    "ffmpeg no está instalado o no está en el PATH".to_string(),
+                )
+            })?;
+
         if output.status.success() {
             Ok(())
         } else {
             Err(LibraryError::ConversionError(
-                "ffmpeg no está disponible".to_string()
+                "ffmpeg no está disponible".to_string(),
             ))
         }
     }
-    
+
     /// Genera path de salida para archivo convertido
-    /// 
+    ///
     /// AIDEV-NOTE: Por ahora preserve_structure solo afecta el nombre del archivo,
     /// no preserva la estructura completa de directorios. Esto se puede expandir
     /// en el futuro para mantener la jerarquía relativa completa.
@@ -219,13 +235,12 @@ impl Mp3Converter {
         input_path: &Path,
         options: &ConversionOptions,
     ) -> LibraryResult<PathBuf> {
-        let file_stem = input_path.file_stem()
-            .ok_or_else(|| LibraryError::ConversionError(
-                "No se pudo obtener nombre de archivo".to_string()
-            ))?;
-        
+        let file_stem = input_path.file_stem().ok_or_else(|| {
+            LibraryError::ConversionError("No se pudo obtener nombre de archivo".to_string())
+        })?;
+
         let output_filename = format!("{}.mp3", file_stem.to_string_lossy());
-        
+
         let output_path = if options.preserve_structure {
             // AIDEV-TODO: Implementar preservación completa de estructura de carpetas
             // Por ahora solo coloca el archivo en output_folder
@@ -234,7 +249,7 @@ impl Mp3Converter {
             // Archivo plano en carpeta de salida
             options.output_folder.join(&output_filename)
         };
-        
+
         Ok(output_path)
     }
 }
@@ -266,7 +281,7 @@ mod tests {
             preserve_structure: false,
             overwrite_existing: false,
         };
-        
+
         let result = Mp3Converter::generate_output_path(&input, &opts).unwrap();
         assert_eq!(result, PathBuf::from("/output/test.mp3"));
     }
@@ -280,7 +295,7 @@ mod tests {
             preserve_structure: true,
             overwrite_existing: false,
         };
-        
+
         let result = Mp3Converter::generate_output_path(&input, &opts).unwrap();
         // AIDEV-NOTE: Por ahora preserve_structure no preserva estructura completa
         assert_eq!(result, PathBuf::from("/output/test.mp3"));
@@ -290,7 +305,7 @@ mod tests {
     fn test_generate_output_path_no_extension() {
         let input = PathBuf::from("/some/path/noext");
         let opts = ConversionOptions::default();
-        
+
         let result = Mp3Converter::generate_output_path(&input, &opts).unwrap();
         assert!(result.to_string_lossy().ends_with("noext.mp3"));
     }
@@ -304,7 +319,7 @@ mod tests {
             error: None,
             duration_ms: 1500,
         };
-        
+
         let json = serde_json::to_string(&result).unwrap();
         assert!(json.contains("inputPath"));
         assert!(json.contains("outputPath"));
@@ -320,7 +335,7 @@ mod tests {
             percentage: 20.0,
             status: ConversionStatus::Converting,
         };
-        
+
         let json = serde_json::to_string(&progress).unwrap();
         assert!(json.contains("currentFile"));
         assert!(json.contains("totalFiles"));
@@ -332,14 +347,14 @@ mod tests {
         // AIDEV-NOTE: Este test puede fallar si ffmpeg no está instalado
         // en el entorno de CI. Considerarlo como test de integración.
         let result = Mp3Converter::check_ffmpeg_available();
-        
+
         // Si ffmpeg está instalado, debe retornar Ok
         // Si no, debe retornar ConversionError
         if result.is_err() {
             match result.unwrap_err() {
                 LibraryError::ConversionError(msg) => {
                     assert!(msg.contains("ffmpeg"));
-                },
+                }
                 _ => panic!("Expected ConversionError"),
             }
         }

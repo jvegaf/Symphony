@@ -1,8 +1,8 @@
-use tauri::State;
+use crate::db::models::Setting;
+use crate::db::queries::settings;
 use rusqlite::Connection;
 use std::sync::Mutex;
-use crate::db::queries::settings;
-use crate::db::models::Setting;
+use tauri::State;
 
 /// Obtiene el valor de una configuración específica
 #[tauri::command]
@@ -11,18 +11,14 @@ pub fn get_setting(
     key: String,
 ) -> Result<Option<Setting>, String> {
     let conn = db.lock().unwrap();
-    settings::get_setting(&conn, &key)
-        .map_err(|e| e.to_string())
+    settings::get_setting(&conn, &key).map_err(|e| e.to_string())
 }
 
 /// Obtiene todas las configuraciones
 #[tauri::command]
-pub fn get_all_settings(
-    db: State<'_, Mutex<Connection>>,
-) -> Result<Vec<Setting>, String> {
+pub fn get_all_settings(db: State<'_, Mutex<Connection>>) -> Result<Vec<Setting>, String> {
     let conn = db.lock().unwrap();
-    settings::get_all_settings(&conn)
-        .map_err(|e| e.to_string())
+    settings::get_all_settings(&conn).map_err(|e| e.to_string())
 }
 
 /// Actualiza o crea una configuración
@@ -34,18 +30,14 @@ pub fn update_setting(
     value_type: String,
 ) -> Result<(), String> {
     let conn = db.lock().unwrap();
-    settings::upsert_setting(&conn, &key, &value, &value_type)
-        .map_err(|e| e.to_string())
+    settings::upsert_setting(&conn, &key, &value, &value_type).map_err(|e| e.to_string())
 }
 
 /// Resetea todas las configuraciones a valores por defecto
 #[tauri::command]
-pub fn reset_settings(
-    db: State<'_, Mutex<Connection>>,
-) -> Result<(), String> {
+pub fn reset_settings(db: State<'_, Mutex<Connection>>) -> Result<(), String> {
     let conn = db.lock().unwrap();
-    settings::reset_all_settings(&conn)
-        .map_err(|e| e.to_string())
+    settings::reset_all_settings(&conn).map_err(|e| e.to_string())
 }
 
 #[cfg(test)]

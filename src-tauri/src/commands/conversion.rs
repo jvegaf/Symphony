@@ -1,6 +1,6 @@
-use tauri::AppHandle;
+use crate::library::converter::{ConversionOptions, ConversionResult, Mp3Converter};
 use std::path::PathBuf;
-use crate::library::converter::{Mp3Converter, ConversionOptions, ConversionResult};
+use tauri::AppHandle;
 
 /// Convierte un track individual a MP3
 #[tauri::command]
@@ -17,12 +17,9 @@ pub async fn convert_track_to_mp3(
         preserve_structure,
         overwrite_existing: false,
     };
-    
-    Mp3Converter::convert_file(
-        &PathBuf::from(input_path),
-        &options,
-        &app,
-    ).map_err(|e| e.to_string())
+
+    Mp3Converter::convert_file(&PathBuf::from(input_path), &options, &app)
+        .map_err(|e| e.to_string())
 }
 
 /// Convierte múltiples tracks a MP3 en batch
@@ -34,19 +31,16 @@ pub async fn batch_convert_to_mp3(
     output_folder: String,
     preserve_structure: bool,
 ) -> Result<Vec<ConversionResult>, String> {
-    let paths: Vec<PathBuf> = input_paths.iter()
-        .map(PathBuf::from)
-        .collect();
-    
+    let paths: Vec<PathBuf> = input_paths.iter().map(PathBuf::from).collect();
+
     let options = ConversionOptions {
         bitrate,
         output_folder: PathBuf::from(output_folder),
         preserve_structure,
         overwrite_existing: false,
     };
-    
-    Mp3Converter::convert_batch(&paths, &options, &app)
-        .map_err(|e| e.to_string())
+
+    Mp3Converter::convert_batch(&paths, &options, &app).map_err(|e| e.to_string())
 }
 
 /// Verifica si ffmpeg está instalado y disponible
