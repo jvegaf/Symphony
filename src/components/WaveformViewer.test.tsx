@@ -94,6 +94,7 @@ describe("WaveformViewer", () => {
     );
 
     // AIDEV-NOTE: WaveSurfer.create debe ser llamado con las opciones correctas
+    // barWidth=1, barGap=0 para mejor sincronización tiempo/espacio
     expect(mockCreate).toHaveBeenCalledWith(
       expect.objectContaining({
         container: expect.any(HTMLElement),
@@ -102,10 +103,13 @@ describe("WaveformViewer", () => {
         progressColor: "#00ff00",
         cursorColor: "#60a5fa",
         cursorWidth: 2,
-        barWidth: 2,
-        barGap: 1,
+        barWidth: 1,
+        barGap: 0,
         normalize: true,
         interact: true,
+        hideScrollbar: true,
+        autoScroll: false,
+        autoCenter: false,
       })
     );
   });

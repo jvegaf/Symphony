@@ -95,41 +95,73 @@ export function WaveformCanvas({
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.scale(dpr, dpr);
 
-    // AIDEV-NOTE: Renderizar SOLO los peaks que tenemos (streaming progresivo)
-    // No importa si son todos o solo algunos - renderizamos lo que hay
-    const peaksToRender = peaks.length;
+    const peaksCount = peaks.length;
 
-    console.log(`🎨 Renderizando waveform: ${peaksToRender} peaks, progreso: ${currentTime.toFixed(2)}/${duration.toFixed(2)}s`);
-
-    if (peaksToRender === 0) {
+    if (peaksCount === 0) {
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       return;
     }
 
-    // Ancho por peak
+    // AIDEV-NOTE: SOLUCIÓN AL PROBLEMA DE SINCRONIZACIÓN
+    // 
+    // El problema era que cada peak se renderizaba en posición fija (i * barStep),
+    // lo que causaba que el waveform se saliera del canvas cuando había muchos peaks.
+    // 
+    // La solución es ESCALAR los peaks al ancho del canvas:
+    // - Cada peak representa un porcentaje de la duración total
+    // - La posición X de cada peak = (índice / total_peaks) * ancho_canvas
+    // - Esto garantiza que TODOS los peaks quepan en el canvas
+    
     const barWidth = 2;
-    const barGap = 1;
+    const minBarGap = 1;
+    
+    // Calcular cuántas barras caben en el canvas
+    const maxBars = Math.floor(width / (barWidth + minBarGap));
+    
+    // Si tenemos más peaks que barras disponibles, necesitamos resamplear
+    // Si tenemos menos peaks, espaciamos las barras uniformemente
+    const needsResampling = peaksCount > maxBars;
+    const barsToRender = needsResampling ? maxBars : peaksCount;
+    
+    // Calcular el espaciado real entre barras para ocupar todo el ancho
+    const totalBarSpace = barsToRender * barWidth;
+    const totalGapSpace = width - totalBarSpace;
+    const barGap = barsToRender > 1 ? totalGapSpace / (barsToRender - 1) : 0;
     const barStep = barWidth + barGap;
 
-    // AIDEV-NOTE: Progreso basado en TIEMPO, no en peaks
-    // Calcular posición del progreso en píxeles basado en currentTime/duration
+    // AIDEV-NOTE: Progreso basado en TIEMPO
     const progressX = duration > 0 ? (currentTime / duration) * width : 0;
 
-    // Renderizar cada peak que tengamos
-    for (let i = 0; i < peaksToRender; i++) {
-      const peak = peaks[i];
-      
-      // AIDEV-NOTE: Renderizar incluso peaks con valor 0 (silencio)
-      // Esto permite ver el waveform completo aunque haya partes silenciosas
-      const x = i * barStep;
-      if (x > width) break; // No renderizar fuera del canvas
+    console.log(`🎨 Waveform: ${peaksCount} peaks → ${barsToRender} barras, ancho=${width.toFixed(0)}px, progreso=${currentTime.toFixed(1)}/${duration.toFixed(1)}s`);
 
-      // Altura de la barra (normalizada entre 0 y 1)
-      // Mínimo 2px para que los silencios sean visibles
-      const barHeight = Math.max(2, peak * canvasHeight * 0.9);
+    // Renderizar barras
+    for (let i = 0; i < barsToRender; i++) {
+      // Calcular qué peak(s) corresponden a esta barra
+      let peakValue: number;
+      
+      if (needsResampling) {
+        // Resamplear: tomar el máximo de los peaks que corresponden a esta barra
+        const startIdx = Math.floor((i / barsToRender) * peaksCount);
+        const endIdx = Math.floor(((i + 1) / barsToRender) * peaksCount);
+        
+        let maxPeak = 0;
+        for (let j = startIdx; j < endIdx && j < peaksCount; j++) {
+          maxPeak = Math.max(maxPeak, peaks[j]);
+        }
+        peakValue = maxPeak;
+      } else {
+        // Sin resamplear: usar el peak directamente
+        peakValue = peaks[i];
+      }
+
+      // Posición X de la barra (escalada al ancho del canvas)
+      const x = i * barStep;
+
+      // Altura de la barra (mínimo 2px para silencios)
+      const barHeight = Math.max(2, peakValue * canvasHeight * 0.9);
       const y = (canvasHeight - barHeight) / 2;
 
-      // Color según si está antes o después del progreso (basado en TIEMPO)
+      // Color según progreso de reproducción
       ctx.fillStyle = x < progressX ? progressColor : waveColor;
       
       // Dibujar barra redondeada
@@ -138,7 +170,7 @@ export function WaveformCanvas({
       ctx.fill();
     }
 
-    // Dibujar línea de progreso (cursor vertical en la posición actual)
+    // Dibujar línea de progreso
     if (progressX > 0 && progressX <= width) {
       ctx.fillStyle = progressColor;
       ctx.fillRect(progressX - 1, 0, 2, canvasHeight);

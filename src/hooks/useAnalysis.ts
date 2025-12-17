@@ -67,6 +67,8 @@ export const useGetBeatgrid = (trackId: string) => {
     queryFn: async () => {
       return await invoke<Beatgrid | null>('get_beatgrid', { trackId });
     },
+    // AIDEV-NOTE: Solo ejecutar si hay trackId válido
+    enabled: trackId.length > 0,
     staleTime: 5 * 60 * 1000, // 5 minutos - beatgrids no cambian frecuentemente
   });
 };

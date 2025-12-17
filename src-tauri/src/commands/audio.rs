@@ -122,6 +122,25 @@ pub async fn cancel_waveform(
     Ok(cancel_waveform_generation(&track_id, waveform_state.inner().clone()).await)
 }
 
+/// Limpia el cache de waveforms en la base de datos
+///
+/// AIDEV-NOTE: Útil cuando se cambian parámetros de generación (ej. WAVEFORM_WINDOW_SIZE)
+/// y se necesita regenerar todos los waveforms con la nueva configuración.
+#[tauri::command]
+pub async fn clear_waveform_cache(
+    db: State<'_, Arc<tokio::sync::Mutex<rusqlite::Connection>>>,
+) -> Result<usize, String> {
+    log::info!("🧹 clear_waveform_cache: Limpiando cache de waveforms...");
+
+    let conn = db.lock().await;
+    let deleted = conn
+        .execute("DELETE FROM waveforms", [])
+        .map_err(|e| format!("Error limpiando cache: {}", e))?;
+
+    log::info!("✅ Cache limpiado: {} waveforms eliminados", deleted);
+    Ok(deleted)
+}
+
 // Obtiene un waveform cacheado de la base de datos (DEPRECATED)
 // AIDEV-NOTE: Reemplazado por get_waveform que maneja cache internamente
 /*
