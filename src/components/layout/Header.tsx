@@ -8,6 +8,7 @@ interface HeaderProps {
   onImport: () => void;
   isImporting: boolean;
   progress: ImportProgress;
+  selectedTracksCount?: number;
 }
 
 export const Header = ({
@@ -16,32 +17,44 @@ export const Header = ({
   onImport,
   isImporting,
   progress,
+  selectedTracksCount = 0,
 }: HeaderProps) => {
   const tabs: { id: Tab; label: string }[] = [
     { id: "library", label: "Library" },
-    { id: "benchmark", label: "🔬 Benchmark" },
     { id: "settings", label: "Settings" },
     { id: "import", label: "Import" },
     { id: "export", label: "Export" },
     { id: "tools", label: "Tools" },
   ];
 
-  const progressPercent = progress.total > 0 
-    ? Math.round((progress.current / progress.total) * 100) 
-    : 0;
+  const progressPercent =
+    progress.total > 0
+      ? Math.round((progress.current / progress.total) * 100)
+      : 0;
 
   return (
-    <header className="flex items-center justify-between bg-white/5 dark:bg-gray-800/50 p-2 border-b border-gray-200/10 dark:border-gray-700/50 text-xs text-gray-500 dark:text-gray-400" data-testid="header">
+    <header
+      className="flex items-center justify-between bg-white/5 dark:bg-gray-800/50 p-2 border-b border-gray-200/10 dark:border-gray-700/50 text-xs text-gray-500 dark:text-gray-400"
+      data-testid="header"
+    >
       {/* Left: Status */}
       <div className="flex items-center space-x-2 min-w-[150px]">
         {isImporting ? (
           <span data-testid="import-status">
             {progress.phase === "scanning" && "Escaneando..."}
-            {progress.phase === "importing" && `Importando ${progress.current}/${progress.total}`}
+            {progress.phase === "importing" &&
+              `Importando ${progress.current}/${progress.total}`}
             {progress.phase === "complete" && "¡Completado!"}
           </span>
+        ) : selectedTracksCount > 0 ? (
+          <div className="bg-primary/90 backdrop-blur-sm text-white px-3 py-1.5 rounded-md flex items-center gap-2" data-testid="selection-badge">
+            <span className="material-icons text-sm">playlist_add_check</span>
+            <span className="text-sm font-medium">
+              {selectedTracksCount} track{selectedTracksCount > 1 ? 's' : ''} seleccionado{selectedTracksCount > 1 ? 's' : ''}
+            </span>
+          </div>
         ) : (
-          <span>Symphony</span>
+          <span></span>
         )}
       </div>
 
@@ -80,7 +93,10 @@ export const Header = ({
       {/* Right: Progress & Controls */}
       <div className="flex items-center space-x-2 min-w-[150px] justify-end">
         {isImporting && (
-          <div className="w-24 h-2 bg-gray-200/20 dark:bg-gray-700 rounded-full overflow-hidden" data-testid="import-progress-bar">
+          <div
+            className="w-24 h-2 bg-gray-200/20 dark:bg-gray-700 rounded-full overflow-hidden"
+            data-testid="import-progress-bar"
+          >
             <div
               className="bg-primary h-full transition-all duration-300"
               style={{ width: `${progressPercent}%` }}
@@ -88,9 +104,24 @@ export const Header = ({
             />
           </div>
         )}
-        <span className="material-icons text-base cursor-pointer hover:text-gray-300" data-testid="window-minimize">remove</span>
-        <span className="material-icons text-base cursor-pointer hover:text-gray-300" data-testid="window-maximize">check_box_outline_blank</span>
-        <span className="material-icons text-base cursor-pointer hover:text-gray-300" data-testid="window-close">close</span>
+        <span
+          className="material-icons text-base cursor-pointer hover:text-gray-300"
+          data-testid="window-minimize"
+        >
+          remove
+        </span>
+        <span
+          className="material-icons text-base cursor-pointer hover:text-gray-300"
+          data-testid="window-maximize"
+        >
+          check_box_outline_blank
+        </span>
+        <span
+          className="material-icons text-base cursor-pointer hover:text-gray-300"
+          data-testid="window-close"
+        >
+          close
+        </span>
       </div>
     </header>
   );

@@ -208,8 +208,33 @@ interface UpdateTrackMetadataRequest {
   bpm?: number;
   key?: string;
   rating?: number; // 0-5 estrellas
-  comment?: string;
 }
+
+/**
+ * Extrae artista y título del filename usando patrón "Artista - Título"
+ * 
+ * @param path - Path completo del archivo
+ * @returns Objeto con artist y title extraídos
+ */
+export const extractMetadataFromFilename = (path: string): { artist: string; title: string } => {
+  // Extraer filename sin extensión
+  const fullFilename = path.split('/').pop() || path.split('\\').pop() || '';
+  const lastDotIndex = fullFilename.lastIndexOf('.');
+  const filename = lastDotIndex > 0 ? fullFilename.substring(0, lastDotIndex) : fullFilename;
+  
+  // Buscar el separador "-" en el filename
+  const separatorIndex = filename.indexOf('-');
+  
+  if (separatorIndex > 0 && separatorIndex < filename.length - 1) {
+    // Extraer y limpiar artista y título
+    const artist = filename.substring(0, separatorIndex).trim();
+    const title = filename.substring(separatorIndex + 1).trim();
+    return { artist, title };
+  } else {
+    // Si no hay separador, asignar todo al título
+    return { artist: '', title: filename.trim() };
+  }
+};
 
 /**
  * Hook para actualizar rating de un track
@@ -293,6 +318,88 @@ export const useUpdateTrackMetadata = () => {
     },
     onError: (error) => {
       console.error("Error updating track metadata:", error);
+    },
+  });
+};
+
+/**
+ * Hook para actualizar metadatos desde nombre de archivo (batch)
+ * 
+ * AIDEV-NOTE: Extrae Artist y Title desde filename con formato "Artist - Title.ext"
+ * y actualiza múltiples tracks en paralelo con Promise.allSettled (continúa si hay errores)
+ * 
+ * @example
+ * ```tsx
+ * const { mutate: batchUpdate, isPending } = useBatchFilenameToTags();
+ * 
+ * batchUpdate({
+ *   tracks: selectedTracks,
+ *   onProgress: (current, total) => setProgress({ current, total })
+ * }, {
+ *   onSuccess: (result) => {
+ *     console.log(`${result.success} tracks actualizados, ${result.failed} fallidos`);
+ *   }
+ * });
+ * ```
+ */
+export const useBatchFilenameToTags = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<
+    { success: number; failed: number; errors: string[] },
+    Error,
+    { tracks: Track[]; onProgress?: (current: number, total: number) => void }
+  >({
+    mutationFn: async ({ tracks, onProgress }) => {
+      const total = tracks.length;
+      let completed = 0;
+
+      const results = await Promise.allSettled(
+        tracks.map(async (track) => {
+          if (!track.id) {
+            throw new Error(`Track sin ID: ${track.path}`);
+          }
+
+          const { artist, title } = extractMetadataFromFilename(track.path);
+          
+          const request: UpdateTrackMetadataRequest = {
+            id: track.id,
+            title: title || undefined,
+            artist: artist || undefined,
+          };
+
+          await invoke<void>("update_track_metadata", { request });
+          
+          // Actualizar progreso
+          completed++;
+          if (onProgress) {
+            onProgress(completed, total);
+          }
+          
+          return track.id;
+        })
+      );
+
+      const success = results.filter(r => r.status === 'fulfilled').length;
+      const failed = results.filter(r => r.status === 'rejected').length;
+      const errors = results
+        .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+        .map(r => r.reason?.message || String(r.reason));
+
+      return { success, failed, errors };
+    },
+    onSuccess: (result) => {
+      // Invalidar queries para refrescar UI
+      queryClient.invalidateQueries({ queryKey: ["tracks"] });
+      
+      // Log resultado
+      console.log(`Batch update complete: ${result.success} success, ${result.failed} failed`);
+      if (result.errors.length > 0) {
+        console.error('Batch errors:', result.errors);
+      }
+    },
+    onError: (error) => {
+      console.error("Error in batch filename→tags update:", error);
     },
   });
 };

@@ -1,35 +1,71 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 import { open } from "@tauri-apps/plugin-dialog";
 
 import { ErrorBoundary } from "./components/ErrorBoundary";
-import { Header, PlayerSection, Sidebar, TrackTable } from "./components/layout";
+import {
+  Header,
+  PlayerSection,
+  Sidebar,
+  TrackTable,
+} from "./components/layout";
+import { TrackDetail } from "./components/TrackDetail";
 import { useAudioPlayer } from "./hooks/useAudioPlayer";
-import { useGetAllTracks, useImportLibrary } from "./hooks/useLibrary";
-import { BenchmarkPage } from "./pages/Benchmark";
+import { useGetAllTracks, useImportLibrary, useBatchFilenameToTags } from "./hooks/useLibrary";
 import { Settings } from "./pages/Settings";
 import type { ImportProgress, Track } from "./types/library";
 import { logger } from "./utils/logger";
 // AIDEV-NOTE: Import waveform debugger to expose window.debugWaveform()
-import "./utils/waveform-debug";
+// import "./utils/waveform-debug";
 
 function App() {
-  const [activeTab, setActiveTab] = useState<"library" | "settings" | "import" | "export" | "tools" | "benchmark">("library");
+  const [activeTab, setActiveTab] = useState<
+    "library" | "settings" | "import" | "export" | "tools" | "benchmark"
+  >("library");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
+  // AIDEV-NOTE: selectedTracks ahora es un array para soportar multi-selección
+  // (Ctrl+Click, Shift+Click) en la TrackTable
+  const [selectedTracks, setSelectedTracks] = useState<Track[]>([]);
   // AIDEV-NOTE: playingTrack es la pista que está reproduciéndose (double click)
-  // selectedTrack es la pista resaltada en la tabla (single click)
+  // selectedTracks son las pistas resaltadas en la tabla (single/multi click)
   const [playingTrack, setPlayingTrack] = useState<Track | null>(null);
+  const [trackDetailsId, setTrackDetailsId] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState<ImportProgress>({
     current: 0,
     total: 0,
-    phase: "scanning"
+    phase: "scanning",
   });
+  // AIDEV-NOTE: Estado para barra de progreso de batch operations
+  const [batchProgress, setBatchProgress] = useState<{ current: number; total: number } | null>(null);
 
   const { data: tracks = [], isLoading } = useGetAllTracks();
   const importMutation = useImportLibrary();
-  const { play } = useAudioPlayer();
+  const { play, pause, resume, isPlaying } = useAudioPlayer();
+  const { mutate: batchFilenameToTags } = useBatchFilenameToTags();
+
+  // AIDEV-NOTE: Keyboard shortcut - Espacio para pausar/reanudar reproducción
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignorar si el usuario está escribiendo en un input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      // Espacio: Pausar/Reanudar
+      if (e.code === 'Space' && playingTrack) {
+        e.preventDefault();
+        if (isPlaying) {
+          pause();
+        } else {
+          resume();
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [playingTrack, isPlaying, pause, resume]);
 
   const handleImport = async () => {
     try {
@@ -45,10 +81,10 @@ function App() {
 
         // Simulate progress (in real app, backend would emit progress events)
         const progressInterval = setInterval(() => {
-          setImportProgress(prev => ({
+          setImportProgress((prev) => ({
             ...prev,
             current: Math.min(prev.current + 10, 90),
-            phase: prev.current < 50 ? "scanning" : "importing"
+            phase: prev.current < 50 ? "scanning" : "importing",
           }));
         }, 500);
 
@@ -56,7 +92,7 @@ function App() {
 
         clearInterval(progressInterval);
         setImportProgress({ current: 100, total: 100, phase: "complete" });
-        
+
         setTimeout(() => {
           setIsImporting(false);
           setImportProgress({ current: 0, total: 0, phase: "scanning" });
@@ -69,33 +105,92 @@ function App() {
     }
   };
 
-  const handleTrackSelect = (track: Track) => {
-    setSelectedTrack(track);
+  // AIDEV-NOTE: handleTracksSelect maneja selección múltiple (Ctrl+Click, Shift+Click)
+  const handleTracksSelect = (tracks: Track[]) => {
+    setSelectedTracks(tracks);
+  };
+
+  // AIDEV-NOTE: handleBatchFilenameToTags actualiza metadatos desde nombre de archivo
+  // para múltiples pistas seleccionadas (contextMenu en TrackTable)
+  const handleBatchFilenameToTags = (tracks: Track[]) => {
+    setBatchProgress({ current: 0, total: tracks.length });
+    
+    batchFilenameToTags(
+      {
+        tracks,
+        onProgress: (current, total) => {
+          setBatchProgress({ current, total });
+        }
+      },
+      {
+        onSuccess: (result) => {
+          setBatchProgress(null);
+          const message = result.failed === 0
+            ? `✅ ${result.success} pistas actualizadas correctamente`
+            : `✅ ${result.success} actualizadas\n❌ ${result.failed} fallaron\n\nErrores:\n${result.errors.join('\n')}`;
+          alert(message);
+        },
+        onError: (error) => {
+          setBatchProgress(null);
+          alert(`❌ Error al actualizar pistas: ${error}`);
+        }
+      }
+    );
   };
 
   const handleTrackDoubleClick = async (track: Track) => {
     const timestamp = new Date().toISOString();
-    console.log(`%c[${timestamp}] ========== APP.TSX DOUBLE CLICK ==========`, 'background: #ff0000; color: #fff; font-weight: bold; padding: 4px;');
-    console.log(`%c[${timestamp}] Track: ${track.title}`, 'background: #0088ff; color: #fff; padding: 2px;');
-    console.log(`%c[${timestamp}] Path: ${track.path}`, 'background: #0088ff; color: #fff; padding: 2px;');
-    
-    await logger.info(`[${timestamp}] ========== APP.TSX DOUBLE CLICK ==========`);
+    console.log(
+      `%c[${timestamp}] ========== APP.TSX DOUBLE CLICK ==========`,
+      "background: #ff0000; color: #fff; font-weight: bold; padding: 4px;",
+    );
+    console.log(
+      `%c[${timestamp}] Track: ${track.title}`,
+      "background: #0088ff; color: #fff; padding: 2px;",
+    );
+    console.log(
+      `%c[${timestamp}] Path: ${track.path}`,
+      "background: #0088ff; color: #fff; padding: 2px;",
+    );
+
+    await logger.info(
+      `[${timestamp}] ========== APP.TSX DOUBLE CLICK ==========`,
+    );
     await logger.info(`[${timestamp}] Track: ${track.title}`);
     await logger.info(`[${timestamp}] Path: ${track.path}`);
-    
+
     try {
-      console.log(`%c[${timestamp}] Calling play() with path: ${track.path}`, 'background: #00ff00; color: #000; padding: 2px;');
-      await logger.info(`[${timestamp}] Calling play() with path: ${track.path}`);
+      console.log(
+        `%c[${timestamp}] Calling play() with path: ${track.path}`,
+        "background: #00ff00; color: #000; padding: 2px;",
+      );
+      await logger.info(
+        `[${timestamp}] Calling play() with path: ${track.path}`,
+      );
       await play(track.path);
       // AIDEV-NOTE: Solo actualizar playingTrack (no selectedTrack) en double click
       // Esto hace que PlayerSection solo muestre info de la pista reproduciéndose
       setPlayingTrack(track);
-      console.log(`%c[${timestamp}] ✅ Play successful`, 'background: #00ff00; color: #000; font-weight: bold; padding: 4px;');
+      console.log(
+        `%c[${timestamp}] ✅ Play successful`,
+        "background: #00ff00; color: #000; font-weight: bold; padding: 4px;",
+      );
       await logger.info(`[${timestamp}] ✅ Play successful`);
     } catch (error) {
-      console.error(`%c[${timestamp}] ❌ Play failed: ${JSON.stringify(error)}`, 'background: #ff0000; color: #fff; font-weight: bold; padding: 4px;');
-      await logger.error(`[${timestamp}] ❌ Play failed: ${JSON.stringify(error)}`);
+      console.error(
+        `%c[${timestamp}] ❌ Play failed: ${JSON.stringify(error)}`,
+        "background: #ff0000; color: #fff; font-weight: bold; padding: 4px;",
+      );
+      await logger.error(
+        `[${timestamp}] ❌ Play failed: ${JSON.stringify(error)}`,
+      );
       console.error("Error al reproducir:", error);
+    }
+  };
+
+  const handleTrackDetails = (track: Track) => {
+    if (track.id) {
+      setTrackDetailsId(track.id);
     }
   };
 
@@ -111,23 +206,20 @@ function App() {
 
   return (
     <ErrorBoundary>
-      <div className="h-screen bg-background-dark flex flex-col overflow-hidden relative" data-testid="app-root">
-        {/* Indicador de versión nueva */}
-        <div className="absolute top-2 right-2 z-50 bg-red-600 text-white px-3 py-1 rounded-full text-xs font-bold shadow-lg">
-          🔴 CÓDIGO NUEVO v2.0
-        </div>
-        
+      <div
+        className="h-screen bg-background-dark flex flex-col overflow-hidden relative"
+        data-testid="app-root"
+      >
         <Header
           activeTab={activeTab}
           onTabChange={setActiveTab}
           onImport={handleImport}
           isImporting={isImporting}
           progress={importProgress}
+          selectedTracksCount={selectedTracks.length}
         />
-        
-        {activeTab === "benchmark" ? (
-          <BenchmarkPage />
-        ) : activeTab === "settings" ? (
+
+        {activeTab === "settings" ? (
           <Settings />
         ) : (
           <div className="flex flex-1 overflow-hidden">
@@ -136,17 +228,72 @@ function App() {
               onSearchChange={setSearchQuery}
               totalTracks={tracks.length}
             />
-            
+
             <div className="flex-1 flex flex-col overflow-hidden">
-              <PlayerSection track={playingTrack} />
-              
+              <PlayerSection 
+                track={playingTrack} 
+                tracks={filteredTracks}
+                onTrackChange={setPlayingTrack}
+              />
+
               <TrackTable
                 tracks={filteredTracks}
-                selectedTrack={selectedTrack}
-                onTrackSelect={handleTrackSelect}
+                selectedTracks={selectedTracks}
+                playingTrack={playingTrack}
+                onTracksSelect={handleTracksSelect}
                 onTrackDoubleClick={handleTrackDoubleClick}
+                onTrackDetails={handleTrackDetails}
+                onBatchFilenameToTags={handleBatchFilenameToTags}
                 isLoading={isLoading}
               />
+            </div>
+          </div>
+        )}
+
+        {/* Modal de detalles del track */}
+        {trackDetailsId && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-auto">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Track Details</h2>
+                <button
+                  type="button"
+                  onClick={() => setTrackDetailsId(null)}
+                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+                >
+                  <span className="material-icons">close</span>
+                </button>
+              </div>
+              <TrackDetail 
+                trackId={trackDetailsId} 
+                tracks={filteredTracks}
+                onNavigate={setTrackDetailsId}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* AIDEV-NOTE: Barra de progreso para operaciones batch (Filename→Tags) */}
+        {batchProgress && (
+          <div className="fixed bottom-4 right-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 min-w-[300px] z-50 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-3">
+              <span className="material-icons text-primary animate-spin">sync</span>
+              <div className="flex-1">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                    Actualizando pistas...
+                  </span>
+                  <span className="text-xs text-gray-600 dark:text-gray-400">
+                    {batchProgress.current}/{batchProgress.total}
+                  </span>
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  <div 
+                    className="bg-primary h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${(batchProgress.current / batchProgress.total) * 100}%` }}
+                  />
+                </div>
+              </div>
             </div>
           </div>
         )}

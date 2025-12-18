@@ -8,6 +8,13 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    // AIDEV-NOTE: Excluir tests E2E de ejecución normal (usar npm run test:e2e para E2E)
+    exclude: [
+      'node_modules/**',
+      'dist/**',
+      'e2e/**',
+      '**/*.e2e.{test,spec}.{js,ts,jsx,tsx}',
+    ],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'json', 'lcov'],

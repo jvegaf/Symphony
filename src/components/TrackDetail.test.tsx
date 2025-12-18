@@ -169,13 +169,16 @@ describe("TrackDetail", () => {
     await user.click(stars[2]);
 
     // Verificar que se llame al comando de actualización
+    // AIDEV-NOTE: El comando ahora espera { request: { id, ...fields } }
     await waitFor(() => {
-      expect(mockInvoke).toHaveBeenCalledWith("update_track_metadata", {
-        track_id: "1",
-        metadata: expect.objectContaining({
-          rating: 3,
-        }),
-      });
+      expect(mockInvoke).toHaveBeenCalledWith("update_track_metadata", 
+        expect.objectContaining({
+          request: expect.objectContaining({
+            id: "1",
+            rating: 3,
+          })
+        })
+      );
     });
   });
 
@@ -200,18 +203,21 @@ describe("TrackDetail", () => {
     await user.click(saveButton);
 
     // Verificar llamada al comando
+    // AIDEV-NOTE: El comando ahora espera { request: { id, ...fields } }
     await waitFor(() => {
-      expect(mockInvoke).toHaveBeenCalledWith("update_track_metadata", {
-        track_id: "1",
-        metadata: {
-          title: "Track Editado",
-          artist: "Artista Editado",
-          album: "Test Album",
-          year: 2024,
-          genre: "Rock",
-          rating: 4,
-        },
-      });
+      expect(mockInvoke).toHaveBeenCalledWith("update_track_metadata",
+        expect.objectContaining({
+          request: expect.objectContaining({
+            id: "1",
+            title: "Track Editado",
+            artist: "Artista Editado",
+            album: "Test Album",
+            year: 2024,
+            genre: "Rock",
+            rating: 4,
+          })
+        })
+      );
     });
   });
 
@@ -249,13 +255,16 @@ describe("TrackDetail", () => {
     // Click en la quinta estrella (máximo)
     await user.click(stars[4]);
 
+    // AIDEV-NOTE: El comando ahora espera { request: { id, ...fields } }
     await waitFor(() => {
-      expect(mockInvoke).toHaveBeenCalledWith("update_track_metadata", {
-        track_id: "1",
-        metadata: expect.objectContaining({
-          rating: 5,
-        }),
-      });
+      expect(mockInvoke).toHaveBeenCalledWith("update_track_metadata",
+        expect.objectContaining({
+          request: expect.objectContaining({
+            id: "1",
+            rating: 5,
+          })
+        })
+      );
     });
   });
 });

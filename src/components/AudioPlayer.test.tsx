@@ -17,7 +17,11 @@ vi.mock("@/hooks/useAudioPlayer", () => ({
   useAudioPlayer: vi.fn(),
 }));
 
-const createMockPlayerState = (overrides: Partial<ReturnType<typeof useAudioPlayerModule.useAudioPlayer>> = {}) => ({
+const createMockPlayerState = (
+  overrides: Partial<
+    ReturnType<typeof useAudioPlayerModule.useAudioPlayer>
+  > = {},
+) => ({
   isPlaying: false,
   state: "stopped" as const,
   currentTrackPath: null,
@@ -38,59 +42,57 @@ const createMockPlayerState = (overrides: Partial<ReturnType<typeof useAudioPlay
 describe("AudioPlayer", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    
+
     // Mock por defecto: estado stopped
-    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue(createMockPlayerState());
+    vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue(
+      createMockPlayerState(),
+    );
   });
 
   it("debería renderizar correctamente", () => {
     render(<AudioPlayer />);
-    
+
     expect(screen.getByText("Reproductor de Audio")).toBeInTheDocument();
     expect(screen.getByTestId("track-title")).toBeInTheDocument();
     expect(screen.getByTestId("playback-state")).toBeInTheDocument();
   });
 
-  it("debería mostrar 'Sin pista seleccionada' cuando no hay trackPath", () => {
-    render(<AudioPlayer />);
-    
-    expect(screen.getByTestId("track-title")).toHaveTextContent("Sin pista seleccionada");
-  });
-
   it("debería mostrar el título de la pista cuando se proporciona", () => {
     vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue(
-      createMockPlayerState({ currentTrackPath: "/test/song.mp3" })
+      createMockPlayerState({ currentTrackPath: "/test/song.mp3" }),
     );
 
     render(<AudioPlayer trackPath="/test/song.mp3" trackTitle="Mi Canción" />);
-    
+
     expect(screen.getByTestId("track-title")).toHaveTextContent("Mi Canción");
   });
 
   it("debería mostrar estado de reproducción", () => {
     render(<AudioPlayer />);
-    
-    expect(screen.getByTestId("playback-state")).toHaveTextContent("Estado: stopped");
+
+    expect(screen.getByTestId("playback-state")).toHaveTextContent(
+      "Estado: stopped",
+    );
   });
 
   it("debería mostrar botón de reproducir cuando está stopped", () => {
     render(<AudioPlayer trackPath="/test/song.mp3" />);
-    
+
     expect(screen.getByTestId("play-button")).toBeInTheDocument();
     expect(screen.getByTestId("play-button")).toHaveTextContent("Reproducir");
   });
 
   it("debería mostrar botón de pausar cuando está playing", () => {
     vi.mocked(useAudioPlayerModule.useAudioPlayer).mockReturnValue(
-      createMockPlayerState({ 
+      createMockPlayerState({
         isPlaying: true,
         state: "playing",
-        currentTrackPath: "/test/song.mp3"
-      })
+        currentTrackPath: "/test/song.mp3",
+      }),
     );
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
-    
+
     expect(screen.getByTestId("pause-button")).toBeInTheDocument();
     expect(screen.getByTestId("stop-button")).toBeInTheDocument();
   });
@@ -100,12 +102,12 @@ describe("AudioPlayer", () => {
       createMockPlayerState({
         isPlaying: false,
         state: "paused",
-        currentTrackPath: "/test/song.mp3"
-      })
+        currentTrackPath: "/test/song.mp3",
+      }),
     );
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
-    
+
     expect(screen.getByTestId("resume-button")).toBeInTheDocument();
     expect(screen.getByTestId("stop-button")).toBeInTheDocument();
   });
@@ -115,7 +117,7 @@ describe("AudioPlayer", () => {
     mockPlay.mockResolvedValue(undefined);
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
-    
+
     const playButton = screen.getByTestId("play-button");
     await user.click(playButton);
 
@@ -128,7 +130,7 @@ describe("AudioPlayer", () => {
     mockPlay.mockResolvedValue(undefined);
 
     render(<AudioPlayer trackPath="/test/song.mp3" onPlay={onPlay} />);
-    
+
     await user.click(screen.getByTestId("play-button"));
 
     await waitFor(() => {
@@ -144,12 +146,12 @@ describe("AudioPlayer", () => {
       createMockPlayerState({
         isPlaying: true,
         state: "playing",
-        currentTrackPath: "/test/song.mp3"
-      })
+        currentTrackPath: "/test/song.mp3",
+      }),
     );
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
-    
+
     await user.click(screen.getByTestId("pause-button"));
 
     expect(mockPause).toHaveBeenCalled();
@@ -163,12 +165,12 @@ describe("AudioPlayer", () => {
       createMockPlayerState({
         isPlaying: false,
         state: "paused",
-        currentTrackPath: "/test/song.mp3"
-      })
+        currentTrackPath: "/test/song.mp3",
+      }),
     );
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
-    
+
     await user.click(screen.getByTestId("resume-button"));
 
     expect(mockResume).toHaveBeenCalled();
@@ -182,12 +184,12 @@ describe("AudioPlayer", () => {
       createMockPlayerState({
         isPlaying: false,
         state: "paused",
-        currentTrackPath: "/test/song.mp3"
-      })
+        currentTrackPath: "/test/song.mp3",
+      }),
     );
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
-    
+
     await user.click(screen.getByTestId("stop-button"));
 
     expect(mockStop).toHaveBeenCalled();
@@ -195,16 +197,9 @@ describe("AudioPlayer", () => {
 
   it("debería deshabilitar el botón de reproducir cuando no hay trackPath", () => {
     render(<AudioPlayer />);
-    
+
     const playButton = screen.getByTestId("play-button");
     expect(playButton).toBeDisabled();
-  });
-
-  it("debería mostrar 'Sin pista seleccionada' en el título cuando no hay trackPath", () => {
-    render(<AudioPlayer />);
-    
-    expect(screen.getByTestId("track-title")).toHaveTextContent("Sin pista seleccionada");
-    expect(screen.getByTestId("play-button")).toBeDisabled();
   });
 
   it("debería mostrar mensaje de error cuando falla la reproducción", async () => {
@@ -212,12 +207,14 @@ describe("AudioPlayer", () => {
     mockPlay.mockRejectedValue(new Error("Error de prueba"));
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
-    
+
     await user.click(screen.getByTestId("play-button"));
 
     await waitFor(() => {
       expect(screen.getByTestId("error-message")).toBeInTheDocument();
-      expect(screen.getByTestId("error-message")).toHaveTextContent("Error de prueba");
+      expect(screen.getByTestId("error-message")).toHaveTextContent(
+        "Error de prueba",
+      );
     });
   });
 
@@ -226,14 +223,16 @@ describe("AudioPlayer", () => {
       createMockPlayerState({
         isPlaying: true,
         state: "playing",
-        currentTrackPath: "/test/song.mp3"
-      })
+        currentTrackPath: "/test/song.mp3",
+      }),
     );
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
-    
+
     expect(screen.getByTestId("playing-indicator")).toBeInTheDocument();
-    expect(screen.getByTestId("playing-indicator")).toHaveTextContent("🎵 Reproduciendo...");
+    expect(screen.getByTestId("playing-indicator")).toHaveTextContent(
+      "🎵 Reproduciendo...",
+    );
   });
 
   it("debería tener el displayName correcto", () => {
@@ -248,17 +247,19 @@ describe("AudioPlayer", () => {
       createMockPlayerState({
         isPlaying: true,
         state: "playing",
-        currentTrackPath: "/test/song.mp3"
-      })
+        currentTrackPath: "/test/song.mp3",
+      }),
     );
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
-    
+
     await user.click(screen.getByTestId("pause-button"));
 
     await waitFor(() => {
       expect(screen.getByTestId("error-message")).toBeInTheDocument();
-      expect(screen.getByTestId("error-message")).toHaveTextContent("Error al pausar");
+      expect(screen.getByTestId("error-message")).toHaveTextContent(
+        "Error al pausar",
+      );
     });
   });
 
@@ -270,17 +271,19 @@ describe("AudioPlayer", () => {
       createMockPlayerState({
         isPlaying: false,
         state: "paused",
-        currentTrackPath: "/test/song.mp3"
-      })
+        currentTrackPath: "/test/song.mp3",
+      }),
     );
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
-    
+
     await user.click(screen.getByTestId("resume-button"));
 
     await waitFor(() => {
       expect(screen.getByTestId("error-message")).toBeInTheDocument();
-      expect(screen.getByTestId("error-message")).toHaveTextContent("Error al reanudar");
+      expect(screen.getByTestId("error-message")).toHaveTextContent(
+        "Error al reanudar",
+      );
     });
   });
 
@@ -292,17 +295,19 @@ describe("AudioPlayer", () => {
       createMockPlayerState({
         isPlaying: false,
         state: "paused",
-        currentTrackPath: "/test/song.mp3"
-      })
+        currentTrackPath: "/test/song.mp3",
+      }),
     );
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
-    
+
     await user.click(screen.getByTestId("stop-button"));
 
     await waitFor(() => {
       expect(screen.getByTestId("error-message")).toBeInTheDocument();
-      expect(screen.getByTestId("error-message")).toHaveTextContent("Error al detener");
+      expect(screen.getByTestId("error-message")).toHaveTextContent(
+        "Error al detener",
+      );
     });
   });
 
@@ -311,12 +316,14 @@ describe("AudioPlayer", () => {
     mockPlay.mockRejectedValue("String error");
 
     render(<AudioPlayer trackPath="/test/song.mp3" />);
-    
+
     await user.click(screen.getByTestId("play-button"));
 
     await waitFor(() => {
       expect(screen.getByTestId("error-message")).toBeInTheDocument();
-      expect(screen.getByTestId("error-message")).toHaveTextContent("Error al reproducir");
+      expect(screen.getByTestId("error-message")).toHaveTextContent(
+        "Error al reproducir",
+      );
     });
   });
 
@@ -329,12 +336,12 @@ describe("AudioPlayer", () => {
       createMockPlayerState({
         isPlaying: true,
         state: "playing",
-        currentTrackPath: "/test/song.mp3"
-      })
+        currentTrackPath: "/test/song.mp3",
+      }),
     );
 
     render(<AudioPlayer trackPath="/test/song.mp3" onPause={onPause} />);
-    
+
     await user.click(screen.getByTestId("pause-button"));
 
     await waitFor(() => {
@@ -351,12 +358,12 @@ describe("AudioPlayer", () => {
       createMockPlayerState({
         isPlaying: false,
         state: "paused",
-        currentTrackPath: "/test/song.mp3"
-      })
+        currentTrackPath: "/test/song.mp3",
+      }),
     );
 
     render(<AudioPlayer trackPath="/test/song.mp3" onStop={onStop} />);
-    
+
     await user.click(screen.getByTestId("stop-button"));
 
     await waitFor(() => {

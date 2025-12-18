@@ -2,7 +2,7 @@
 # Aplicación de escritorio para gestión de bibliotecas musicales
 # Stack: Tauri 2.0 + React 18 + TypeScript + Rust
 
-.PHONY: help install dev build test coverage lint clean format check release deps-update
+.PHONY: help install dev build test test-e2e coverage lint clean format check release deps-update
 
 # Colores para output
 RED := \033[0;31m
@@ -52,22 +52,27 @@ build-dev: ## Build de desarrollo (más rápido, sin optimizaciones)
 
 ##@ Testing
 
-test: ## Ejecutar todos los tests (frontend + backend)
-	@echo "$(BLUE)Ejecutando tests de frontend...$(NC)"
+test: ## Ejecutar todos los tests (frontend unit + backend, excluye E2E)
+	@echo "$(BLUE)Ejecutando tests de frontend (unit tests)...$(NC)"
 	$(NPM) test
 	@echo "$(BLUE)Ejecutando tests de backend...$(NC)"
 	cd $(CARGO_DIR) && $(CARGO) test
 	@echo "$(GREEN)✓ Todos los tests completados$(NC)"
 
-test-frontend: ## Ejecutar solo tests de frontend (Vitest)
-	@echo "$(BLUE)Ejecutando tests de frontend...$(NC)"
+test-frontend: ## Ejecutar solo tests de frontend (Vitest, excluye E2E)
+	@echo "$(BLUE)Ejecutando tests de frontend (unit tests)...$(NC)"
 	$(NPM) test
 
 test-backend: ## Ejecutar solo tests de backend (cargo test)
 	@echo "$(BLUE)Ejecutando tests de backend...$(NC)"
 	cd $(CARGO_DIR) && $(CARGO) test
 
-test-watch: ## Ejecutar tests en modo watch (frontend)
+test-e2e: ## Ejecutar tests E2E (Playwright, requiere app compilada)
+	@echo "$(YELLOW)⚠️  Los tests E2E requieren la app compilada$(NC)"
+	@echo "$(BLUE)Ejecutando tests E2E con Playwright...$(NC)"
+	$(NPM) run test:e2e
+
+test-watch: ## Ejecutar tests en modo watch (frontend, excluye E2E)
 	@echo "$(BLUE)Ejecutando tests en modo watch...$(NC)"
 	$(NPM) test -- --watch
 

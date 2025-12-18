@@ -191,6 +191,7 @@ pub fn search_tracks(conn: &Connection, query: &str) -> Result<Vec<Track>> {
 }
 
 /// Actualización parcial de metadatos de track
+/// AIDEV-NOTE: Agregado parámetro 'key' para soportar tonalidad musical
 #[allow(clippy::too_many_arguments)]
 pub fn update_track_metadata(
     conn: &Connection,
@@ -201,6 +202,7 @@ pub fn update_track_metadata(
     year: Option<i32>,
     genre: Option<&str>,
     bpm: Option<f64>,
+    key: Option<&str>,
     rating: Option<i32>,
 ) -> Result<()> {
     // Validar rating (0-5)
@@ -239,6 +241,10 @@ pub fn update_track_metadata(
     if let Some(b) = bpm {
         updates.push("bpm = ?");
         params.push(Box::new(b));
+    }
+    if let Some(k) = key {
+        updates.push("key = ?");
+        params.push(Box::new(k.to_string()));
     }
     if let Some(r) = rating {
         updates.push("rating = ?");
@@ -370,6 +376,7 @@ mod tests {
             &db.conn,
             &id,
             Some("New Title"),
+            None,
             None,
             None,
             None,

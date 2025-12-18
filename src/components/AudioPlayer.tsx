@@ -37,12 +37,13 @@ export interface AudioPlayerProps {
  */
 export function AudioPlayer({
   trackPath,
-  trackTitle = "Sin pista seleccionada",
+  trackTitle = "",
   onPlay,
   onPause,
   onStop,
 }: AudioPlayerProps) {
-  const { isPlaying, state, play, pause, resume, stop, currentTrackPath } = useAudioPlayer();
+  const { isPlaying, state, play, pause, resume, stop, currentTrackPath } =
+    useAudioPlayer();
   const [error, setError] = useState<string | null>(null);
 
   const handlePlay = async () => {
@@ -89,17 +90,23 @@ export function AudioPlayer({
     }
   };
 
-  const displayTitle = currentTrackPath === trackPath ? trackTitle : "Sin pista seleccionada";
+  const displayTitle = currentTrackPath === trackPath ? trackTitle : "";
 
   return (
     <Card title="Reproductor de Audio">
       <div className="space-y-4">
         {/* Título de la pista */}
         <div className="text-center">
-          <p className="text-lg font-semibold dark:text-white" data-testid="track-title">
+          <p
+            className="text-lg font-semibold dark:text-white"
+            data-testid="track-title"
+          >
             {displayTitle}
           </p>
-          <p className="text-sm text-gray-600 dark:text-gray-400" data-testid="playback-state">
+          <p
+            className="text-sm text-gray-600 dark:text-gray-400"
+            data-testid="playback-state"
+          >
             Estado: {state}
           </p>
         </div>

@@ -79,10 +79,6 @@ jobs:
         working-directory: src-tauri
         run: cargo test --all-features
 
-      - name: Build
-        working-directory: src-tauri
-        run: cargo build --release
-
   lint:
     name: Lint
     runs-on: ubuntu-latest

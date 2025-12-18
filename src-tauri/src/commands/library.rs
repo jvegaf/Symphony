@@ -137,7 +137,7 @@ pub async fn get_library_stats() -> Result<LibraryStats, String> {
 }
 
 /// Estructura para actualizar metadatos de track
-/// AIDEV-NOTE: Agregado 'key' y 'comment' para full compatibility con SongUpdater de Python
+/// AIDEV-NOTE: 'key' soportado, 'comment' removido (no existe en DB schema)
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateTrackMetadataRequest {
@@ -150,7 +150,6 @@ pub struct UpdateTrackMetadataRequest {
     pub bpm: Option<f64>,
     pub key: Option<String>, // Tonalidad musical (ej: "Am", "C#m")
     pub rating: Option<i32>,
-    pub comment: Option<String>, // Comentarios del usuario
 }
 
 /// Actualiza metadatos de una pista
@@ -176,6 +175,7 @@ pub async fn update_track_metadata(request: UpdateTrackMetadataRequest) -> Resul
         request.year,
         request.genre.as_deref(),
         request.bpm,
+        request.key.as_deref(),
         request.rating,
     )
     .map_err(|e| e.to_string())?;
@@ -198,7 +198,7 @@ pub async fn update_track_metadata(request: UpdateTrackMetadataRequest) -> Resul
             .or(track.bpm.map(|b| b as i32)),
         key: request.key.or(track.key),
         rating: request.rating.or(track.rating),
-        comment: request.comment,
+        comment: None, // Comment no existe en Track model
         // Campos técnicos no cambian
         duration: track.duration,
         bitrate: track.bitrate,
