@@ -45,7 +45,9 @@ build() {
     npm run build
     
     # Build Rust backend with Tauri
+    # Set LIBSQLITE3_SYS_USE_PKG_CONFIG to use system sqlite
     cd src-tauri
+    export LIBSQLITE3_SYS_USE_PKG_CONFIG=1
     cargo build --release --locked --all-features
 }
 

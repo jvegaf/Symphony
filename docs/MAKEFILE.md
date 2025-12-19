@@ -52,7 +52,18 @@ make build
 ### 📦 Build
 - `make build` - Build de producción optimizado
 - `make build-windows` - Build para Windows (.msi + .exe)
-- `make build-linux` - Build para Linux (.deb + .AppImage)
+- `make build-linux` - Build para Linux (.deb + .rpm)
+- `make build-appimage-docker` - Build AppImage usando Docker (Ubuntu 20.04)
+
+### 📦 AUR Package
+- `make aur-build` - Compilar paquete AUR localmente (requiere Arch Linux)
+- `make aur-install` - Compilar e instalar paquete AUR localmente
+- `make aur-clean` - Limpiar archivos generados por makepkg
+- `make aur-srcinfo` - Generar .SRCINFO desde PKGBUILD (requerido para publicar)
+- `make aur-test` - Test completo del PKGBUILD (clean + srcinfo + build)
+- `make aur-publish-check` - Verificar que todo está listo para publicar a AUR
+
+**📖 Documentación completa**: Ver [AUR_IMPLEMENTATION.md](./AUR_IMPLEMENTATION.md) y [aur/README.md](../aur/README.md)
 
 ### 🗄️ Database
 - `make db-info` - Mostrar información de todas las bases de datos
@@ -70,6 +81,7 @@ make build
 - `make clean` - Limpiar archivos generados y dependencias
 - `make clean-build` - Limpiar solo archivos de build
 - `make clean-cache` - Limpiar cache de npm y cargo
+- `make clean-aur` - Limpiar archivos AUR (alias de aur-clean)
 
 ### 📚 Documentation
 - `make docs` - Generar documentación de Rust
@@ -140,6 +152,52 @@ make coverage
 make test-watch
 ```
 
+### Compilar AppImage con Docker
+```bash
+# Primera vez (15-20 min)
+make build-appimage-docker
+
+# Subsecuentes (3-5 min, reutiliza imagen Docker)
+make build-appimage-docker
+```
+
+### Probar paquete AUR localmente (solo Arch Linux)
+```bash
+# Test completo
+make aur-test
+
+# O paso por paso
+make aur-clean
+make aur-srcinfo
+make aur-build
+
+# Instalar localmente
+make aur-install
+```
+
+### Preparar publicación AUR
+```bash
+# 1. Verificar estado
+make aur-publish-check
+
+# 2. Crear tag de versión (si no existe)
+git tag v0.7.0
+git push origin v0.7.0
+
+# 3. Actualizar SHA256 en aur/PKGBUILD
+# (descargar tarball de GitHub y calcular SHA256)
+sha256sum symphony-0.7.0.tar.gz
+
+# 4. Publicar (ver aur/README.md para instrucciones completas)
+git clone ssh://aur@aur.archlinux.org/symphony-bin.git aur-publish
+cp aur/PKGBUILD aur/symphony.desktop aur-publish/
+cd aur-publish
+makepkg --printsrcinfo > .SRCINFO
+git add PKGBUILD .SRCINFO symphony.desktop
+git commit -m "Initial release: v0.7.0"
+git push
+```
+
 ## Notas
 
 - El comando `make` sin argumentos muestra la ayuda completa
@@ -151,16 +209,32 @@ make test-watch
 
 ## Requisitos
 
+### Básicos
 - Node.js 18+
 - Rust 1.70+
 - npm
 - cargo
-- (Opcional) cargo-tarpaulin para cobertura de backend
 
-Instalar cargo-tarpaulin:
-```bash
-cargo install cargo-tarpaulin
-```
+### Opcionales
+- **cargo-tarpaulin** - Para cobertura de backend
+  ```bash
+  cargo install cargo-tarpaulin
+  ```
+
+- **makepkg** - Para compilar paquetes AUR (solo Arch Linux)
+  ```bash
+  # Ya viene instalado en Arch Linux
+  sudo pacman -S base-devel
+  ```
+
+- **Docker** - Para compilar AppImage con compatibilidad máxima
+  ```bash
+  # Arch Linux
+  sudo pacman -S docker
+  sudo systemctl enable --now docker
+  sudo usermod -aG docker $USER
+  # Cerrar sesión y volver a entrar
+  ```
 
 ## Estructura del Makefile
 
@@ -180,4 +254,4 @@ Al agregar nuevos comandos al Makefile:
 
 ---
 
-*Última actualización: 16 dic 2025*
+*Última actualización: 19 dic 2025*

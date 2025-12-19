@@ -2,7 +2,8 @@
 # Aplicación de escritorio para gestión de bibliotecas musicales
 # Stack: Tauri 2.0 + React 18 + TypeScript + Rust
 
-.PHONY: help install dev build test test-e2e coverage lint clean format check release deps-update
+.PHONY: help install dev build test test-e2e coverage lint clean format check release deps-update \
+        aur-build aur-install aur-clean aur-srcinfo aur-test aur-publish-check build-appimage-docker
 
 # Colores para output
 RED := \033[0;31m
@@ -149,6 +150,90 @@ build-linux: ## Build para Linux (.deb + .AppImage)
 	$(TAURI) build
 	@echo "$(GREEN)✓ Build Linux completado$(NC)"
 
+build-appimage-docker: ## Build AppImage usando Docker (Ubuntu 20.04 para compatibilidad)
+	@echo "$(BLUE)Building AppImage con Docker...$(NC)"
+	@./scripts/build-appimage-docker.sh
+	@echo "$(GREEN)✓ Build AppImage completado$(NC)"
+
+##@ AUR Package
+
+aur-build: ## Compilar paquete AUR localmente (requiere makepkg)
+	@echo "$(BLUE)Compilando paquete AUR localmente...$(NC)"
+	@if ! command -v makepkg &> /dev/null; then \
+		echo "$(RED)⚠ makepkg no está instalado. Este comando solo funciona en Arch Linux.$(NC)"; \
+		exit 1; \
+	fi
+	@cd aur && makepkg -fd
+	@echo "$(GREEN)✓ Paquete AUR compilado$(NC)"
+	@echo "$(YELLOW)Paquete en: aur/symphony-bin-*.pkg.tar.zst$(NC)"
+
+aur-install: ## Compilar e instalar paquete AUR localmente
+	@echo "$(BLUE)Compilando e instalando paquete AUR...$(NC)"
+	@if ! command -v makepkg &> /dev/null; then \
+		echo "$(RED)⚠ makepkg no está instalado. Este comando solo funciona en Arch Linux.$(NC)"; \
+		exit 1; \
+	fi
+	@cd aur && makepkg -sdi
+	@echo "$(GREEN)✓ Symphony instalado desde AUR$(NC)"
+
+aur-clean: ## Limpiar archivos generados por makepkg
+	@echo "$(YELLOW)Limpiando archivos AUR...$(NC)"
+	@cd aur && rm -rf pkg/ src/ *.pkg.tar.zst
+	@echo "$(GREEN)✓ Archivos AUR limpiados$(NC)"
+
+aur-srcinfo: ## Generar .SRCINFO desde PKGBUILD (requerido para publicar)
+	@echo "$(BLUE)Generando .SRCINFO...$(NC)"
+	@if ! command -v makepkg &> /dev/null; then \
+		echo "$(RED)⚠ makepkg no está instalado. Este comando solo funciona en Arch Linux.$(NC)"; \
+		exit 1; \
+	fi
+	@cd aur && makepkg --printsrcinfo > .SRCINFO
+	@echo "$(GREEN)✓ .SRCINFO generado$(NC)"
+
+aur-test: aur-clean aur-srcinfo aur-build ## Test completo del PKGBUILD (clean + srcinfo + build)
+	@echo "$(GREEN)✓ Test AUR completado exitosamente$(NC)"
+
+aur-publish-check: ## Verificar que todo está listo para publicar a AUR
+	@echo "$(BLUE)Verificando preparación para publicación AUR...$(NC)"
+	@echo ""
+	@echo "$(YELLOW)Checklist:$(NC)"
+	@# Check 1: Git tag exists
+	@if git describe --tags --exact-match HEAD 2>/dev/null; then \
+		echo "  ✓ Tag de versión existe: $$(git describe --tags --exact-match HEAD)"; \
+	else \
+		echo "  $(RED)✗ No hay tag de versión en HEAD$(NC)"; \
+		echo "    Crear con: git tag v0.7.0 && git push origin v0.7.0"; \
+	fi
+	@# Check 2: PKGBUILD exists
+	@if [ -f aur/PKGBUILD ]; then \
+		echo "  ✓ PKGBUILD existe"; \
+	else \
+		echo "  $(RED)✗ PKGBUILD no encontrado$(NC)"; \
+	fi
+	@# Check 3: Check for SKIP in checksums
+	@if grep -q "sha256sums=('SKIP')" aur/PKGBUILD; then \
+		echo "  $(RED)✗ PKGBUILD contiene sha256sums='SKIP'$(NC)"; \
+		echo "    Actualizar con el SHA256 real del tarball de GitHub"; \
+	else \
+		echo "  ✓ SHA256 checksum configurado"; \
+	fi
+	@# Check 4: .SRCINFO exists
+	@if [ -f aur/.SRCINFO ]; then \
+		echo "  ✓ .SRCINFO existe"; \
+	else \
+		echo "  $(YELLOW)⚠ .SRCINFO no existe (generar con: make aur-srcinfo)$(NC)"; \
+	fi
+	@echo ""
+	@echo "$(YELLOW)Próximos pasos para publicar:$(NC)"
+	@echo "  1. git clone ssh://aur@aur.archlinux.org/symphony-bin.git aur-publish"
+	@echo "  2. cp aur/PKGBUILD aur/symphony.desktop aur-publish/"
+	@echo "  3. cd aur-publish && makepkg --printsrcinfo > .SRCINFO"
+	@echo "  4. git add PKGBUILD .SRCINFO symphony.desktop"
+	@echo "  5. git commit -m 'Initial release: v0.7.0'"
+	@echo "  6. git push"
+	@echo ""
+	@echo "$(YELLOW)Ver guía completa: aur/README.md$(NC)"
+
 ##@ Database
 
 db-migrate: ## Ejecutar migraciones de base de datos
@@ -238,6 +323,8 @@ clean-cache: ## Limpiar cache de npm y cargo
 	$(NPM) cache clean --force
 	$(CARGO) clean
 	@echo "$(GREEN)✓ Cache limpiado$(NC)"
+
+clean-aur: aur-clean ## Limpiar archivos AUR [Alias de aur-clean]
 
 ##@ Documentation
 
