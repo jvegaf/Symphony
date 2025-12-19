@@ -45,12 +45,13 @@ npm run tauri build -- --bundles appimage
 ### Linux Package Coverage
 - **`.deb`** - Debian, Ubuntu, Linux Mint, Pop!_OS, Elementary, MX Linux (~60% of desktop Linux users)
 - **`.rpm`** - Fedora, RHEL, CentOS, openSUSE, Mageia (~25% of desktop Linux users)
-- **Total coverage:** ~85% of Linux desktop users
+- **AUR (Arch)** - Arch Linux, Manjaro, EndeavourOS, Garuda (~5-10% of desktop Linux users)
+- **Total coverage:** ~90-95% of Linux desktop users
 
-Users on other distributions (Arch, Gentoo, etc.) can:
+Users on other distributions can:
 1. Install from `.deb` or `.rpm` using alien/conversion tools
 2. Build from source: `make build-linux`
-3. Use distro-specific package managers (AUR for Arch)
+3. Use distro-specific package managers (AUR for Arch: `yay -S symphony-bin`)
 
 ## When Will AppImage Be Re-enabled?
 

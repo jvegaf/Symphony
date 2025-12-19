@@ -1,0 +1,88 @@
+# Maintainer: Jose Vega <your-email@example.com>
+# AIDEV-NOTE: This PKGBUILD builds Symphony from source for Arch Linux AUR
+
+pkgname=symphony-bin
+pkgver=0.7.0
+pkgrel=1
+pkgdesc="The Old School Music Manager - Desktop music library manager with advanced audio analysis"
+arch=('x86_64')
+url="https://github.com/jvegaf/Symphony"
+license=('MIT')
+depends=(
+    'webkit2gtk'
+    'gtk3'
+    'libayatana-appindicator'
+    'sqlite'
+    'alsa-lib'
+)
+makedepends=(
+    'rust'
+    'cargo'
+    'npm'
+    'webkit2gtk'
+)
+optdepends=(
+    'ffmpeg: For audio conversion support'
+)
+provides=('symphony')
+conflicts=('symphony' 'symphony-git')
+source=(
+    "symphony-$pkgver.tar.gz::https://github.com/jvegaf/Symphony/archive/v$pkgver.tar.gz"
+)
+sha256sums=('SKIP')  # TODO: Update with actual SHA256 after first release
+
+prepare() {
+    cd "$srcdir/Symphony-$pkgver"
+    
+    # Install npm dependencies
+    npm install
+}
+
+build() {
+    cd "$srcdir/Symphony-$pkgver"
+    
+    # Build frontend
+    npm run build
+    
+    # Build Rust backend with Tauri
+    cd src-tauri
+    cargo build --release --locked --all-features
+}
+
+check() {
+    cd "$srcdir/Symphony-$pkgver"
+    
+    # Run tests (optional, can be commented out to speed up builds)
+    # npm test
+    # cd src-tauri && cargo test --release
+}
+
+package() {
+    cd "$srcdir/Symphony-$pkgver"
+    
+    # Install binary
+    install -Dm755 "src-tauri/target/release/symphony" "$pkgdir/usr/bin/symphony"
+    
+    # Install desktop file
+    install -Dm644 "aur/symphony.desktop" "$pkgdir/usr/share/applications/symphony.desktop"
+    
+    # Install icons
+    for size in 32x32 128x128; do
+        install -Dm644 "src-tauri/icons/${size}.png" \
+            "$pkgdir/usr/share/icons/hicolor/${size}/apps/symphony.png"
+    done
+    
+    # Install 128x128@2x as 256x256
+    install -Dm644 "src-tauri/icons/128x128@2x.png" \
+        "$pkgdir/usr/share/icons/hicolor/256x256/apps/symphony.png"
+    
+    # Install license (if exists)
+    if [ -f LICENSE ]; then
+        install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+    fi
+    
+    # Install documentation
+    install -Dm644 README.md "$pkgdir/usr/share/doc/$pkgname/README.md"
+}
+
+# vim:set ts=4 sw=4 et:

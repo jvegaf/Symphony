@@ -43,9 +43,21 @@ Descarga el paquete para tu distribución desde [Releases](https://github.com/jv
   sudo dnf install Symphony-0.7.0-1.x86_64.rpm
   ```
 
-- **Arch Linux / Otras distribuciones:**
+- **Arch Linux (AUR):**
   ```bash
-  # Compilar desde fuente
+  # Con yay
+  yay -S symphony-bin
+  
+  # Con paru
+  paru -S symphony-bin
+  
+  # O compilar desde fuente
+  cd aur/
+  makepkg -si
+  ```
+
+- **Otras distribuciones - Compilar desde fuente:**
+  ```bash
   git clone https://github.com/jvegaf/Symphony.git
   cd Symphony
   make build-linux

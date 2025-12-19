@@ -1,0 +1,13 @@
+[Desktop Entry]
+Name=Symphony
+GenericName=Music Library Manager
+Comment=The Old School Music Manager - Professional desktop music library manager
+Exec=symphony %U
+Icon=symphony
+Terminal=false
+Type=Application
+Categories=Audio;AudioVideo;Player;
+MimeType=audio/mpeg;audio/x-mp3;audio/mpeg3;audio/x-mpeg-3;audio/flac;audio/x-flac;audio/ogg;audio/x-vorbis+ogg;audio/x-wav;audio/wav;audio/mp4;
+Keywords=music;audio;player;library;manager;
+StartupNotify=true
+StartupWMClass=symphony

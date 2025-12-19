@@ -1,0 +1,24 @@
+pkgbase = symphony-bin
+	pkgdesc = The Old School Music Manager - Desktop music library manager with advanced audio analysis
+	pkgver = 0.7.0
+	pkgrel = 1
+	url = https://github.com/jvegaf/Symphony
+	arch = x86_64
+	license = MIT
+	makedepends = rust
+	makedepends = cargo
+	makedepends = npm
+	makedepends = webkit2gtk
+	depends = webkit2gtk
+	depends = gtk3
+	depends = libayatana-appindicator
+	depends = sqlite
+	depends = alsa-lib
+	optdepends = ffmpeg: For audio conversion support
+	provides = symphony
+	conflicts = symphony
+	conflicts = symphony-git
+	source = symphony-0.7.0.tar.gz::https://github.com/jvegaf/Symphony/archive/v0.7.0.tar.gz
+	sha256sums = SKIP
+
+pkgname = symphony-bin

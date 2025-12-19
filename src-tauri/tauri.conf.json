@@ -39,6 +39,22 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "linux": {
+      "deb": {
+        "files": {
+          "/usr/share/doc/symphony/README.md": "../README.md",
+          "/usr/share/licenses/symphony/LICENSE": "../LICENSE"
+        }
+      },
+      "rpm": {
+        "epoch": 0,
+        "release": "1",
+        "files": {
+          "/usr/share/doc/symphony/README.md": "../README.md",
+          "/usr/share/licenses/symphony/LICENSE": "../LICENSE"
+        }
+      }
+    }
   }
 }
