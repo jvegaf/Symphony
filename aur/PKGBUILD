@@ -29,7 +29,7 @@ conflicts=('symphony' 'symphony-git')
 source=(
     "symphony-$pkgver.tar.gz::https://github.com/jvegaf/Symphony/archive/v$pkgver.tar.gz"
 )
-sha256sums=('SKIP')  # TODO: Update with actual SHA256 after first release
+sha256sums=('ff981f8dbc601c5fca6f6d511e4481f573baf372045d08e371ec41112686b740')
 
 prepare() {
     cd "$srcdir/Symphony-$pkgver"
