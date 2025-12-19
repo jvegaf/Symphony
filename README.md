@@ -47,13 +47,17 @@ Descarga el paquete para tu distribución desde [Releases](https://github.com/jv
   ```bash
   # Con yay
   yay -S symphony-bin
-  
+
   # Con paru
   paru -S symphony-bin
-  
+
   # O compilar desde fuente
   cd aur/
   makepkg -si
+
+  # O instalar el paquete
+
+  pacman -U paquete.pkg.tar.zst
   ```
 
 - **Otras distribuciones - Compilar desde fuente:**

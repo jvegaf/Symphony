@@ -1,0 +1,140 @@
+# Multi-stage Dockerfile for AppImage builds
+# Uses Ubuntu 20.04 for maximum compatibility (glibc 2.31)
+# Optimized for CI: ~2-3 GB final image instead of 20+ GB
+
+# ============================================================================
+# Stage 1: Builder with full toolchain
+# ============================================================================
+FROM ubuntu:20.04 AS builder
+
+# Prevent interactive prompts during package installation
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install system dependencies (single layer, aggressive cleanup)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    wget \
+    ca-certificates \
+    file \
+    build-essential \
+    pkg-config \
+    libssl-dev \
+    libgtk-3-dev \
+    libayatana-appindicator3-dev \
+    librsvg2-dev \
+    libwebkit2gtk-4.0-dev \
+    libsqlite3-dev \
+    patchelf \
+    libfuse2 \
+    desktop-file-utils \
+    zsync \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /var/cache/apt/* \
+    && rm -rf /tmp/* \
+    && rm -rf /var/tmp/*
+
+# Install Node.js 20.x (cleanup in same layer to reduce size)
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y --no-install-recommends nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /var/cache/apt/* \
+    && npm config set cache /tmp/npm-cache
+
+# Install Rust (cleanup in same layer)
+RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal \
+    && . $HOME/.cargo/env \
+    && rustup default stable \
+    && rustup component remove rust-docs \
+    && rm -rf /root/.rustup/toolchains/*/share/doc \
+    && rm -rf /root/.cargo/registry/index \
+    && rm -rf /root/.cargo/registry/cache \
+    && rm -rf /root/.cargo/git/db
+
+# Add Rust to PATH
+ENV PATH="/root/.cargo/bin:${PATH}"
+
+# Install linuxdeploy and appimagetool (fixed extraction, cleanup)
+RUN cd /tmp \
+    && wget -q https://github.com/linuxdeploy/linuxdeploy/releases/download/1-alpha-20240109-1/linuxdeploy-x86_64.AppImage \
+    && wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage \
+    && chmod +x linuxdeploy-x86_64.AppImage appimagetool-x86_64.AppImage \
+    && ./linuxdeploy-x86_64.AppImage --appimage-extract >/dev/null 2>&1 \
+    && mv squashfs-root /opt/linuxdeploy \
+    && ./appimagetool-x86_64.AppImage --appimage-extract >/dev/null 2>&1 \
+    && mv squashfs-root /opt/appimagetool \
+    && ln -s /opt/linuxdeploy/AppRun /usr/local/bin/linuxdeploy \
+    && ln -s /opt/appimagetool/AppRun /usr/local/bin/appimagetool \
+    && rm -f linuxdeploy-x86_64.AppImage appimagetool-x86_64.AppImage \
+    && rm -rf /tmp/*
+
+# Set working directory
+WORKDIR /workspace
+
+# Configure Cargo to use /tmp for build artifacts (will be cleaned)
+ENV CARGO_TARGET_DIR=/tmp/cargo-target \
+    CARGO_HOME=/root/.cargo \
+    LIBSQLITE3_SYS_USE_PKG_CONFIG=1
+
+# Display versions
+RUN echo "=== Build Environment ===" \
+    && echo "OS: Ubuntu 20.04" \
+    && echo "glibc: $(ldd --version | head -1)" \
+    && echo "Node: $(node --version)" \
+    && echo "npm: $(npm --version)" \
+    && echo "Rust: $(rustc --version)" \
+    && echo "Cargo: $(cargo --version)" \
+    && echo "========================"
+
+# ============================================================================
+# Stage 2: Final lightweight image (only runtime, no build artifacts)
+# ============================================================================
+FROM ubuntu:20.04 AS runtime
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# Install ONLY runtime dependencies (no build tools)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgtk-3-0 \
+    libayatana-appindicator3-1 \
+    librsvg2-2 \
+    libwebkit2gtk-4.0-37 \
+    libsqlite3-0 \
+    libfuse2 \
+    file \
+    ca-certificates \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* \
+    && rm -rf /var/cache/apt/* \
+    && rm -rf /tmp/* \
+    && rm -rf /var/tmp/*
+
+# Copy only essential tools from builder
+COPY --from=builder /usr/bin/node /usr/bin/node
+COPY --from=builder /usr/bin/npm /usr/bin/npm
+COPY --from=builder /usr/lib/node_modules /usr/lib/node_modules
+COPY --from=builder /root/.cargo/bin/cargo /usr/local/bin/cargo
+COPY --from=builder /root/.cargo/bin/rustc /usr/local/bin/rustc
+COPY --from=builder /root/.rustup /root/.rustup
+COPY --from=builder /opt/linuxdeploy /opt/linuxdeploy
+COPY --from=builder /opt/appimagetool /opt/appimagetool
+COPY --from=builder /usr/local/bin/linuxdeploy /usr/local/bin/linuxdeploy
+COPY --from=builder /usr/local/bin/appimagetool /usr/local/bin/appimagetool
+
+# Re-create minimal Cargo home
+ENV PATH="/root/.cargo/bin:/usr/local/bin:${PATH}" \
+    CARGO_HOME=/root/.cargo \
+    RUSTUP_HOME=/root/.rustup \
+    CARGO_TARGET_DIR=/tmp/cargo-target \
+    LIBSQLITE3_SYS_USE_PKG_CONFIG=1
+
+WORKDIR /workspace
+
+# Display environment info
+RUN echo "=== Runtime Environment ===" \
+    && echo "Node: $(node --version 2>/dev/null || echo 'not found')" \
+    && echo "Cargo: $(cargo --version 2>/dev/null || echo 'not found')" \
+    && echo "============================"
+
+CMD ["/bin/bash"]
