@@ -105,13 +105,25 @@ namcap PKGBUILD  # Lint PKGBUILD
 namcap symphony-bin-*.pkg.tar.zst  # Lint built package
 ```
 
+## Quick Start (After Repository is Public)
+
+```bash
+# From project root, run:
+./scripts/test-aur-after-public.sh  # Verify everything is ready
+make aur-build                       # Build the package
+make aur-install                     # Install and test locally
+```
+
+See `POST_PUBLIC_CHECKLIST.md` for complete publishing guide.
+
 ## Notes
 
 - This is a `-bin` package that builds from source (not a true binary package)
 - For a true binary package, we would download pre-built `.tar.gz` from GitHub Releases
-- The `sha256sums` is set to `SKIP` - update with actual checksum after first release
+- The `sha256sums` is calculated from the v0.7.0 tag tarball
 - Desktop file is installed to `/usr/share/applications/`
 - Icons are installed to `/usr/share/icons/hicolor/`
+- **IMPORTANT**: Repository must be public for AUR users to download source
 
 ## Troubleshooting
 

@@ -18,7 +18,7 @@ pkgbase = symphony-bin
 	provides = symphony
 	conflicts = symphony
 	conflicts = symphony-git
-	source = symphony-0.7.0.tar.gz::https://github.com/jvegaf/Symphony/archive/v0.7.0.tar.gz
-	sha256sums = ff981f8dbc601c5fca6f6d511e4481f573baf372045d08e371ec41112686b740
+	source = symphony-0.7.0.tar.gz::https://github.com/jvegaf/Symphony/archive/refs/tags/v0.7.0.tar.gz
+	sha256sums = 0019dfc4b32d63c1392aa264aed2253c1e0c2fb09216f8e2cc269bbfb8bb49b5
 
 pkgname = symphony-bin
