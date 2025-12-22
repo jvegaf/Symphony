@@ -44,13 +44,23 @@ else
     echo "Construyendo imagen Docker (esto puede tomar varios minutos la primera vez)..."
     echo ""
     
-    # Build con BuildKit para mejor cache y tamaño reducido
-    DOCKER_BUILDKIT=1 docker build \
-        --target runtime \
-        --tag $FULL_IMAGE_NAME \
-        --file Dockerfile.appimage \
-        --build-arg BUILDKIT_INLINE_CACHE=1 \
-        .
+    # Build with multi-stage for reduced size
+    # Try with BuildKit if available, fallback to standard build
+    if docker buildx version &>/dev/null; then
+        DOCKER_BUILDKIT=1 docker build \
+            --target runtime \
+            --tag $FULL_IMAGE_NAME \
+            --file Dockerfile.appimage \
+            --build-arg BUILDKIT_INLINE_CACHE=1 \
+            .
+    else
+        echo -e "${BLUE}BuildKit no disponible, usando docker build estándar...${NC}"
+        docker build \
+            --target runtime \
+            --tag $FULL_IMAGE_NAME \
+            --file Dockerfile.appimage \
+            .
+    fi
     
     echo ""
     FINAL_SIZE=$(docker images $FULL_IMAGE_NAME --format "{{.Size}}")
