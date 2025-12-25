@@ -1,6 +1,7 @@
 ---
 agent: 'agent'
-model: Claude Haiku 4.5
+model: Claude Opus 4.5 (copilot)
+
 tools: ['search/codebase', 'web/githubRepo']
 description: 'Analizar código y sugerir mejoras'
 ---

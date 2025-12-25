@@ -1,6 +1,6 @@
 ---
 agent: 'agent'
-model: Claude Haiku 4.5
+model: Claude Opus 4.5 (copilot)
 tools: ['search/codebase', 'web/githubRepo', 'web/fetch']
 description: 'Planificar arquitectura de nuevas características'
 ---

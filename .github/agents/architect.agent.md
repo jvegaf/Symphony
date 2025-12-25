@@ -1,7 +1,7 @@
 ---
 description: "Modo arquitecto para planificación de características"
 tools: ['search/codebase', 'web/githubRepo', 'web/fetch']
-model: Claude Haiku 4.5
+model: Claude Opus 4.5 (copilot)
 ---
 
 # Architect Mode

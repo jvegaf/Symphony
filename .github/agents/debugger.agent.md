@@ -1,7 +1,7 @@
 ---
 description: "Modo para debuggear problemas en aplicación Symphony"
 tools: ['search/codebase', 'web/githubRepo']
-model: Claude Haiku 4.5
+model: Claude Opus 4.5 (copilot)
 ---
 
 # Debugger Mode
@@ -54,6 +54,35 @@ Busca patrones en:
 # Pasos exactos para reproducir
 # Estado esperado vs actual
 ```
+
+### 5. Probar primero: crear un test reproducible (TDD)
+
+- Antes de aplicar una corrección en producción, crea un test que reproduzca el fallo (test-first).
+- Pasos recomendados:
+	1. Escribe un test unitario o de integración que capture el comportamiento incorrecto.
+	2. Ejecuta la suite de tests y verifica que el nuevo test falle (confirma la regresión).
+	3. Implementa la corrección mínima necesaria para pasar el test.
+	4. Ejecuta los tests y comprueba que el nuevo test pasa y no se rompen otros tests.
+	5. Añade el test a la suite y documenta el cambio en el PR/CHANGELOG.
+
+Ejemplos rápidos:
+
+Frontend (Vitest):
+```bash
+# crear archivo de test en `src/.../archivo.test.ts`
+npm run test -- --coverage
+ # o ejecutar un test específico
+npm test -- src/path/to/mi.test.ts
+```
+
+Backend (Rust):
+```bash
+# añadir test en el módulo o en `tests/` y ejecutar:
+cd src-tauri
+cargo test --test nombre_del_test
+```
+
+Nota: el objetivo es que el test falle primero; así garantizamos que la corrección arregla el problema y evitamos regresiones.
 
 ## Categorías Comunes
 
@@ -145,3 +174,5 @@ SELECT COUNT(*) FROM tracks;
 - [ ] Tests generados
 - [ ] Fix implementado
 - [ ] Documentado en CHANGELOG
+
+- [ ] Crear test que reproduzca el bug antes de aplicar fix (TDD)

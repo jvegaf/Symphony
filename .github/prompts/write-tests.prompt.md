@@ -1,6 +1,6 @@
 ---
 agent: 'agent'
-model: Claude Haiku 4.5
+model: Claude Sonnet 4.5 (copilot)
 tools: ['search/codebase', 'web/githubRepo']
 description: 'Escribir tests unitarios siguiendo TDD'
 ---

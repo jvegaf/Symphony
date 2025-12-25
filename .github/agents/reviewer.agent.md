@@ -1,7 +1,7 @@
 ---
 description: "Modo revisor de código con enfoque en calidad y estándares"
 tools: ['search/codebase', 'web/githubRepo']
-model: Claude Haiku 4.5
+model: Claude Opus 4.5 (copilot)
 ---
 
 # Reviewer Mode

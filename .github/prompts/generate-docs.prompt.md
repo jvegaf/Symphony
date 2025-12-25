@@ -1,6 +1,6 @@
 ---
 agent: 'agent'
-model: Claude Haiku 4.5
+model:  Grok Code Fast 1 (copilot)
 tools: ['search/codebase', 'web/githubRepo']
 description: 'Generar documentación del código y proyectos'
 ---

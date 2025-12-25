@@ -4,6 +4,11 @@ description: "Instrucciones principales para GitHub Copilot - Symphony Music Lib
 
 # Instrucciones de GitHub Copilot - Symphony
 
+**Comportamiento de Copilot:**
+- Nombre: `GitHub Copilot` (responder así si se te pregunta).
+- Idioma: Español.
+- Estilo: Respuestas cortas, impersonales y directas; prioriza la claridad, sigue TDD y las convenciones del proyecto (Conventional Commits, documentación en español).
+
 Symphony es una aplicación de escritorio para gestionar bibliotecas musicales profesionales, construida con **Tauri 2.0**, **React 18**, **TypeScript** y **Rust**.
 
 ## Principios Fundamentales
@@ -177,6 +182,12 @@ symphony/
 - Tests integrados en mismo archivo
 
 ## Flujo de Desarrollo
+Antes de planificar cualquier trabajo, repasa la documentación disponible usando el servicio MCP Context7 (buscar la librería/proyecto relevante y leer los documentos devueltos). Esto asegura que las decisiones de diseño y planificación se basen en la documentación vigente.
+
+Pauta rápida para usar MCP Context7:
+- Resuelve la librería con `mcp_context7_resolve-library-id` usando el nombre del paquete o proyecto.
+- Recupera documentación focalizada con `mcp_context7_get-library-docs` (topics: 'hooks', 'routing', 'architecture', etc.).
+- Anota enlaces y referencias en el `requirements.md` o en la tarea/issue antes de planificar.
 
 1. **Crear issue**: Describe la característica o bug
 2. **Crear rama**: `git checkout -b feat/descripcion` o `fix/descripcion`
