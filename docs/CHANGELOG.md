@@ -5,6 +5,86 @@ Todos los cambios notables de Symphony se documentan aquí.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/),
 y este proyecto sigue [Semantic Versioning](https://semver.org/es/).
 
+## [0.8.0] - 2025-12-25
+
+### 🎹 Sistema de Cola de Reproducción y Atajos de Teclado
+
+Esta versión introduce un sistema completo de cola de reproducción y atajos de teclado para DJs, permitiendo navegación rápida sin usar el mouse.
+
+#### ✨ Nuevas Funcionalidades
+
+- **Hook `usePlaybackQueue`**: Sistema de cola de reproducción que gestiona el orden de las pistas
+  - `generateQueue(tracks, startIndex)` - Crea cola desde el índice hasta el final
+  - `next()` / `previous()` - Navegación en la cola
+  - `hasNext` / `hasPrevious` - Flags de disponibilidad
+  - `clear()` - Limpia la cola
+
+- **Atajos de teclado** (hook `usePlayerShortcuts`):
+  | Tecla | Acción |
+  |-------|--------|
+  | **A** | Ir al inicio de la pista. Doble pulsación en <3s → pista anterior |
+  | **D** | Siguiente pista en la cola |
+  | **W** | Retroceder 10 segundos |
+  | **S** | Avanzar 10 segundos |
+  | **Space** | Pausar/Reanudar |
+
+#### 🐛 Correcciones
+
+- **Teclas A/D invertidas**: Corregido el comportamiento (A=anterior, D=siguiente)
+- **Orden visual de la cola**: La cola ahora respeta el orden visual de la tabla (por título, BPM, fecha, etc.) en lugar del orden de la base de datos
+
+#### 🔧 Cambios Técnicos
+
+- `TrackTable.tsx`: El callback `onTrackDoubleClick` ahora pasa `(track, sortedTracks, index)` para preservar el orden visual
+- `App.tsx`: Integración del hook `usePlaybackQueue` con lookup O(1) via `Map<string, Track>`
+- Cobertura de tests: 28 nuevos tests (14 para `usePlaybackQueue`, 14 para `usePlayerShortcuts`)
+
+**Resultados de testing:**
+- Frontend: 439/439 tests passing ✅
+- TypeScript: Sin errores ✅
+
+---
+
+## [0.7.0] - 2025-12-20
+
+### 📦 Soporte AUR y Optimización de Builds
+
+- **Soporte AUR (Arch Linux)**: Nuevo paquete `symphony-bin` para instalación via AUR
+- **Optimización Docker AppImage**: Build multi-stage reducido de 20GB a 2-3GB
+- **Comandos Makefile para AUR**: `make aur-build`, `make aur-install`, etc.
+- **Documentación**: Investigación completa de portable builds
+
+---
+
+## [0.6.0] - 2025-12-19
+
+### 🎯 Milestone 6 - Infraestructura E2E y Mejoras UI
+
+- **E2E Testing**: Infraestructura completa con Playwright + WebDriver
+- **Multi-select**: Selección múltiple de pistas con Ctrl/Shift
+- **Track highlighting**: Resaltado visual de pistas seleccionadas
+- **Editor layout**: Diseño de dos columnas para el editor de metadatos
+
+---
+
+## [0.5.3] - 2025-12-18
+
+### 🔧 Mantenimiento
+
+- Correcciones menores de CI
+- Ajustes de cobertura de tests
+
+---
+
+## [0.5.2] - 2025-12-18
+
+### 🐛 Correcciones
+
+- Fix: advertencia clippy unnecessary-unwrap
+- Fix: comandos cargo en Makefile
+
+---
+
 ## [0.5.1] - 2025-12-17
 
 ### 🐛 Fixes Críticos de Interacción Waveform ([commit eb3ea9a](https://github.com/jvegaf/Symphony/commit/eb3ea9a))

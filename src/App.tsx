@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { open } from "@tauri-apps/plugin-dialog";
 
@@ -12,6 +12,8 @@ import {
 import { TrackDetail } from "./components/TrackDetail";
 import { useAudioPlayer } from "./hooks/useAudioPlayer";
 import { useGetAllTracks, useImportLibrary, useBatchFilenameToTags } from "./hooks/useLibrary";
+import { usePlaybackQueue } from "./hooks/usePlaybackQueue";
+import { usePlayerShortcuts } from "./hooks/usePlayerShortcuts";
 import { Settings } from "./pages/Settings";
 import type { ImportProgress, Track } from "./types/library";
 import { logger } from "./utils/logger";
@@ -41,10 +43,59 @@ function App() {
 
   const { data: tracks = [], isLoading } = useGetAllTracks();
   const importMutation = useImportLibrary();
-  const { play, pause, resume, isPlaying } = useAudioPlayer();
+  const { play, pause, resume, isPlaying, seek, position, duration } = useAudioPlayer();
   const { mutate: batchFilenameToTags } = useBatchFilenameToTags();
 
-  // AIDEV-NOTE: Keyboard shortcut - Espacio para pausar/reanudar reproducción
+  // AIDEV-NOTE: filteredTracks se calcula para la búsqueda en la tabla
+  const filteredTracks = tracks.filter((track) => {
+    if (!searchQuery) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      track.title.toLowerCase().includes(query) ||
+      track.artist.toLowerCase().includes(query) ||
+      track.album?.toLowerCase().includes(query)
+    );
+  });
+
+  // AIDEV-NOTE: Mapa de ID -> Track para búsqueda rápida O(1)
+  // Se usa en usePlayerShortcuts para obtener el track por ID desde la cola
+  const tracksById = useMemo(() => {
+    const map = new Map<string, Track>();
+    for (const track of tracks) {
+      if (track.id) {
+        map.set(track.id, track);
+      }
+    }
+    return map;
+  }, [tracks]);
+
+  // AIDEV-NOTE: Cola de reproducción - se genera al hacer doble click
+  // Contiene los IDs desde la pista seleccionada hasta el final de la lista
+  // NO se regenera al navegar con A/D, solo al doble click o cambio de orden
+  const playbackQueue = usePlaybackQueue();
+
+  // AIDEV-NOTE: Hook para atajos de navegación de pistas (A, D, S, W)
+  // - A: Ir al inicio, doble pulsación en < 3seg → pista anterior (de la cola)
+  // - D: Siguiente pista (de la cola)
+  // - S: Avanzar 10 segundos
+  // - W: Retroceder 10 segundos
+  const { handleKeyPress, isShortcutKey } = usePlayerShortcuts({
+    currentTrack: playingTrack,
+    tracksById,
+    position,
+    duration,
+    seek,
+    play,
+    onTrackChange: setPlayingTrack,
+    queueNext: playbackQueue.next,
+    queuePrevious: playbackQueue.previous,
+    hasNext: playbackQueue.hasNext,
+    hasPrevious: playbackQueue.hasPrevious,
+  });
+
+  // AIDEV-NOTE: Keyboard shortcuts para el reproductor
+  // - Espacio: Pausar/Reanudar
+  // - A/D/S/W: Navegación (ver usePlayerShortcuts)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Ignorar si el usuario está escribiendo en un input
@@ -60,12 +111,19 @@ function App() {
         } else {
           resume();
         }
+        return;
+      }
+
+      // Atajos de navegación (A, D, S, W)
+      if (playingTrack && isShortcutKey(e.key)) {
+        e.preventDefault();
+        handleKeyPress(e.key);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [playingTrack, isPlaying, pause, resume]);
+  }, [playingTrack, isPlaying, pause, resume, handleKeyPress, isShortcutKey]);
 
   const handleImport = async () => {
     try {
@@ -138,7 +196,12 @@ function App() {
     );
   };
 
-  const handleTrackDoubleClick = async (track: Track) => {
+  /**
+   * Handler para doble click en un track de la tabla
+   * AIDEV-NOTE: Recibe sortedTracks (orden visual de la tabla) y el índice
+   * para generar la cola de reproducción en el orden correcto
+   */
+  const handleTrackDoubleClick = async (track: Track, sortedTracks: Track[], index: number) => {
     const timestamp = new Date().toISOString();
     console.log(
       `%c[${timestamp}] ========== APP.TSX DOUBLE CLICK ==========`,
@@ -158,6 +221,14 @@ function App() {
     );
     await logger.info(`[${timestamp}] Track: ${track.title}`);
     await logger.info(`[${timestamp}] Path: ${track.path}`);
+
+    // AIDEV-NOTE: Generar cola de reproducción usando sortedTracks (orden visual de la tabla)
+    // El índice ya viene de la tabla, no necesitamos buscarlo
+    playbackQueue.generateQueue(sortedTracks, index);
+    console.log(
+      `%c[${timestamp}] Cola generada desde índice ${index}, total: ${sortedTracks.length - index} pistas`,
+      "background: #9900ff; color: #fff; padding: 2px;",
+    );
 
     try {
       console.log(
@@ -193,16 +264,6 @@ function App() {
       setTrackDetailsId(track.id);
     }
   };
-
-  const filteredTracks = tracks.filter((track) => {
-    if (!searchQuery) return true;
-    const query = searchQuery.toLowerCase();
-    return (
-      track.title.toLowerCase().includes(query) ||
-      track.artist.toLowerCase().includes(query) ||
-      (track.album && track.album.toLowerCase().includes(query))
-    );
-  });
 
   return (
     <ErrorBoundary>

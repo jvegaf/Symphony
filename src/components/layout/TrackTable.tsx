@@ -25,7 +25,13 @@ interface TrackTableProps {
   selectedTracks: Track[];
   playingTrack: Track | null;
   onTracksSelect: (tracks: Track[]) => void;
-  onTrackDoubleClick: (track: Track) => void;
+  /** 
+   * Callback cuando se hace doble click en un track
+   * @param track - Track clickeado
+   * @param sortedTracks - Lista de tracks en el orden visual actual de la tabla
+   * @param index - Índice del track en sortedTracks
+   */
+  onTrackDoubleClick: (track: Track, sortedTracks: Track[], index: number) => void;
   onTrackDetails?: (track: Track) => void;
   onBatchFilenameToTags?: (tracks: Track[]) => void;
   isLoading: boolean;
@@ -271,9 +277,10 @@ export const TrackTable = ({
   };
 
   // AIDEV-NOTE: Double-click handler - deselecciona todos y reproduce el track
-  const handleDoubleClick = (track: Track) => {
+  // Pasa sortedTracks y el índice para que App.tsx pueda generar la cola correctamente
+  const handleDoubleClick = (track: Track, index: number) => {
     onTracksSelect([]); // Deseleccionar todos
-    onTrackDoubleClick(track); // Reproducir track
+    onTrackDoubleClick(track, sortedTracks, index); // Reproducir track con contexto de orden
   };
 
   if (isLoading) {
@@ -424,7 +431,7 @@ export const TrackTable = ({
                 data-testid="track-row"
                 data-track-id={track.id}
                 onClick={(e) => handleTrackClick(track, index, e)}
-                onDoubleClick={() => handleDoubleClick(track)}
+                onDoubleClick={() => handleDoubleClick(track, index)}
                 onContextMenu={(e) => handleContextMenu(e, track)}
                 className={`
                   cursor-pointer transition-colors

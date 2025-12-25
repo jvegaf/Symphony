@@ -3,27 +3,30 @@
 Aplicación de escritorio profesional para gestionar bibliotecas musicales con importación, reproducción, análisis de audio y herramientas de organización avanzadas.
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![Version](https://img.shields.io/badge/version-0.7.0-blue)]()
+[![Version](https://img.shields.io/badge/version-0.8.0-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 
 ## ✨ Características
 
 - 📁 **Importación de Bibliotecas:** Escaneo recursivo con preservación de estructura
 - 🎵 **Reproducción Integrada:** Player completo con waveform interactivo (canvas propio, streaming progresivo, seek visual, feedback instantáneo). Ver [docs/waveform-implementation.md](./docs/waveform-implementation.md) para detalles.
+- ⌨️ **Atajos de Teclado:** Navegación rápida con A/D (anterior/siguiente), W/S (±10s), Espacio (pausa)
 - 📊 **Análisis de Audio:** Beatgrids automáticos, cue points y loops personalizados
 - 📋 **Playlists:** Gestión completa con drag & drop
 - ✏️ **Edición de Metadatos:** Editor integrado con rating de pistas (nuevo sistema visual de estrellas, mejoras UX v0.4.0)
 - 🔄 **Conversión de Audio:** Opcional a MP3 durante importación
 - 🌙 **Modo Oscuro:** Interfaz optimizada para uso prolongado
 
-## 🐛 Últimas correcciones críticas (v0.5.1)
+## 🆕 Novedades v0.8.0
 
-- Tres bugs críticos de interacción con waveform RESUELTOS ([commit eb3ea9a](https://github.com/jvegaf/Symphony/commit/eb3ea9a)):
-  - Seek en waveform ahora funciona correctamente (evento 'click')
-  - Waveform solo se genera al reproducir (doble click), no al seleccionar
-  - Overlay de CuePointEditor ya no bloquea clicks (patrón pointer-events)
-- Documentación técnica: [`docs/WAVEFORM_FIXES_COMPLETE.md`](./docs/WAVEFORM_FIXES_COMPLETE.md), [`docs/WAVEFORM_FIXES_QUICKREF.md`](./docs/WAVEFORM_FIXES_QUICKREF.md)
-- Script de verificación: [`scripts/verify-waveform-fixes.sh`](./scripts/verify-waveform-fixes.sh)
+- **Cola de reproducción inteligente:** Se genera automáticamente al hacer doble click en una pista, respetando el orden visual de la tabla (columna ordenada)
+- **Atajos de teclado para navegación:**
+  - `A` — Ir al inicio de la canción. Doble pulsación (< 3s) → pista anterior
+  - `D` — Siguiente pista en la cola
+  - `W` — Retroceder 10 segundos
+  - `S` — Avanzar 10 segundos
+  - `Espacio` — Pausar/Reanudar
+- **Navegación secuencial:** La cola mantiene el orden visual de la tabla, no se regenera al navegar con A/D
 
 ## 📦 Instalación
 
