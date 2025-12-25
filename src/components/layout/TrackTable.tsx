@@ -79,7 +79,7 @@ export const TrackTable = ({
   const [focusedIndex, setFocusedIndex] = useState<number>(0);
 
   // AIDEV-NOTE: Estado de ordenamiento
-  type SortColumn = 'title' | 'artist' | 'album' | 'duration' | 'bpm' | 'rating' | 'year' | 'dateAdded';
+  type SortColumn = 'title' | 'artist' | 'album' | 'duration' | 'bpm' | 'rating' | 'year' | 'dateAdded' | 'bitrate';
   type SortDirection = 'asc' | 'desc';
   const [sortColumn, setSortColumn] = useState<SortColumn>('title');
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
@@ -133,6 +133,10 @@ export const TrackTable = ({
       case 'dateAdded':
         aValue = new Date(a.dateAdded).getTime();
         bValue = new Date(b.dateAdded).getTime();
+        break;
+      case 'bitrate':
+        aValue = a.bitrate ?? 0;
+        bValue = b.bitrate ?? 0;
         break;
     }
 
@@ -414,6 +418,19 @@ export const TrackTable = ({
             </th>
             <th 
               className="p-2 font-medium text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-gray-100"
+              onClick={() => handleSort('bitrate')}
+            >
+              <div className="flex items-center gap-1">
+                Bitrate
+                {sortColumn === 'bitrate' && (
+                  <span className="material-icons text-base">
+                    {sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward'}
+                  </span>
+                )}
+              </div>
+            </th>
+            <th 
+              className="p-2 font-medium text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-gray-100"
               onClick={() => handleSort('bpm')}
             >
               <div className="flex items-center gap-1">
@@ -503,6 +520,9 @@ export const TrackTable = ({
                 </td>
                 <td className={`p-2 ${isPlaying || isSelected ? "text-primary font-medium" : ""}`} data-testid="track-duration">
                   {formatDuration(track.duration)}
+                </td>
+                <td className={`p-2 ${isPlaying || isSelected ? "text-primary font-medium" : ""}`} data-testid="track-bitrate">
+                  {track.bitrate ? `${track.bitrate}` : ""}
                 </td>
                 <td className={`p-2 ${isPlaying || isSelected ? "text-primary font-medium" : ""}`}>
                   {track.bpm ? track.bpm.toFixed(2) : ""}
