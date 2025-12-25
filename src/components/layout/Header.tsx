@@ -1,3 +1,5 @@
+import { getCurrentWindow } from "@tauri-apps/api/window";
+
 import type { ImportProgress } from "../../types/library";
 
 type Tab = "library" | "settings" | "import" | "export" | "tools" | "benchmark";
@@ -11,6 +13,12 @@ interface HeaderProps {
   selectedTracksCount?: number;
 }
 
+/**
+ * Header principal de la aplicación.
+ * Contiene tabs de navegación, estado de importación y controles de ventana.
+ * AIDEV-NOTE: Los controles de ventana (minimize, maximize, close) usan la API
+ * de Tauri getCurrentWindow() para controlar la ventana nativa.
+ */
 export const Header = ({
   activeTab,
   onTabChange,
@@ -19,6 +27,18 @@ export const Header = ({
   progress,
   selectedTracksCount = 0,
 }: HeaderProps) => {
+  // AIDEV-NOTE: Handlers para controles de ventana usando Tauri API
+  const handleMinimize = () => {
+    getCurrentWindow().minimize();
+  };
+
+  const handleMaximize = () => {
+    getCurrentWindow().toggleMaximize();
+  };
+
+  const handleClose = () => {
+    getCurrentWindow().close();
+  };
   const tabs: { id: Tab; label: string }[] = [
     { id: "library", label: "Library" },
     { id: "settings", label: "Settings" },
@@ -104,24 +124,33 @@ export const Header = ({
             />
           </div>
         )}
-        <span
-          className="material-icons text-base cursor-pointer hover:text-gray-300"
+        <button
+          type="button"
+          onClick={handleMinimize}
+          className="material-icons text-base cursor-pointer hover:text-gray-300 hover:bg-gray-700/50 rounded p-1 transition-colors"
           data-testid="window-minimize"
+          aria-label="Minimizar ventana"
         >
           remove
-        </span>
-        <span
-          className="material-icons text-base cursor-pointer hover:text-gray-300"
+        </button>
+        <button
+          type="button"
+          onClick={handleMaximize}
+          className="material-icons text-base cursor-pointer hover:text-gray-300 hover:bg-gray-700/50 rounded p-1 transition-colors"
           data-testid="window-maximize"
+          aria-label="Maximizar ventana"
         >
           check_box_outline_blank
-        </span>
-        <span
-          className="material-icons text-base cursor-pointer hover:text-gray-300"
+        </button>
+        <button
+          type="button"
+          onClick={handleClose}
+          className="material-icons text-base cursor-pointer hover:text-white hover:bg-red-500/80 rounded p-1 transition-colors"
           data-testid="window-close"
+          aria-label="Cerrar ventana"
         >
           close
-        </span>
+        </button>
       </div>
     </header>
   );

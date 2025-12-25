@@ -5,6 +5,32 @@ Todos los cambios notables de Symphony se documentan aquí.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/),
 y este proyecto sigue [Semantic Versioning](https://semver.org/es/).
 
+## [0.8.1] - 2025-12-25
+
+### 🐛 Corrección: Controles de Ventana
+
+Se ha solucionado un bug crítico donde los botones de minimizar, maximizar y cerrar la ventana no funcionaban.
+
+#### Correcciones
+
+- **Controles de ventana funcionales**: Los botones de minimizar, maximizar y cerrar ahora funcionan correctamente usando la API `getCurrentWindow()` de Tauri
+- **Permisos de Tauri capabilities**: Agregados permisos necesarios para control de ventana (`core:window:allow-close`, `core:window:allow-minimize`, `core:window:allow-toggle-maximize`, `core:window:allow-start-dragging`)
+
+#### Mejoras
+
+- **Accesibilidad**: Todos los controles de ventana ahora incluyen `aria-label` descriptivo
+- **UX visual**: El botón de cerrar muestra hover rojo para indicar acción destructiva
+- **Semántica HTML**: Los controles de ventana cambiados de `<span>` a `<button>` para mejor accesibilidad
+
+#### Cambios Técnicos
+
+- `Header.tsx`: Integración de `getCurrentWindow` con handlers dedicados
+- `capabilities/default.json`: Nuevos permisos de ventana y `fs:allow-remove`
+
+**Testing:** 442 frontend + 149 backend tests passing ✅
+
+---
+
 ## [0.8.0] - 2025-12-25
 
 ### 🎹 Sistema de Cola de Reproducción y Atajos de Teclado
