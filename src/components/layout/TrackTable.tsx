@@ -9,6 +9,7 @@
  * - Context menu nativo de Tauri con opciones:
  *   - "Details": abrir modal de metadatos (TrackDetail component)
  *   - "Filename→Tags (N tracks)": batch update desde filename para selección múltiple
+ *   - "Delete Track": elimina de la biblioteca y borra el archivo del disco
  *   - "Open DevTools (F12)": ayuda para debugging
  * - Usa LogicalPosition para popup menu (clientX/clientY son logical pixels en browser)
  */
@@ -16,9 +17,10 @@
 import { useState, useEffect } from "react";
 import type { Track } from "../../types/library";
 import { StarRating } from "../ui/StarRating";
-import { useUpdateTrackRating } from "../../hooks/useLibrary";
+import { useUpdateTrackRating, useDeleteTrack } from "../../hooks/useLibrary";
 import { Menu, MenuItem } from "@tauri-apps/api/menu";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
+import { confirm } from "@tauri-apps/plugin-dialog";
 
 interface TrackTableProps {
   tracks: Track[];
@@ -66,6 +68,9 @@ export const TrackTable = ({
 }: TrackTableProps) => {
   // AIDEV-NOTE: Hook para actualizar rating en DB y archivo MP3
   const { mutate: updateRating } = useUpdateTrackRating();
+  
+  // AIDEV-NOTE: Hook para eliminar track de DB y borrar archivo
+  const { mutate: deleteTrack } = useDeleteTrack();
 
   // AIDEV-NOTE: Índice del último track clickeado para Shift+Click range selection
   const [lastClickedIndex, setLastClickedIndex] = useState<number>(-1);
@@ -261,6 +266,36 @@ export const TrackTable = ({
       });
       menuItems.push(batchFilenameItem);
     }
+
+    // Opción "Delete Track" - elimina de DB y borra archivo
+    // AIDEV-NOTE: Solo se muestra si hay tracks seleccionados
+    const tracksToDelete = isTrackSelected ? selectedTracks : [track];
+    const deleteItem = await MenuItem.new({
+      id: 'delete-track',
+      text: `Delete Track${tracksToDelete.length > 1 ? `s (${tracksToDelete.length})` : ''}`,
+      action: async () => {
+        // Confirmar antes de eliminar
+        const trackNames = tracksToDelete.slice(0, 3).map(t => `"${t.title}"`).join(', ');
+        const moreText = tracksToDelete.length > 3 ? ` and ${tracksToDelete.length - 3} more` : '';
+        
+        const confirmed = await confirm(
+          `Are you sure you want to delete ${trackNames}${moreText}?\n\nThis will remove the track${tracksToDelete.length > 1 ? 's' : ''} from the library AND delete the file${tracksToDelete.length > 1 ? 's' : ''} from disk.`,
+          { title: 'Delete Track', kind: 'warning' }
+        );
+        
+        if (confirmed) {
+          // Eliminar cada track seleccionado
+          for (const t of tracksToDelete) {
+            if (t.id) {
+              deleteTrack(t.id);
+            }
+          }
+          // Limpiar selección después de eliminar
+          onTracksSelect([]);
+        }
+      }
+    });
+    menuItems.push(deleteItem);
 
     // Opción DevTools
     const devToolsItem = await MenuItem.new({

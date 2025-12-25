@@ -403,3 +403,59 @@ export const useBatchFilenameToTags = () => {
     },
   });
 };
+
+/**
+ * Resultado de la eliminación de un track
+ * AIDEV-NOTE: Debe coincidir con DeleteTrackResult en Rust
+ */
+interface DeleteTrackResult {
+  trackId: string;
+  fileDeleted: boolean;
+  filePath: string;
+}
+
+/**
+ * Hook para eliminar un track de la biblioteca y del disco
+ * 
+ * AIDEV-NOTE: Este hook elimina:
+ * 1. El registro de la base de datos
+ * 2. El archivo físico del disco
+ * 
+ * @example
+ * ```tsx
+ * const { mutate: deleteTrack, isPending } = useDeleteTrack();
+ * 
+ * const handleDelete = (trackId: string) => {
+ *   deleteTrack(trackId, {
+ *     onSuccess: (result) => {
+ *       if (result.fileDeleted) {
+ *         console.log(`Track y archivo eliminados: ${result.filePath}`);
+ *       } else {
+ *         console.log(`Track eliminado, pero el archivo no pudo borrarse`);
+ *       }
+ *     }
+ *   });
+ * };
+ * ```
+ */
+export const useDeleteTrack = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation<DeleteTrackResult, Error, string>({
+    mutationFn: async (trackId: string) => {
+      const result = await invoke<DeleteTrackResult>("delete_track", { id: trackId });
+      return result;
+    },
+    onSuccess: (result) => {
+      // Invalidar queries para refrescar UI
+      queryClient.invalidateQueries({ queryKey: ["tracks"] });
+      queryClient.invalidateQueries({ queryKey: ["library-stats"] });
+      queryClient.invalidateQueries({ queryKey: ["tracks", "byId", result.trackId] });
+      
+      console.log(`Track eliminado: ${result.trackId}, archivo borrado: ${result.fileDeleted}`);
+    },
+    onError: (error) => {
+      console.error("Error deleting track:", error);
+    },
+  });
+};

@@ -10,6 +10,7 @@ import {
   useSearchTracks,
   useGetTrack,
   useLibraryStats,
+  useDeleteTrack,
 } from "./useLibrary";
 import type { Track, ImportResult, LibraryStats } from "../types/library";
 
@@ -360,5 +361,89 @@ describe("useLibraryStats", () => {
       totalSizeGb: 0,
       ratingDistribution: [0, 0, 0, 0, 0, 0],
     });
+  });
+});
+
+describe("useDeleteTrack", () => {
+  let queryClient: QueryClient;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    queryClient = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+  });
+
+  afterEach(() => {
+    queryClient.clear();
+  });
+
+  const createWrapperWithClient = () => {
+    return ({ children }: { children: React.ReactNode }) => (
+      <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    );
+  };
+
+  it("debería eliminar un track y su archivo", async () => {
+    const mockResult = {
+      trackId: "test-id-123",
+      fileDeleted: true,
+      filePath: "/music/song.mp3",
+    };
+    mockInvoke.mockResolvedValue(mockResult);
+
+    const { result } = renderHook(() => useDeleteTrack(), {
+      wrapper: createWrapperWithClient(),
+    });
+
+    result.current.mutate("test-id-123");
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(mockInvoke).toHaveBeenCalledWith("delete_track", { id: "test-id-123" });
+    expect(result.current.data).toEqual(mockResult);
+  });
+
+  it("debería manejar cuando el archivo no existe", async () => {
+    const mockResult = {
+      trackId: "test-id-456",
+      fileDeleted: false,
+      filePath: "/music/missing.mp3",
+    };
+    mockInvoke.mockResolvedValue(mockResult);
+
+    const { result } = renderHook(() => useDeleteTrack(), {
+      wrapper: createWrapperWithClient(),
+    });
+
+    result.current.mutate("test-id-456");
+
+    await waitFor(() => {
+      expect(result.current.isSuccess).toBe(true);
+    });
+
+    expect(result.current.data?.fileDeleted).toBe(false);
+  });
+
+  it("debería manejar error al eliminar track", async () => {
+    const mockError = new Error("Track not found");
+    mockInvoke.mockRejectedValue(mockError);
+
+    const { result } = renderHook(() => useDeleteTrack(), {
+      wrapper: createWrapperWithClient(),
+    });
+
+    result.current.mutate("invalid-id");
+
+    await waitFor(() => {
+      expect(result.current.isError).toBe(true);
+    });
+
+    expect(result.current.error?.message).toBe("Track not found");
   });
 });

@@ -235,6 +235,62 @@ pub struct LibraryStats {
     pub rating_distribution: Vec<usize>, // Distribución de ratings [0-5 stars]
 }
 
+/// Elimina una pista de la biblioteca y borra el archivo físico
+///
+/// AIDEV-NOTE: Proceso de eliminación:
+/// 1. Obtiene la pista de la DB para conocer su ruta
+/// 2. Elimina la pista de la base de datos
+/// 3. Borra el archivo físico del disco
+/// 4. Si falla el borrado del archivo, igual retorna OK (la pista ya no está en DB)
+#[tauri::command]
+pub async fn delete_track(id: String) -> Result<DeleteTrackResult, String> {
+    let db = crate::db::get_connection().map_err(|e| e.to_string())?;
+
+    // Paso 1: Obtener la pista para conocer su ruta
+    let track = queries::get_track(&db.conn, &id)
+        .map_err(|e| format!("Track not found: {}", e))?;
+    
+    let file_path = PathBuf::from(&track.path);
+
+    // Paso 2: Eliminar de la base de datos
+    queries::delete_track(&db.conn, &id)
+        .map_err(|e| format!("Failed to delete from database: {}", e))?;
+
+    log::info!("Track eliminado de la base de datos: {} ({})", track.title, id);
+
+    // Paso 3: Borrar el archivo físico
+    let file_deleted = if file_path.exists() {
+        match std::fs::remove_file(&file_path) {
+            Ok(_) => {
+                log::info!("Archivo eliminado: {:?}", file_path);
+                true
+            }
+            Err(e) => {
+                log::warn!("No se pudo eliminar el archivo {:?}: {}", file_path, e);
+                false
+            }
+        }
+    } else {
+        log::warn!("El archivo no existe: {:?}", file_path);
+        false
+    };
+
+    Ok(DeleteTrackResult {
+        track_id: id,
+        file_deleted,
+        file_path: track.path,
+    })
+}
+
+/// Resultado de la eliminación de una pista
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DeleteTrackResult {
+    pub track_id: String,
+    pub file_deleted: bool,
+    pub file_path: String,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -261,6 +317,33 @@ mod tests {
         assert!(json.contains("\"total_artists\":150"));
         assert!(json.contains("\"total_duration_hours\":72.5"));
         assert!(json.contains("\"rating_distribution\""));
+    }
+
+    #[test]
+    fn test_delete_track_result_serialization() {
+        let result = DeleteTrackResult {
+            track_id: "test-uuid-123".to_string(),
+            file_deleted: true,
+            file_path: "/music/song.mp3".to_string(),
+        };
+
+        let json = serde_json::to_string(&result).unwrap();
+        // AIDEV-NOTE: Verifica que se use camelCase como espera el frontend
+        assert!(json.contains("\"trackId\":\"test-uuid-123\""));
+        assert!(json.contains("\"fileDeleted\":true"));
+        assert!(json.contains("\"filePath\":\"/music/song.mp3\""));
+    }
+
+    #[test]
+    fn test_delete_track_result_file_not_deleted() {
+        let result = DeleteTrackResult {
+            track_id: "test-uuid-456".to_string(),
+            file_deleted: false,
+            file_path: "/music/missing.mp3".to_string(),
+        };
+
+        let json = serde_json::to_string(&result).unwrap();
+        assert!(json.contains("\"fileDeleted\":false"));
     }
 
     // Tests asíncronos de comandos requieren setup completo de Tauri

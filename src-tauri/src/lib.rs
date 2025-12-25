@@ -138,6 +138,7 @@ pub fn run() {
             commands::library::get_track_by_id,
             commands::library::get_library_stats,
             commands::library::update_track_metadata,
+            commands::library::delete_track,
             // Playlist commands
             commands::playlists::create_playlist,
             commands::playlists::get_playlists,
