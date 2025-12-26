@@ -151,6 +151,56 @@ pub fn delete_track(conn: &Connection, id: &str) -> Result<()> {
     Ok(())
 }
 
+/// Elimina toda la biblioteca: tracks, playlists, waveforms y datos de análisis
+/// AIDEV-NOTE: Útil para empezar de cero sin reinstalar la app
+/// Las tablas relacionadas (playlist_tracks, beatgrids, cue_points, loops, waveforms)
+/// se eliminan en cascada gracias a las foreign keys
+pub fn reset_library(conn: &Connection) -> Result<ResetLibraryResult> {
+    // Contar antes de eliminar para informar al usuario
+    let tracks_count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM tracks",
+        [],
+        |row| row.get(0),
+    )?;
+    
+    let playlists_count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM playlists",
+        [],
+        |row| row.get(0),
+    )?;
+    
+    let waveforms_count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM waveforms",
+        [],
+        |row| row.get(0),
+    )?;
+
+    // Eliminar en orden correcto (respeta foreign keys)
+    // playlist_tracks, beatgrids, cue_points, loops se eliminan en cascada
+    conn.execute("DELETE FROM waveforms", [])?;
+    conn.execute("DELETE FROM loops", [])?;
+    conn.execute("DELETE FROM cue_points", [])?;
+    conn.execute("DELETE FROM beatgrids", [])?;
+    conn.execute("DELETE FROM playlist_tracks", [])?;
+    conn.execute("DELETE FROM playlists", [])?;
+    conn.execute("DELETE FROM tracks", [])?;
+
+    Ok(ResetLibraryResult {
+        tracks_deleted: tracks_count as usize,
+        playlists_deleted: playlists_count as usize,
+        waveforms_deleted: waveforms_count as usize,
+    })
+}
+
+/// Resultado de reset_library
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ResetLibraryResult {
+    pub tracks_deleted: usize,
+    pub playlists_deleted: usize,
+    pub waveforms_deleted: usize,
+}
+
 /// Busca tracks por título, artista o álbum
 pub fn search_tracks(conn: &Connection, query: &str) -> Result<Vec<Track>> {
     let search_pattern = format!("%{}%", query);
@@ -421,5 +471,47 @@ mod tests {
 
         let result = get_track(&db.conn, &id);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_reset_library() {
+        let db = setup_db();
+
+        // Insertar algunos tracks
+        for i in 0..3 {
+            let track = Track {
+                id: None,
+                path: format!("/music/test{}.mp3", i),
+                title: format!("Track {}", i),
+                artist: "Artist".to_string(),
+                album: None,
+                genre: None,
+                year: None,
+                duration: 180.0,
+                bitrate: 320,
+                sample_rate: 44100,
+                file_size: 8388608,
+                bpm: None,
+                key: None,
+                rating: None,
+                play_count: 0,
+                last_played: None,
+                date_added: "2024-01-01".to_string(),
+                date_modified: "2024-01-01".to_string(),
+            };
+            insert_track(&db.conn, &track).unwrap();
+        }
+
+        // Verificar que hay 3 tracks
+        let tracks_before = get_all_tracks(&db.conn).unwrap();
+        assert_eq!(tracks_before.len(), 3);
+
+        // Resetear biblioteca
+        let result = reset_library(&db.conn).unwrap();
+        assert_eq!(result.tracks_deleted, 3);
+
+        // Verificar que no hay tracks
+        let tracks_after = get_all_tracks(&db.conn).unwrap();
+        assert_eq!(tracks_after.len(), 0);
     }
 }

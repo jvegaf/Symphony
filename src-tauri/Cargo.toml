@@ -1,6 +1,6 @@
 [package]
 name = "symphony"
-version = "0.9.0"
+version = "0.10.0"
 description = "The Old School Music Manager"
 authors = ["Jose Vega"]
 edition = "2021"

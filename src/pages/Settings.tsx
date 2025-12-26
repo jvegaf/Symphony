@@ -2,6 +2,7 @@ import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { Toast } from '../components/Toast';
 import { useEffect, useState } from 'react';
+import { invoke } from '@tauri-apps/api/core';
 
 import { useSettings } from '../hooks/useSettings';
 import { DEFAULT_SETTINGS } from '../types/settings';
@@ -162,7 +163,14 @@ export const Settings = () => {
             <AudioSettingsTab settings={localSettings} onChange={setLocalSettings} />
           )}
           {activeTab === 'library' && (
-            <LibrarySettingsTab settings={localSettings} onChange={setLocalSettings} />
+            <LibrarySettingsTab 
+              settings={localSettings} 
+              onChange={setLocalSettings}
+              onShowToast={(message) => {
+                setToastMessage(message);
+                setShowToast(true);
+              }}
+            />
           )}
           {activeTab === 'conversion' && (
             <ConversionSettingsTab settings={localSettings} onChange={setLocalSettings} />
@@ -368,81 +376,176 @@ const AudioSettingsTab = ({
 const LibrarySettingsTab = ({
   settings,
   onChange,
+  onShowToast,
 }: {
   settings: typeof DEFAULT_SETTINGS;
   onChange: (settings: typeof DEFAULT_SETTINGS) => void;
-}) => (
-  <Card className="p-6 space-y-6">
-    <div>
-      <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
-        Configuración de Biblioteca
-      </h2>
+  onShowToast: (message: string) => void;
+}) => {
+  const [isClearingCache, setIsClearingCache] = useState(false);
+  const [isResettingLibrary, setIsResettingLibrary] = useState(false);
 
-      {/* Auto Scan */}
-      <div className="flex items-center space-x-3">
-        <input
-          type="checkbox"
-          id="autoScan"
-          checked={settings.library.autoScanOnStartup}
-          onChange={(e) =>
-            onChange({
-              ...settings,
-              library: { ...settings.library, autoScanOnStartup: e.target.checked },
-            })
-          }
-          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-        />
-        <label htmlFor="autoScan" className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Escanear biblioteca automáticamente al iniciar
-        </label>
+  const handleClearWaveformCache = async () => {
+    setIsClearingCache(true);
+    try {
+      await invoke('clear_waveform_cache');
+      onShowToast('✅ Caché de waveforms limpiado exitosamente');
+    } catch (error) {
+      console.error('Error al limpiar caché:', error);
+      onShowToast('❌ Error al limpiar el caché de waveforms');
+    } finally {
+      setIsClearingCache(false);
+    }
+  };
+
+  const handleResetLibrary = async () => {
+    const confirmed = confirm(
+      '⚠️ ATENCIÓN: Esta acción eliminará:\n\n' +
+      '• Todas las pistas de la biblioteca\n' +
+      '• Todas las playlists\n' +
+      '• Todo el caché de waveforms\n' +
+      '• Todos los beatgrids, cue points y loops\n\n' +
+      'Los archivos de audio NO serán eliminados del disco.\n\n' +
+      '¿Estás seguro de que quieres continuar?'
+    );
+    
+    if (!confirmed) return;
+
+    setIsResettingLibrary(true);
+    try {
+      const result = await invoke<{ tracksDeleted: number; playlistsDeleted: number; waveformsDeleted: number }>('reset_library');
+      onShowToast(
+        `✅ Biblioteca reseteada: ${result.tracksDeleted} pistas, ` +
+        `${result.playlistsDeleted} playlists y ${result.waveformsDeleted} waveforms eliminados`
+      );
+    } catch (error) {
+      console.error('Error al resetear biblioteca:', error);
+      onShowToast('❌ Error al resetear la biblioteca');
+    } finally {
+      setIsResettingLibrary(false);
+    }
+  };
+
+  return (
+    <Card className="p-6 space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-4">
+          Configuración de Biblioteca
+        </h2>
+
+        {/* Auto Scan */}
+        <div className="flex items-center space-x-3">
+          <input
+            type="checkbox"
+            id="autoScan"
+            checked={settings.library.autoScanOnStartup}
+            onChange={(e) =>
+              onChange({
+                ...settings,
+                library: { ...settings.library, autoScanOnStartup: e.target.checked },
+              })
+            }
+            className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+          />
+          <label htmlFor="autoScan" className="text-sm font-medium text-gray-700 dark:text-gray-300">
+            Escanear biblioteca automáticamente al iniciar
+          </label>
+        </div>
+
+        {/* Scan Interval */}
+        <div className="space-y-2 mt-4">
+          <label htmlFor="scanInterval" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Intervalo de escaneo automático (horas)
+          </label>
+          <input
+            id="scanInterval"
+            type="number"
+            min="0"
+            max="168"
+            value={settings.library.scanIntervalHours}
+            onChange={(e) =>
+              onChange({
+                ...settings,
+                library: { ...settings.library, scanIntervalHours: Number(e.target.value) },
+              })
+            }
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100"
+          />
+          <p className="text-xs text-gray-500 dark:text-gray-400">
+            0 = desactivado
+          </p>
+        </div>
+
+        {/* Import Folder */}
+        <div className="space-y-2 mt-4">
+          <label htmlFor="importFolder" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+            Carpeta de importación por defecto
+          </label>
+          <input
+            id="importFolder"
+            type="text"
+            value={settings.library.importFolder}
+            onChange={(e) =>
+              onChange({
+                ...settings,
+                library: { ...settings.library, importFolder: e.target.value },
+              })
+            }
+            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100"
+            placeholder="/ruta/a/tu/música"
+          />
+        </div>
       </div>
 
-      {/* Scan Interval */}
-      <div className="space-y-2 mt-4">
-        <label htmlFor="scanInterval" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Intervalo de escaneo automático (horas)
-        </label>
-        <input
-          id="scanInterval"
-          type="number"
-          min="0"
-          max="168"
-          value={settings.library.scanIntervalHours}
-          onChange={(e) =>
-            onChange({
-              ...settings,
-              library: { ...settings.library, scanIntervalHours: Number(e.target.value) },
-            })
-          }
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100"
-        />
-        <p className="text-xs text-gray-500 dark:text-gray-400">
-          0 = desactivado
-        </p>
-      </div>
+      {/* Maintenance Section */}
+      <div className="border-t border-gray-200 dark:border-gray-700 pt-6">
+        <h3 className="text-md font-semibold text-gray-900 dark:text-gray-100 mb-3">
+          Mantenimiento
+        </h3>
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Limpiar caché de waveforms
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Elimina las formas de onda almacenadas. Se regenerarán al reproducir cada pista.
+              </p>
+            </div>
+            <Button
+              variant="secondary"
+              onClick={handleClearWaveformCache}
+              disabled={isClearingCache}
+              className="ml-4 shrink-0 text-sm px-3 py-1.5"
+            >
+              {isClearingCache ? 'Limpiando...' : 'Limpiar caché'}
+            </Button>
+          </div>
 
-      {/* Import Folder */}
-      <div className="space-y-2 mt-4">
-        <label htmlFor="importFolder" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
-          Carpeta de importación por defecto
-        </label>
-        <input
-          id="importFolder"
-          type="text"
-          value={settings.library.importFolder}
-          onChange={(e) =>
-            onChange({
-              ...settings,
-              library: { ...settings.library, importFolder: e.target.value },
-            })
-          }
-          className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 rounded-md bg-white dark:bg-slate-900 text-gray-900 dark:text-gray-100"
-          placeholder="/ruta/a/tu/música"
-        />
+          {/* Reset Library - Zona de peligro */}
+          <div className="flex items-center justify-between p-4 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-lg">
+            <div>
+              <p className="text-sm font-medium text-red-700 dark:text-red-300">
+                🗑️ Resetear biblioteca completa
+              </p>
+              <p className="text-xs text-red-600 dark:text-red-400">
+                Elimina todas las pistas, playlists, waveforms y datos de análisis. Los archivos NO se borran.
+              </p>
+            </div>
+            <Button
+              variant="secondary"
+              onClick={handleResetLibrary}
+              disabled={isResettingLibrary}
+              className="ml-4 shrink-0 text-sm px-3 py-1.5 bg-red-100 dark:bg-red-900/50 hover:bg-red-200 dark:hover:bg-red-900 text-red-700 dark:text-red-300 border-red-300 dark:border-red-700"
+            >
+              {isResettingLibrary ? 'Reseteando...' : 'Resetear biblioteca'}
+            </Button>
+          </div>
+        </div>
       </div>
-    </div>
-  </Card>
-);
+    </Card>
+  );
+};
 
 // Conversion Settings Tab
 const ConversionSettingsTab = ({

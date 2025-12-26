@@ -6,6 +6,11 @@
  * - Progreso basado en tiempo real (no en peaks)
  * - Hover y seek sin dependencias externas
  * - Más simple y eficiente
+ * 
+ * MODO PROPORCIONAL (streaming):
+ * Durante la generación, el waveform ocupa solo el % del canvas
+ * correspondiente al progreso de generación. Esto da una sensación
+ * visual más natural del progreso real.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -51,8 +56,8 @@ export function WaveformCanvas({
   const [hoverX, setHoverX] = useState<number | null>(null);
   const [hoverTime, setHoverTime] = useState<number | null>(null);
 
-  // Obtener peaks del hook
-  const { peaks, error } = useWaveform(
+  // Obtener peaks del hook (ahora incluye progress e isLoading)
+  const { peaks, progress: generationProgress, isLoading, error } = useWaveform(
     shouldGenerate ? trackId : undefined,
     shouldGenerate ? trackPath : undefined,
     shouldGenerate ? duration : undefined,
@@ -88,7 +93,7 @@ export function WaveformCanvas({
     if (!ctx) return;
 
     const dpr = window.devicePixelRatio || 1;
-    const width = canvas.width / dpr;
+    const totalWidth = canvas.width / dpr;
     const canvasHeight = canvas.height / dpr;
 
     // Limpiar canvas
@@ -102,39 +107,36 @@ export function WaveformCanvas({
       return;
     }
 
-    // AIDEV-NOTE: SOLUCIÓN AL PROBLEMA DE SINCRONIZACIÓN
-    //
-    // El problema era que cada peak se renderizaba en posición fija (i * barStep),
-    // lo que causaba que el waveform se saliera del canvas cuando había muchos peaks.
-    //
-    // La solución es ESCALAR los peaks al ancho del canvas:
-    // - Cada peak representa un porcentaje de la duración total
-    // - La posición X de cada peak = (índice / total_peaks) * ancho_canvas
-    // - Esto garantiza que TODOS los peaks quepan en el canvas
+    // AIDEV-NOTE: MODO PROPORCIONAL
+    // Durante streaming (isLoading=true), el waveform ocupa solo el % del canvas
+    // correspondiente al progreso de generación. Una vez completo, usa todo el ancho.
+    const isComplete = !isLoading && generationProgress >= 1.0;
+    const effectiveWidth = isComplete ? totalWidth : totalWidth * Math.max(generationProgress, 0.01);
 
     const barWidth = 2;
     const minBarGap = 1;
 
-    // Calcular cuántas barras caben en el canvas
-    const maxBars = Math.floor(width / (barWidth + minBarGap));
+    // Calcular cuántas barras caben en el ancho efectivo
+    const maxBars = Math.floor(effectiveWidth / (barWidth + minBarGap));
 
     // Si tenemos más peaks que barras disponibles, necesitamos resamplear
-    // Si tenemos menos peaks, espaciamos las barras uniformemente
     const needsResampling = peaksCount > maxBars;
     const barsToRender = needsResampling ? maxBars : peaksCount;
 
-    // Calcular el espaciado real entre barras para ocupar todo el ancho
+    if (barsToRender === 0) {
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      return;
+    }
+
+    // Calcular el espaciado real entre barras para ocupar el ancho efectivo
     const totalBarSpace = barsToRender * barWidth;
-    const totalGapSpace = width - totalBarSpace;
+    const totalGapSpace = effectiveWidth - totalBarSpace;
     const barGap = barsToRender > 1 ? totalGapSpace / (barsToRender - 1) : 0;
     const barStep = barWidth + barGap;
 
-    // AIDEV-NOTE: Progreso basado en TIEMPO
-    const progressX = duration > 0 ? (currentTime / duration) * width : 0;
-
-    console.log(
-      `🎨 Waveform: ${peaksCount} peaks → ${barsToRender} barras, ancho=${width.toFixed(0)}px, progreso=${currentTime.toFixed(1)}/${duration.toFixed(1)}s`,
-    );
+    // AIDEV-NOTE: Progreso de reproducción basado en TIEMPO
+    // Se calcula sobre el ancho TOTAL, no el efectivo
+    const progressX = duration > 0 ? (currentTime / duration) * totalWidth : 0;
 
     // Renderizar barras
     for (let i = 0; i < barsToRender; i++) {
@@ -156,15 +158,17 @@ export function WaveformCanvas({
         peakValue = peaks[i];
       }
 
-      // Posición X de la barra (escalada al ancho del canvas)
+      // Posición X de la barra
       const x = i * barStep;
 
       // Altura de la barra (mínimo 2px para silencios)
       const barHeight = Math.max(2, peakValue * canvasHeight * 0.9);
       const y = (canvasHeight - barHeight) / 2;
 
-      // Color según progreso de reproducción
-      ctx.fillStyle = x < progressX ? progressColor : waveColor;
+      // Color según progreso de reproducción (comparar con posición real en canvas completo)
+      // Durante streaming, las barras que están antes del progressX se colorean
+      const barRealX = isComplete ? x : (x / effectiveWidth) * totalWidth;
+      ctx.fillStyle = barRealX < progressX ? progressColor : waveColor;
 
       // Dibujar barra redondeada
       ctx.beginPath();
@@ -172,14 +176,18 @@ export function WaveformCanvas({
       ctx.fill();
     }
 
-    // Dibujar línea de progreso
-    if (progressX > 0 && progressX <= width) {
-      ctx.fillStyle = progressColor;
-      ctx.fillRect(progressX - 1, 0, 2, canvasHeight);
+    // Dibujar línea de progreso de reproducción
+    // Durante streaming, la línea se muestra en la posición proporcional
+    if (progressX > 0 && progressX <= totalWidth) {
+      const displayProgressX = isComplete ? progressX : (progressX / totalWidth) * effectiveWidth;
+      if (displayProgressX <= effectiveWidth) {
+        ctx.fillStyle = progressColor;
+        ctx.fillRect(displayProgressX - 1, 0, 2, canvasHeight);
+      }
     }
 
     // Dibujar hover line
-    if (hoverX !== null && hoverX >= 0 && hoverX <= width) {
+    if (hoverX !== null && hoverX >= 0 && hoverX <= totalWidth) {
       ctx.strokeStyle = hoverColor;
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -198,6 +206,8 @@ export function WaveformCanvas({
     waveColor,
     progressColor,
     hoverColor,
+    generationProgress,
+    isLoading,
   ]);
 
   // Manejar hover

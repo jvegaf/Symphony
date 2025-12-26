@@ -37,15 +37,21 @@ pub const PLAY_VALUE: u32 = 0;
 
 /// Tamaño de ventana para calcular peaks de waveform (en samples)
 ///
-/// AIDEV-NOTE: 8192 samples por peak es el valor estándar (estilo Musicat)
-/// - 44100 Hz ÷ 8192 = ~5.38 peaks/segundo
-/// - Genera buen detalle visual
-/// - El canvas se encarga de escalar/resamplear según su ancho
+/// AIDEV-NOTE: Valor usado para el sampling rápido de waveform
+/// El tamaño real de ventana se calcula dinámicamente basado en la duración
 pub const WAVEFORM_WINDOW_SIZE: usize = 8192;
 
-/// Número de peaks por paquete de streaming
-/// ~100 paquetes para mostrar progreso incremental
-pub const WAVEFORM_PEAKS_PER_PACKET: usize = 100;
+/// Número de peaks objetivo para el waveform
+/// AIDEV-NOTE: ~800 peaks es suficiente para un canvas de 1600px
+/// Valores más altos = más detalle pero más tiempo de generación
+pub const WAVEFORM_TARGET_PEAKS: usize = 800;
+
+/// Número de paquetes entre emisiones de eventos de progreso
+/// Mayor valor = menos overhead IPC, menos actualizaciones de UI
+pub const WAVEFORM_PEAKS_PER_PACKET: usize = 50;
+
+/// Ratio de skip de paquetes (DESHABILITADO - no usado en nueva implementación)
+pub const WAVEFORM_PACKET_SKIP_RATIO: usize = 1;
 
 /// Método de cálculo de peaks por defecto
 /// AIDEV-NOTE: RMS es más perceptualmente relevante que peak simple

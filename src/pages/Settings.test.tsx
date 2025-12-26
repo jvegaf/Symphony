@@ -9,6 +9,12 @@ import { DEFAULT_SETTINGS } from '../types/settings';
 
 import { Settings } from './Settings';
 
+// Mock @tauri-apps/api/core
+const mockInvoke = vi.fn();
+vi.mock('@tauri-apps/api/core', () => ({
+  invoke: (...args: unknown[]) => mockInvoke(...args),
+}));
+
 // Mock useSettings hook
 const mockUpdateSettings = vi.fn();
 const mockResetSettings = vi.fn();
@@ -40,6 +46,7 @@ const createWrapper = () => {
 describe('Settings', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockInvoke.mockResolvedValue(undefined);
     // Create a FRESH copy of DEFAULT_SETTINGS for each test to avoid reference issues
     // The Settings component compares `settings !== localSettings` by reference
     mockUseSettings.settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
@@ -245,6 +252,51 @@ describe('Settings', () => {
 
       await waitFor(() => {
         expect(autoScanCheckbox.checked).toBe(true);
+      });
+    });
+
+    it('debería mostrar sección de mantenimiento con botón limpiar caché', async () => {
+      render(<Settings />, { wrapper: createWrapper() });
+
+      const libraryTab = screen.getByText('Biblioteca');
+      await userEvent.click(libraryTab);
+
+      expect(screen.getByText('Mantenimiento')).toBeInTheDocument();
+      expect(screen.getByText('Limpiar caché de waveforms')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Limpiar caché' })).toBeInTheDocument();
+    });
+
+    it('debería llamar invoke al limpiar caché', async () => {
+      const user = userEvent.setup();
+      render(<Settings />, { wrapper: createWrapper() });
+
+      const libraryTab = screen.getByText('Biblioteca');
+      await user.click(libraryTab);
+
+      const clearButton = screen.getByRole('button', { name: 'Limpiar caché' });
+      await user.click(clearButton);
+
+      await waitFor(() => {
+        expect(mockInvoke).toHaveBeenCalledWith('clear_waveform_cache');
+      });
+    });
+
+    it('debería mostrar estado de carga mientras limpia caché', async () => {
+      mockInvoke.mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 100)));
+      const user = userEvent.setup();
+      render(<Settings />, { wrapper: createWrapper() });
+
+      const libraryTab = screen.getByText('Biblioteca');
+      await user.click(libraryTab);
+
+      const clearButton = screen.getByRole('button', { name: 'Limpiar caché' });
+      await user.click(clearButton);
+
+      expect(screen.getByRole('button', { name: 'Limpiando...' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Limpiando...' })).toBeDisabled();
+
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Limpiar caché' })).toBeInTheDocument();
       });
     });
   });

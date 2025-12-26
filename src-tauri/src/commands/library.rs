@@ -291,6 +291,29 @@ pub struct DeleteTrackResult {
     pub file_path: String,
 }
 
+/// Resetea la biblioteca eliminando todas las pistas, playlists y caché de waveforms
+///
+/// AIDEV-NOTE: Esta operación es destructiva pero no elimina archivos físicos.
+/// Solo limpia la base de datos para empezar de cero.
+#[tauri::command]
+pub async fn reset_library() -> Result<queries::ResetLibraryResult, String> {
+    let db = crate::db::get_connection().map_err(|e| e.to_string())?;
+    
+    log::warn!("🗑️ Iniciando reset de biblioteca...");
+    
+    let result = queries::reset_library(&db.conn)
+        .map_err(|e| format!("Error al resetear biblioteca: {}", e))?;
+    
+    log::info!(
+        "✅ Biblioteca reseteada: {} pistas, {} playlists, {} waveforms eliminados",
+        result.tracks_deleted,
+        result.playlists_deleted,
+        result.waveforms_deleted
+    );
+    
+    Ok(result)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
