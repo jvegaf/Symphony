@@ -136,7 +136,7 @@ Se resolvieron tres bugs críticos que afectaban la interacción del usuario con
 **Documentación técnica y verificación:**
 - [`docs/WAVEFORM_FIXES_COMPLETE.md`](docs/WAVEFORM_FIXES_COMPLETE.md) — Resumen técnico y diagramas
 - [`docs/WAVEFORM_FIXES_QUICKREF.md`](docs/WAVEFORM_FIXES_QUICKREF.md) — Guía rápida de testing
-- [`scripts/verify-waveform-fixes.sh`](scripts/verify-waveform-fixes.sh) — Script de verificación automatizada
+- [`scripts/verify-waveform-fixes.sh`](../scripts/verify-waveform-fixes.sh) — Script de verificación automatizada
 - [`src/components/analysis/AIDEV-CuePointEditor-PointerEvents.md`](src/components/analysis/AIDEV-CuePointEditor-PointerEvents.md) — Patrón de overlays SVG
 
 **Resultados de testing:**

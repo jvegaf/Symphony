@@ -17,7 +17,7 @@ Symphony es una aplicación de escritorio para gestionar bibliotecas musicales p
 - **Escribe pruebas primero**: Define el comportamiento esperado antes de implementar.
 - **Cobertura mínima del 80%**: Todo nuevo código debe alcanzar al menos 80% de cobertura.
 - **Pruebas significativas**: Las pruebas deben verificar comportamiento, no solo cobertura.
-- Referencia: [testing.instructions.md](./instructions/testing.instructions.md)
+	- Referencia: [testing.instructions.md](instructions/testing.instructions.md)
 
 ### 2. Convenciones de Commit (Conventional Commits)
 Todos los commits deben seguir el formato:
@@ -212,12 +212,12 @@ Antes de hacer push, verifica:
 
 ## Recursos
 
-- [React TypeScript Guidelines](./instructions/react-typescript.instructions.md)
-- [Tauri Rust Guidelines](./instructions/tauri-rust.instructions.md)
-- [Testing Strategy](./instructions/testing.instructions.md)
-- [Documentation Standards](./instructions/documentation.instructions.md)
-- [Git Workflow & Commits](./instructions/git-workflow.instructions.md)
-- [Security Best Practices](./instructions/security.instructions.md)
+- [React TypeScript Guidelines](instructions/react-typescript.instructions.md)
+- [Tauri Rust Guidelines](instructions/tauri-rust.instructions.md)
+- [Testing Strategy](instructions/testing.instructions.md)
+- [Documentation Standards](instructions/documentation.instructions.md)
+- [Git Workflow & Commits](instructions/git-workflow.instructions.md)
+- [Security Best Practices](instructions/security.instructions.md)
 
 ---
 

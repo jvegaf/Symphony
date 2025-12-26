@@ -18,12 +18,12 @@ Estándares específicos por área:
 
 | Archivo | Propósito |
 |---------|-----------|
-| [react-typescript.instructions.md](./instructions/react-typescript.instructions.md) | Desarrollo con React 18 + TypeScript |
-| [tauri-rust.instructions.md](./instructions/tauri-rust.instructions.md) | Desarrollo con Tauri 2.0 + Rust |
-| [testing.instructions.md](./instructions/testing.instructions.md) | Estrategia TDD con 80%+ cobertura |
-| [documentation.instructions.md](./instructions/documentation.instructions.md) | Documentación en español |
-| [git-workflow.instructions.md](./instructions/git-workflow.instructions.md) | Conventional Commits y Git workflow |
-| [security.instructions.md](./instructions/security.instructions.md) | Seguridad y mejores prácticas |
+| [react-typescript.instructions.md](instructions/react-typescript.instructions.md) | Desarrollo con React 18 + TypeScript |
+| [tauri-rust.instructions.md](instructions/tauri-rust.instructions.md) | Desarrollo con Tauri 2.0 + Rust |
+| [testing.instructions.md](instructions/testing.instructions.md) | Estrategia TDD con 80%+ cobertura |
+| [documentation.instructions.md](instructions/documentation.instructions.md) | Documentación en español |
+| [git-workflow.instructions.md](instructions/git-workflow.instructions.md) | Conventional Commits y Git workflow |
+| [security.instructions.md](instructions/security.instructions.md) | Seguridad y mejores prácticas |
 
 ### 3. Directorio `prompts/`
 Prompts reutilizables para tareas comunes:
@@ -258,9 +258,9 @@ Para la siguiente característica:
 
 ## Recursos Internos
 
-- **Configuración principal:** [.github/copilot-instructions.md](./.github/copilot-instructions.md)
-- **Guía de commits:** [.github/instructions/git-workflow.instructions.md](./.github/instructions/git-workflow.instructions.md)
-- **Estrategia de testing:** [.github/instructions/testing.instructions.md](./.github/instructions/testing.instructions.md)
+- **Configuración principal:** [copilot-instructions.md](./copilot-instructions.md)
+ - **Guía de commits:** [instructions/git-workflow.instructions.md](instructions/git-workflow.instructions.md)
+ - **Estrategia de testing:** [instructions/testing.instructions.md](instructions/testing.instructions.md)
 - **Especificación del proyecto:** [docs/base.md](../docs/base.md)
 
 ---

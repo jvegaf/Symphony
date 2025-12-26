@@ -27,7 +27,7 @@
 **Documentación y verificación:**
 - Ver [`docs/WAVEFORM_FIXES_COMPLETE.md`](docs/WAVEFORM_FIXES_COMPLETE.md)
 - Ver [`docs/WAVEFORM_FIXES_QUICKREF.md`](docs/WAVEFORM_FIXES_QUICKREF.md)
-- Script: [`scripts/verify-waveform-fixes.sh`](scripts/verify-waveform-fixes.sh)
+- Script: [`scripts/verify-waveform-fixes.sh`](../scripts/verify-waveform-fixes.sh)
 
 **Resultado:**
 - Todos los bugs críticos de interacción de waveform resueltos y verificados.

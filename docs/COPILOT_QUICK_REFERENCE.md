@@ -8,12 +8,12 @@ description: "Referencia rápida de GitHub Copilot para Symphony"
 
 | Necesito... | Haz... | Archivo |
 |------------|--------|---------|
-| Crear componente React | `@workspace create-component` | [create-component.prompt.md](.github/prompts/create-component.prompt.md) |
-| Escribir tests (TDD) | `@workspace write-tests` | [write-tests.prompt.md](.github/prompts/write-tests.prompt.md) |
-| Revisar código | `@reviewer mode` | [reviewer.chatmode.md](.github/chatmodes/reviewer.chatmode.md) |
-| Planificar arquitectura | `@architect mode` | [architect.chatmode.md](.github/chatmodes/architect.chatmode.md) |
-| Debuggear problema | `@debugger mode` | [debugger.chatmode.md](.github/chatmodes/debugger.chatmode.md) |
-| Generar documentación | `@workspace generate-docs` | [generate-docs.prompt.md](.github/prompts/generate-docs.prompt.md) |
+| Crear componente React | `@workspace create-component` | [create-component.prompt.md](../.github/prompts/create-component.prompt.md) |
+| Escribir tests (TDD) | `@workspace write-tests` | [write-tests.prompt.md](../.github/prompts/write-tests.prompt.md) |
+| Revisar código | `@reviewer mode` | [reviewer.agent.md](../.github/agents/reviewer.agent.md) |
+| Planificar arquitectura | `@architect mode` | [architect.agent.md](../.github/agents/architect.agent.md) |
+| Debuggear problema | `@debugger mode` | [debugger.agent.md](../.github/agents/debugger.agent.md) |
+| Generar documentación | `@workspace generate-docs` | [generate-docs.prompt.md](../.github/prompts/generate-docs.prompt.md) |
 
 ## Convenciones Quick Reference
 
@@ -101,7 +101,7 @@ cargo clippy               # Rust linter
    Crear tests para [feature]
    ```
 
-3. **Implementa** - Usa estándares en [instructions](./instructions/)
+3. **Implementa** - Usa estándares en [react-typescript.instructions.md](../.github/instructions/react-typescript.instructions.md)
    ```
    El test pasa cuando se implementa [X]
    ```
@@ -120,15 +120,15 @@ cargo clippy               # Rust linter
 
 | Documento | Para |
 |-----------|------|
-| [copilot-instructions.md](.github/copilot-instructions.md) | Overview del proyecto |
-| [react-typescript.instructions.md](.github/insarchitect.agent.md](./agents/architect.agent.md) | Planificación de arquitectura |
-| [reviewer.agent.md](./agents/reviewer.agent.md) | Code reviews de calidad |
-| [debugger.agent.md](./agents/debugger.agent.md) | Debugging y troubleshooting |tructions/react-typescript.instructions.md) | Frontend |
-| [tauri-rust.instructions.md](.github/instructions/tauri-rust.instructions.md) | Backend |
-| [testing.instructions.md](.github/instructions/testing.instructions.md) | Testing TDD |
-| [documentation.instructions.md](.github/instructions/documentation.instructions.md) | Docs en español |
-| [git-workflow.instructions.md](.github/instructions/git-workflow.instructions.md) | Git & commits |
-| [security.instructions.md](.github/instructions/security.instructions.md) | Seguridad |
+| [copilot-instructions.md](../.github/copilot-instructions.md) | Overview del proyecto |
+| [react-typescript.instructions.md](../.github/instructions/react-typescript.instructions.md) | Guía frontend (React + TypeScript) |
+| [tauri-rust.instructions.md](../.github/instructions/tauri-rust.instructions.md) | Guía backend (Tauri + Rust) |
+| [testing.instructions.md](../.github/instructions/testing.instructions.md) | Estrategia de testing (TDD) |
+| [documentation.instructions.md](../.github/instructions/documentation.instructions.md) | Estándares de documentación |
+| [git-workflow.instructions.md](../.github/instructions/git-workflow.instructions.md) | Git & Conventional Commits |
+| [security.instructions.md](../.github/instructions/security.instructions.md) | Seguridad y buenas prácticas |
+| Prompts (plantillas) | [create-component.prompt.md](../.github/prompts/create-component.prompt.md) |
+| Agentes y guías | [architect.agent.md](../.github/agents/architect.agent.md) |
 
 ## Debugging Común
 
@@ -163,4 +163,4 @@ Build:    Vite + Tauri + GitHub Actions (releases automáticas)
 
 ---
 
-**Más info:** Lee [.github/SETUP.md](.github/SETUP.md) para setup completo.
+**Más info:** Lee [../.github/SETUP.md](../.github/SETUP.md) para setup completo.

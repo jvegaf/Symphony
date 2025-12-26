@@ -288,4 +288,4 @@ Según confidence score de 88% (High Confidence):
 
 - [Plan de Implementación](./implementation-plan.md)
 - [Documento Base](./base.md)
-- [Estándares de Testing](./.github/instructions/testing.instructions.md)
+- [Estándares de Testing](../.github/instructions/testing.instructions.md)

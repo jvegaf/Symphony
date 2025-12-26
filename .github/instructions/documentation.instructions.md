@@ -131,9 +131,9 @@ cargo tarpaulin
 
 ## Documentación
 
-- [ARCHITECTURE.md](./docs/ARCHITECTURE.md) - Arquitectura técnica
-- [API.md](./docs/API.md) - API de comandos Tauri
-- [CHANGELOG.md](./CHANGELOG.md) - Historial de cambios
+- [ARCHITECTURE.md](../../docs/ARCHITECTURE.md) - Arquitectura técnica
+- [API.md](../../docs/API.md) - API de comandos Tauri
+- [CHANGELOG.md](../../CHANGELOG.md) - Historial de cambios
 ```
 
 ### ARCHITECTURE.md

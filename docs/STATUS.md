@@ -68,12 +68,12 @@ docs/
 
 ## 🔗 Enlaces Útiles
 
-- [Guía técnica de fixes de waveform](./docs/WAVEFORM_FIXES_COMPLETE.md)
-- [Guía rápida de testing de waveform](./docs/WAVEFORM_FIXES_QUICKREF.md)
-- [Script de verificación](./scripts/verify-waveform-fixes.sh)
-- [Plan de Implementación](./docs/implementation-plan.md)
-- [Tareas Detalladas](./docs/tasks.md)
-- [CHANGELOG](./CHANGELOG.md)
+- [Guía técnica de fixes de waveform](./WAVEFORM_FIXES_COMPLETE.md)
+- [Guía rápida de testing de waveform](./WAVEFORM_FIXES_QUICKREF.md)
+- [Script de verificación](../scripts/verify-waveform-fixes.sh)
+- [Plan de Implementación](./implementation-plan.md)
+- [Tareas Detalladas](./tasks.md)
+- [CHANGELOG](../CHANGELOG.md)
 
 ---
 
