@@ -3,7 +3,7 @@
 Aplicación de escritorio profesional para gestionar bibliotecas musicales con importación, reproducción, análisis de audio y herramientas de organización avanzadas.
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![Version](https://img.shields.io/badge/version-0.8.1-blue)]()
+[![Version](https://img.shields.io/badge/version-0.9.0-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 
 ## ✨ Características
@@ -82,6 +82,33 @@ Próximamente en releases oficiales.
 - **Cobertura:** 80%+ en todos los módulos
 - **Build:** Exitosa (331.31 kB)
 - No hay bugs críticos abiertos en el sistema de waveform
+
+## ⚡ Waveform - Mejoras de rendimiento (v0.9.0)
+
+- Implementado muestreo por búsqueda ("seek-sampling") en el backend Rust: se muestrean posiciones temporales uniformes y se decodifican solo unos pocos paquetes cerca de cada posición, reduciendo drásticamente la cantidad de datos decodificados.
+- Renderizado progresivo en canvas: mientras se generan peaks en backend, el frontend dibuja únicamente la porción proporcional del canvas (crece de izquierda a derecha hasta completar el 100%). Esto mejora la percepción de rapidez en UI.
+- Optimización de desarrollo: los crates de audio se compilan con `opt-level = 3` en el perfil `dev` para evitar la enorme penalización de rendimiento de Symphonia en modo debug.
+
+Benchmarks (ejemplo con test-data/bang.mp3, ~362s):
+- SEEK SAMPLING (release): ~0.15s para 800 peaks
+- FULL DECODE (release): ~0.86s para 1950 peaks
+- SEEK SAMPLING (dev optimized): ~1.35s
+- FULL DECODE (dev unoptimized): ~33s (sin optimizaciones)
+
+Comandos útiles:
+
+```bash
+# Ejecutar benchmark (release)
+cd src-tauri && cargo run --bin waveform_bench --release
+
+# Forzar regenerar waveform (borra cache DB local)
+rm -f ~/.config/symphony/symphony.db
+
+# Iniciar dev (ahora con optimizaciones en crates de audio)
+npm run tauri dev
+```
+
+Ver detalles de implementación: [docs/waveform-implementation.md](./docs/waveform-implementation.md)
 
 ## 🛠️ Desarrollo
 
