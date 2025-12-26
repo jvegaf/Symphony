@@ -9,6 +9,7 @@ import {
   Sidebar,
   TrackTable,
 } from "./components/layout";
+import type { SortColumn, SortDirection } from "./components/layout/TrackTable";
 import { TrackDetail } from "./components/TrackDetail";
 import { useAudioPlayer } from "./hooks/useAudioPlayer";
 import { useGetAllTracks, useImportLibrary, useBatchFilenameToTags } from "./hooks/useLibrary";
@@ -40,6 +41,11 @@ function App() {
   });
   // AIDEV-NOTE: Estado para barra de progreso de batch operations
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number } | null>(null);
+
+  // AIDEV-NOTE: Estado de ordenamiento de TrackTable - levantado a App.tsx
+  // para que no se pierda al navegar a Settings y volver
+  const [sortColumn, setSortColumn] = useState<SortColumn>('title');
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const { data: tracks = [], isLoading } = useGetAllTracks();
   const importMutation = useImportLibrary();
@@ -280,36 +286,44 @@ function App() {
           selectedTracksCount={selectedTracks.length}
         />
 
-        {activeTab === "settings" ? (
+        {/* AIDEV-NOTE: Usamos hidden en lugar de condicional para evitar desmontaje
+            Esto preserva el estado del waveform cuando navegamos a Settings */}
+        <div className={activeTab === "settings" ? "flex flex-1 overflow-hidden" : "hidden"}>
           <Settings />
-        ) : (
-          <div className="flex flex-1 overflow-hidden">
-            <Sidebar
-              searchQuery={searchQuery}
-              onSearchChange={setSearchQuery}
-              totalTracks={tracks.length}
+        </div>
+
+        <div className={activeTab !== "settings" ? "flex flex-1 overflow-hidden" : "hidden"}>
+          <Sidebar
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+            totalTracks={tracks.length}
+          />
+
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <PlayerSection 
+              track={playingTrack} 
+              tracks={filteredTracks}
+              onTrackChange={setPlayingTrack}
             />
 
-            <div className="flex-1 flex flex-col overflow-hidden">
-              <PlayerSection 
-                track={playingTrack} 
-                tracks={filteredTracks}
-                onTrackChange={setPlayingTrack}
-              />
-
-              <TrackTable
-                tracks={filteredTracks}
-                selectedTracks={selectedTracks}
-                playingTrack={playingTrack}
-                onTracksSelect={handleTracksSelect}
-                onTrackDoubleClick={handleTrackDoubleClick}
-                onTrackDetails={handleTrackDetails}
-                onBatchFilenameToTags={handleBatchFilenameToTags}
-                isLoading={isLoading}
-              />
-            </div>
+            <TrackTable
+              tracks={filteredTracks}
+              selectedTracks={selectedTracks}
+              playingTrack={playingTrack}
+              onTracksSelect={handleTracksSelect}
+              onTrackDoubleClick={handleTrackDoubleClick}
+              onTrackDetails={handleTrackDetails}
+              onBatchFilenameToTags={handleBatchFilenameToTags}
+              isLoading={isLoading}
+              sortColumn={sortColumn}
+              sortDirection={sortDirection}
+              onSortChange={(column, direction) => {
+                setSortColumn(column);
+                setSortDirection(direction);
+              }}
+            />
           </div>
-        )}
+        </div>
 
         {/* Modal de detalles del track */}
         {trackDetailsId && (

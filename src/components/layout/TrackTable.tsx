@@ -6,6 +6,7 @@
  * - Selección visual mediante background color al hacer click
  * - Ratings editables inline con StarRating component
  * - Double-click para reproducir track
+ * - Sort estado levantado a App.tsx para persistir al navegar a Settings
  * - Context menu nativo de Tauri con opciones:
  *   - "Details": abrir modal de metadatos (TrackDetail component)
  *   - "Filename→Tags (N tracks)": batch update desde filename para selección múltiple
@@ -22,6 +23,10 @@ import { Menu, MenuItem } from "@tauri-apps/api/menu";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { confirm } from "@tauri-apps/plugin-dialog";
 
+// AIDEV-NOTE: Tipos exportados para que App.tsx pueda usarlos
+export type SortColumn = 'title' | 'artist' | 'album' | 'duration' | 'bpm' | 'rating' | 'year' | 'dateAdded' | 'bitrate';
+export type SortDirection = 'asc' | 'desc';
+
 interface TrackTableProps {
   tracks: Track[];
   selectedTracks: Track[];
@@ -37,6 +42,10 @@ interface TrackTableProps {
   onTrackDetails?: (track: Track) => void;
   onBatchFilenameToTags?: (tracks: Track[]) => void;
   isLoading: boolean;
+  // AIDEV-NOTE: Props para sort controlado desde App.tsx (persiste al navegar)
+  sortColumn?: SortColumn;
+  sortDirection?: SortDirection;
+  onSortChange?: (column: SortColumn, direction: SortDirection) => void;
 }
 
 const formatDuration = (seconds: number): string => {
@@ -65,6 +74,9 @@ export const TrackTable = ({
   onTrackDetails,
   onBatchFilenameToTags,
   isLoading,
+  sortColumn: externalSortColumn,
+  sortDirection: externalSortDirection,
+  onSortChange,
 }: TrackTableProps) => {
   // AIDEV-NOTE: Hook para actualizar rating en DB y archivo MP3
   const { mutate: updateRating } = useUpdateTrackRating();
@@ -78,21 +90,20 @@ export const TrackTable = ({
   // AIDEV-NOTE: Índice del track con foco actual (para navegación con teclado)
   const [focusedIndex, setFocusedIndex] = useState<number>(0);
 
-  // AIDEV-NOTE: Estado de ordenamiento
-  type SortColumn = 'title' | 'artist' | 'album' | 'duration' | 'bpm' | 'rating' | 'year' | 'dateAdded' | 'bitrate';
-  type SortDirection = 'asc' | 'desc';
-  const [sortColumn, setSortColumn] = useState<SortColumn>('title');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
+  // AIDEV-NOTE: Estado de ordenamiento - usar props externas si están disponibles
+  // Esto permite que App.tsx mantenga el estado al navegar a Settings
+  const sortColumn = externalSortColumn ?? 'title';
+  const sortDirection = externalSortDirection ?? 'asc';
 
   // AIDEV-NOTE: Función para manejar click en header (cambiar ordenamiento)
   const handleSort = (column: SortColumn) => {
-    if (sortColumn === column) {
-      // Si es la misma columna, invertir dirección
-      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
-    } else {
-      // Nueva columna, empezar en ascendente
-      setSortColumn(column);
-      setSortDirection('asc');
+    const newDirection = sortColumn === column
+      ? (sortDirection === 'asc' ? 'desc' : 'asc')
+      : 'asc';
+    
+    // Si hay callback externo, usarlo; sino no hacer nada (estado es controlado)
+    if (onSortChange) {
+      onSortChange(column, newDirection);
     }
   };
 
