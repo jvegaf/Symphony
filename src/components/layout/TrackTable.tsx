@@ -15,7 +15,7 @@
  * - Usa LogicalPosition para popup menu (clientX/clientY son logical pixels en browser)
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import type { Track } from "../../types/library";
 import { StarRating } from "../ui/StarRating";
 import { useUpdateTrackRating, useDeleteTrack } from "../../hooks/useLibrary";
@@ -112,9 +112,12 @@ export const TrackTable = ({
   };
 
   // AIDEV-NOTE: Ordenar tracks según columna y dirección
-  const sortedTracks = [...tracks].sort((a, b) => {
-    let aValue: string | number = '';
-    let bValue: string | number = '';
+  // Usamos useMemo para evitar crear un nuevo array en cada render
+  // y prevenir bucles infinitos en el useEffect que notifica cambios
+  const sortedTracks = useMemo(() => {
+    return [...tracks].sort((a, b) => {
+      let aValue: string | number = '';
+      let bValue: string | number = '';
 
     switch (sortColumn) {
       case 'title':
@@ -155,19 +158,44 @@ export const TrackTable = ({
         break;
     }
 
-    if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
-    if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
-    return 0;
-  });
+      if (aValue < bValue) return sortDirection === 'asc' ? -1 : 1;
+      if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }, [tracks, sortColumn, sortDirection]);
+
+  // AIDEV-NOTE: Referencia para evitar llamadas redundantes a onSortedTracksChange
+  // Guardamos el último hash para comparar si realmente cambió algo
+  const lastNotifiedRef = useRef<{ sortColumn: SortColumn; sortDirection: SortDirection; playingId: string | undefined } | null>(null);
 
   // AIDEV-NOTE: Notificar a App.tsx cuando cambian los tracks ordenados
   // Esto permite regenerar la cola de reproducción cuando cambia el orden
+  // IMPORTANTE: Solo notificamos cuando realmente cambia el sort, no en cada render
   useEffect(() => {
-    if (onSortedTracksChange && playingTrack) {
-      const playingIndex = sortedTracks.findIndex(t => t.id === playingTrack.id);
-      if (playingIndex !== -1) {
-        onSortedTracksChange(sortedTracks, playingIndex);
-      }
+    if (!onSortedTracksChange || !playingTrack) return;
+
+    const currentState = {
+      sortColumn,
+      sortDirection,
+      playingId: playingTrack.id,
+    };
+
+    // Comparar con el último estado notificado
+    const lastState = lastNotifiedRef.current;
+    if (
+      lastState &&
+      lastState.sortColumn === currentState.sortColumn &&
+      lastState.sortDirection === currentState.sortDirection &&
+      lastState.playingId === currentState.playingId
+    ) {
+      // No ha cambiado nada relevante, no notificar
+      return;
+    }
+
+    const playingIndex = sortedTracks.findIndex(t => t.id === playingTrack.id);
+    if (playingIndex !== -1) {
+      lastNotifiedRef.current = currentState;
+      onSortedTracksChange(sortedTracks, playingIndex);
     }
   }, [sortColumn, sortDirection, onSortedTracksChange, playingTrack, sortedTracks]);
 

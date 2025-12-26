@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 
 import type { Track } from "../types/library";
 
@@ -69,6 +69,11 @@ export function usePlaybackQueue(): UsePlaybackQueueResult {
     currentIndex: -1,
   });
 
+  // AIDEV-NOTE: Usar ref para acceder siempre al estado más reciente en los callbacks
+  // Esto evita problemas de closures con valores stale
+  const stateRef = useRef(state);
+  stateRef.current = state;
+
   /**
    * Genera una nueva cola desde el índice especificado hasta el final
    * AIDEV-NOTE: Se llama al hacer doble click o al cambiar el orden de la lista
@@ -97,42 +102,48 @@ export function usePlaybackQueue(): UsePlaybackQueueResult {
   /**
    * Avanza a la siguiente pista en la cola
    * @returns ID de la siguiente pista, o null si no hay más
+   * AIDEV-NOTE: Usa stateRef para leer siempre el estado más reciente
    */
   const next = useCallback((): string | null => {
-    const nextIndex = state.currentIndex + 1;
-    if (nextIndex >= state.queue.length) {
+    const currentState = stateRef.current;
+    const nextIndex = currentState.currentIndex + 1;
+    
+    if (nextIndex >= currentState.queue.length) {
       // No hay más pistas en la cola
       return null;
     }
 
-    const nextId = state.queue[nextIndex];
-    setState((prev) => ({
-      ...prev,
+    const nextId = currentState.queue[nextIndex];
+    setState({
+      queue: currentState.queue,
       currentIndex: nextIndex,
-    }));
+    });
 
     return nextId;
-  }, [state.currentIndex, state.queue]);
+  }, []); // Sin dependencias - usa stateRef
 
   /**
    * Retrocede a la pista anterior en la cola
    * @returns ID de la pista anterior, o null si estamos en la primera
+   * AIDEV-NOTE: Usa stateRef para leer siempre el estado más reciente
    */
   const previous = useCallback((): string | null => {
-    const prevIndex = state.currentIndex - 1;
+    const currentState = stateRef.current;
+    const prevIndex = currentState.currentIndex - 1;
+    
     if (prevIndex < 0) {
       // Ya estamos en la primera pista de la cola
       return null;
     }
 
-    const prevId = state.queue[prevIndex];
-    setState((prev) => ({
-      ...prev,
+    const prevId = currentState.queue[prevIndex];
+    setState({
+      queue: currentState.queue,
       currentIndex: prevIndex,
-    }));
+    });
 
     return prevId;
-  }, [state.currentIndex, state.queue]);
+  }, []); // Sin dependencias - usa stateRef
 
   /**
    * Limpia la cola de reproducción
