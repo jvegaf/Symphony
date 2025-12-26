@@ -4,10 +4,12 @@
  * Coordina la búsqueda en Beatport y la aplicación de tags a archivos locales.
  * Implementa la lógica de merge de tags según las reglas definidas:
  * - Title: Siempre se aplica (corrige nombres mal escritos)
+ * - Artist: Siempre se aplica (corrige artistas incorrectos)
  * - Genre: Siempre se aplica (corrige géneros incorrectos)
  * - Key: Siempre se aplica (reemplaza el existente)
+ * - Album: Siempre se aplica (corrige álbumes)
+ * - Year: Siempre se aplica (corrige años)
  * - BPM: Se ignora si el track local ya tiene BPM
- * - Otros tags: Se aplican solo si el local está vacío
  */
 
 use std::path::Path;
@@ -110,10 +112,12 @@ impl BeatportTagger {
     /// 
     /// Reglas:
     /// - Title: Siempre se aplica (corrige nombres mal escritos)
+    /// - Artist: Siempre se aplica (corrige artistas incorrectos)
     /// - Genre: Siempre se aplica (corrige géneros incorrectos)
     /// - Key: Siempre se aplica
+    /// - Album: Siempre se aplica (corrige álbumes)
+    /// - Year: Siempre se aplica (corrige años)
     /// - BPM: Se ignora si local tiene valor
-    /// - Album, Year: Se aplican si local está vacío
     /// - Label, ISRC: Siempre se aplican (generalmente no existen en local)
     /// - Artwork: Siempre se aplica si está disponible
     fn merge_tags(
@@ -121,26 +125,24 @@ impl BeatportTagger {
         beatport: &BeatportTags,
         local_bpm: Option<f64>,
         _local_genre: Option<&str>,  // Ignorado - siempre aplicamos genre de Beatport
-        local_album: Option<&str>,
-        local_year: Option<i32>,
+        _local_album: Option<&str>,  // Ignorado - siempre aplicamos album de Beatport
+        _local_year: Option<i32>,    // Ignorado - siempre aplicamos year de Beatport
     ) -> BeatportTags {
         BeatportTags {
             // Title: Siempre se aplica (corrige nombres)
             title: beatport.title.clone(),
+            // Artist: Siempre se aplica (corrige artistas)
+            artist: beatport.artist.clone(),
             // BPM: Solo si local no tiene
             bpm: if local_bpm.is_some() { None } else { beatport.bpm },
             // Key: Siempre se aplica
             key: beatport.key.clone(),
             // Genre: Siempre se aplica (corrige géneros incorrectos)
             genre: beatport.genre.clone(),
-            // Album: Solo si local no tiene
-            album: if local_album.is_some() && !local_album.unwrap().is_empty() { 
-                None 
-            } else { 
-                beatport.album.clone() 
-            },
-            // Year: Solo si local no tiene
-            year: if local_year.is_some() { None } else { beatport.year },
+            // Album: Siempre se aplica (corrige álbumes)
+            album: beatport.album.clone(),
+            // Year: Siempre se aplica (corrige años)
+            year: beatport.year,
             // Label: Siempre se aplica (generalmente no hay en local)
             label: beatport.label.clone(),
             // ISRC: Siempre se aplica (generalmente no hay en local)
@@ -197,6 +199,7 @@ impl BeatportTagger {
                 // Crear tags con solo artwork para el resultado
                 let tags = BeatportTags {
                     title: None,
+                    artist: None,
                     bpm: None,
                     key: None,
                     genre: None,
@@ -271,6 +274,10 @@ impl BeatportTagger {
         // Aplicar tags solo si tienen valor y hay algo que escribir
         if let Some(ref title) = tags.title {
             tag.set_title(title.clone());
+        }
+
+        if let Some(ref artist) = tags.artist {
+            tag.set_artist(artist.clone());
         }
 
         if let Some(bpm) = tags.bpm {
@@ -376,11 +383,12 @@ mod tests {
         let tagger = BeatportTagger::with_new_client().unwrap();
         let beatport = BeatportTags {
             title: Some("Test Track".to_string()),
+            artist: Some("Test Artist".to_string()),
             bpm: Some(128.0),
             key: Some("A minor".to_string()),
             genre: Some("Techno".to_string()),
             label: None,
-            album: None,
+            album: Some("Test Album".to_string()),
             year: Some(2024),
             isrc: None,
             catalog_number: None,
@@ -393,7 +401,10 @@ mod tests {
         assert!(merged.bpm.is_none()); // BPM de Beatport no se aplica
         assert_eq!(merged.key, Some("A minor".to_string())); // Key siempre se aplica
         assert_eq!(merged.title, Some("Test Track".to_string())); // Title siempre se aplica
+        assert_eq!(merged.artist, Some("Test Artist".to_string())); // Artist siempre se aplica
         assert_eq!(merged.genre, Some("Techno".to_string())); // Genre siempre se aplica
+        assert_eq!(merged.album, Some("Test Album".to_string())); // Album siempre se aplica
+        assert_eq!(merged.year, Some(2024)); // Year siempre se aplica
     }
 
     #[test]
@@ -401,6 +412,7 @@ mod tests {
         let tagger = BeatportTagger::with_new_client().unwrap();
         let beatport = BeatportTags {
             title: None,
+            artist: None,
             bpm: Some(128.0),
             key: Some("A minor".to_string()),
             genre: None,
@@ -423,6 +435,7 @@ mod tests {
         let tagger = BeatportTagger::with_new_client().unwrap();
         let beatport = BeatportTags {
             title: None,
+            artist: None,
             bpm: None,
             key: Some("8A".to_string()),
             genre: None,
@@ -441,51 +454,30 @@ mod tests {
     }
 
     #[test]
-    fn test_merge_tags_genre_always_applied() {
+    fn test_merge_tags_all_always_applied() {
         let tagger = BeatportTagger::with_new_client().unwrap();
         let beatport = BeatportTags {
-            title: None,
+            title: Some("Correct Title".to_string()),
+            artist: Some("Correct Artist".to_string()),
             bpm: None,
             key: None,
             genre: Some("Techno".to_string()),
             label: None,
-            album: None,
-            year: None,
+            album: Some("Correct Album".to_string()),
+            year: Some(2024),
             isrc: None,
             catalog_number: None,
             artwork_url: None,
             artwork_data: None,
         };
 
-        // Genre siempre se aplica (corrige géneros incorrectos)
-        let merged = tagger.merge_tags(&beatport, None, Some("House"), None, None);
-        assert_eq!(merged.genre, Some("Techno".to_string()));
-
-        // También se aplica si local no tiene género
-        let merged2 = tagger.merge_tags(&beatport, None, None, None, None);
-        assert_eq!(merged2.genre, Some("Techno".to_string()));
-    }
-
-    #[test]
-    fn test_merge_tags_title_always_applied() {
-        let tagger = BeatportTagger::with_new_client().unwrap();
-        let beatport = BeatportTags {
-            title: Some("Correct Title".to_string()),
-            bpm: None,
-            key: None,
-            genre: None,
-            label: None,
-            album: None,
-            year: None,
-            isrc: None,
-            catalog_number: None,
-            artwork_url: None,
-            artwork_data: None,
-        };
-
-        // Title siempre se aplica (corrige nombres mal escritos)
-        let merged = tagger.merge_tags(&beatport, None, None, None, None);
+        // Todos estos campos siempre se aplican, incluso si local tiene valores
+        let merged = tagger.merge_tags(&beatport, None, Some("House"), Some("Old Album"), Some(2020));
         assert_eq!(merged.title, Some("Correct Title".to_string()));
+        assert_eq!(merged.artist, Some("Correct Artist".to_string()));
+        assert_eq!(merged.genre, Some("Techno".to_string()));
+        assert_eq!(merged.album, Some("Correct Album".to_string()));
+        assert_eq!(merged.year, Some(2024));
     }
 
     #[test]

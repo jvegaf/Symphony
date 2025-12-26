@@ -309,6 +309,7 @@ pub struct BeatportSearchResult {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BeatportTags {
     pub title: Option<String>,
+    pub artist: Option<String>,
     pub bpm: Option<f64>,
     pub key: Option<String>,
     pub genre: Option<String>,
@@ -326,7 +327,7 @@ pub struct BeatportTags {
 
 impl From<&BeatportTrack> for BeatportTags {
     fn from(track: &BeatportTrack) -> Self {
-        let _artists = track.artists.iter()
+        let artists = track.artists.iter()
             .map(|a| a.name.clone())
             .collect::<Vec<_>>()
             .join(", ");
@@ -352,6 +353,7 @@ impl From<&BeatportTrack> for BeatportTags {
 
         BeatportTags {
             title,
+            artist: if artists.is_empty() { None } else { Some(artists) },
             bpm: track.bpm,
             key: track.get_key_name(),
             genre: track.get_genre_name(),
@@ -495,6 +497,7 @@ mod tests {
     fn test_fix_tags_result_success() {
         let tags = BeatportTags {
             title: Some("Test Track".to_string()),
+            artist: Some("Test Artist".to_string()),
             bpm: Some(128.0),
             key: Some("A minor".to_string()),
             genre: Some("Techno".to_string()),
@@ -529,6 +532,7 @@ mod tests {
         let results = vec![
             FixTagsResult::success("1".to_string(), 1, BeatportTags {
                 title: None,
+                artist: None,
                 bpm: Some(128.0),
                 key: None,
                 genre: None,

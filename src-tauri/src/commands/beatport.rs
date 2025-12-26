@@ -211,6 +211,12 @@ fn update_track_in_db(
         params.push(Box::new(title.clone()));
     }
 
+    // Artist: Siempre se actualiza si tiene valor (corrige artistas)
+    if let Some(ref artist) = tags.artist {
+        updates.push("artist = ?".to_string());
+        params.push(Box::new(artist.clone()));
+    }
+
     // BPM: Solo si local no tiene y Beatport sí tiene
     if current_bpm.is_none() {
         if let Some(bpm) = tags.bpm {
@@ -231,13 +237,13 @@ fn update_track_in_db(
         params.push(Box::new(genre.clone()));
     }
 
-    // Album: Solo si tiene valor de Beatport
+    // Album: Siempre se actualiza si tiene valor (corrige álbumes)
     if let Some(ref album) = tags.album {
         updates.push("album = ?".to_string());
         params.push(Box::new(album.clone()));
     }
 
-    // Year: Solo si tiene valor de Beatport
+    // Year: Siempre se actualiza si tiene valor (corrige años)
     if let Some(year) = tags.year {
         updates.push("year = ?".to_string());
         params.push(Box::new(year));

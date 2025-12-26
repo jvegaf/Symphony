@@ -1504,10 +1504,12 @@ unlisten();
 
 **Lógica de Merge de Tags:**
 - **Title:** Siempre se aplica (corrige nombres mal escritos)
+- **Artist:** Siempre se aplica (corrige artistas incorrectos)
 - **Genre:** Siempre se aplica (corrige géneros incorrectos)
 - **Key:** Siempre se aplica (reemplaza el existente)
+- **Album:** Siempre se aplica (corrige álbumes)
+- **Year:** Siempre se aplica (corrige años)
 - **BPM:** Solo se aplica si el track local NO tiene BPM
-- **Album, Year:** Solo se aplican si el campo local está vacío
 - **Label, ISRC:** Siempre se aplican (generalmente no existen en local)
 - **Artwork:** Siempre se aplica si está disponible
 
