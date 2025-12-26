@@ -114,6 +114,85 @@ pub async fn fix_tags(
     Ok(BatchFixResult::new(results))
 }
 
+/// Busca y aplica SOLO el artwork de múltiples tracks desde Beatport
+/// 
+/// # Arguments
+/// * `track_ids` - Vector de IDs de tracks a procesar
+/// 
+/// # Events
+/// Emite `beatport:progress` con el progreso de cada track
+/// 
+/// # Returns
+/// `BatchFixResult` con el resumen de la operación
+#[tauri::command]
+pub async fn find_artwork(
+    app: AppHandle,
+    _library_state: State<'_, LibraryState>,
+    track_ids: Vec<String>,
+) -> Result<BatchFixResult, String> {
+    let total = track_ids.len();
+    
+    if total == 0 {
+        return Err("No se seleccionaron tracks".to_string());
+    }
+
+    // Crear cliente Beatport
+    let client = Arc::new(
+        BeatportClient::new().map_err(|e| format!("Error creando cliente Beatport: {}", e))?
+    );
+    let tagger = BeatportTagger::new(client);
+
+    let mut results: Vec<FixTagsResult> = Vec::with_capacity(total);
+
+    // Procesar cada track
+    for (index, track_id) in track_ids.iter().enumerate() {
+        // Obtener información del track desde la base de datos
+        let track = {
+            let db = get_connection().map_err(|e| e.to_string())?;
+            queries::get_track(&db.conn, track_id)
+                .map_err(|e| format!("Error obteniendo track {}: {}", track_id, e))?
+        };
+
+        // Emitir progreso - fase de búsqueda
+        let progress = FixTagsProgress {
+            current: index + 1,
+            total,
+            current_track_title: track.title.clone(),
+            phase: FixTagsPhase::Searching,
+        };
+        let _ = app.emit("beatport:progress", &progress);
+
+        // Procesar el track - SOLO artwork
+        let file_path = Path::new(&track.path);
+        
+        let result = tagger.find_artwork_only(
+            track_id,
+            file_path,
+            &track.title,
+            &track.artist,
+            Some(track.duration),
+        ).await;
+
+        results.push(result);
+
+        // Emitir progreso - fase completada
+        let progress = FixTagsProgress {
+            current: index + 1,
+            total,
+            current_track_title: track.title.clone(),
+            phase: if index + 1 == total { FixTagsPhase::Complete } else { FixTagsPhase::Downloading },
+        };
+        let _ = app.emit("beatport:progress", &progress);
+
+        // Pequeña pausa entre requests para evitar rate limiting
+        if index + 1 < total {
+            tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        }
+    }
+
+    Ok(BatchFixResult::new(results))
+}
+
 /// Actualiza el track en la base de datos con los nuevos tags
 fn update_track_in_db(
     track_id: &str,

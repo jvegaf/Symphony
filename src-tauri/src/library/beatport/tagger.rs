@@ -150,6 +150,103 @@ impl BeatportTagger {
         }
     }
 
+    /// Busca y aplica SOLO el artwork de un track (sin modificar otros tags)
+    /// 
+    /// # Arguments
+    /// * `track_id` - ID del track en la base de datos Symphony
+    /// * `file_path` - Ruta al archivo de audio
+    /// * `current_title` - Título actual del track
+    /// * `current_artist` - Artista actual del track
+    /// * `current_duration` - Duración actual en segundos (mejora precisión del matching)
+    pub async fn find_artwork_only(
+        &self,
+        track_id: &str,
+        file_path: &Path,
+        current_title: &str,
+        current_artist: &str,
+        current_duration: Option<f64>,
+    ) -> FixTagsResult {
+        // 1. Buscar el mejor match en Beatport
+        let beatport_track = match self.client.find_best_match(current_title, current_artist, current_duration).await {
+            Ok(track) => track,
+            Err(e) => return FixTagsResult::error(track_id.to_string(), e.to_string()),
+        };
+
+        // 2. Obtener URL del artwork
+        let artwork_url = beatport_track.get_artwork_url(500);
+        
+        if artwork_url.is_none() {
+            return FixTagsResult::error(
+                track_id.to_string(),
+                "Track encontrado pero sin artwork disponible".to_string()
+            );
+        }
+
+        // 3. Descargar artwork
+        let artwork_data = match self.client.download_artwork(artwork_url.as_ref().unwrap()).await {
+            Ok(data) => data,
+            Err(e) => return FixTagsResult::error(track_id.to_string(), format!("Error descargando artwork: {}", e)),
+        };
+
+        // 4. Escribir solo el artwork al archivo
+        match self.write_artwork_only(file_path, &artwork_data) {
+            Ok(()) => {
+                // Crear tags con solo artwork para el resultado
+                let tags = BeatportTags {
+                    bpm: None,
+                    key: None,
+                    genre: None,
+                    label: None,
+                    album: None,
+                    year: None,
+                    isrc: None,
+                    catalog_number: None,
+                    artwork_url,
+                    artwork_data: Some(artwork_data),
+                };
+                FixTagsResult::success(track_id.to_string(), beatport_track.id, tags)
+            }
+            Err(e) => FixTagsResult::error(track_id.to_string(), e.to_string()),
+        }
+    }
+
+    /// Escribe SOLO el artwork al archivo de audio (sin tocar otros tags)
+    fn write_artwork_only(&self, file_path: &Path, artwork_data: &[u8]) -> Result<(), BeatportError> {
+        // Abrir el archivo para lectura/escritura
+        let mut tagged_file = lofty::read_from_path(file_path)?;
+        
+        // Obtener o crear el tag primario
+        let tag = match tagged_file.primary_tag_mut() {
+            Some(t) => t,
+            None => {
+                let file_type = tagged_file.file_type();
+                tagged_file.insert_tag(Tag::new(file_type.primary_tag_type()));
+                tagged_file.primary_tag_mut()
+                    .ok_or_else(|| BeatportError::TagWriteError("No se pudo crear tag".to_string()))?
+            }
+        };
+
+        // Detectar tipo MIME
+        let mime_type = detect_image_mime(artwork_data);
+        
+        // Crear la imagen
+        let picture = Picture::new_unchecked(
+            PictureType::CoverFront,
+            Some(mime_type),
+            None,
+            artwork_data.to_vec(),
+        );
+
+        // Eliminar artwork existente y agregar el nuevo
+        tag.remove_picture_type(PictureType::CoverFront);
+        tag.push_picture(picture);
+
+        // Guardar el archivo
+        tag.save_to_path(file_path, WriteOptions::default())?;
+
+        Ok(())
+    }
+
     /// Escribe los tags al archivo de audio usando lofty
     fn write_tags(&self, file_path: &Path, tags: &BeatportTags) -> Result<(), BeatportError> {
         // Abrir el archivo para lectura/escritura

@@ -42,6 +42,7 @@ interface TrackTableProps {
   onTrackDetails?: (track: Track) => void;
   onBatchFilenameToTags?: (tracks: Track[]) => void;
   onFixTags?: (trackIds: string[]) => void;
+  onFindArtwork?: (trackIds: string[]) => void;
   isLoading: boolean;
   // AIDEV-NOTE: Props para sort controlado desde App.tsx (persiste al navegar)
   sortColumn?: SortColumn;
@@ -78,6 +79,7 @@ export const TrackTable = ({
   onTrackDetails,
   onBatchFilenameToTags,
   onFixTags,
+  onFindArtwork,
   isLoading,
   sortColumn: externalSortColumn,
   sortDirection: externalSortDirection,
@@ -342,6 +344,23 @@ export const TrackTable = ({
         }
       });
       menuItems.push(fixTagsItem);
+    }
+
+    // Opción "Find Artwork" - buscar SOLO artwork en Beatport
+    // AIDEV-NOTE: Solo descarga y aplica carátulas, sin modificar otros tags
+    if (selectedTracks.length > 0 && onFindArtwork) {
+      const tracksForArtwork = isTrackSelected ? selectedTracks : [track];
+      const findArtworkItem = await MenuItem.new({
+        id: 'find-artwork',
+        text: `Find Artwork (${tracksForArtwork.length} track${tracksForArtwork.length > 1 ? 's' : ''})`,
+        action: () => {
+          const trackIds = tracksForArtwork
+            .filter(t => t.id !== undefined)
+            .map(t => t.id as string);
+          onFindArtwork(trackIds);
+        }
+      });
+      menuItems.push(findArtworkItem);
     }
 
     // Opción "Delete Track" - elimina de DB y borra archivo

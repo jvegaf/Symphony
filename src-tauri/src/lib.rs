@@ -175,6 +175,7 @@ pub fn run() {
             commands::conversion::check_ffmpeg_installed,
             // Beatport commands
             commands::beatport::fix_tags,
+            commands::beatport::find_artwork,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

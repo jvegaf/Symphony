@@ -1,8 +1,8 @@
 /**
  * Hook para integración con Beatport
  * 
- * Proporciona el mutation useFixTags para corregir tags de tracks
- * y escucha eventos de progreso desde el backend.
+ * Proporciona los mutations useFixTags y useFindArtwork para corregir tags
+ * y buscar artwork de tracks, y escucha eventos de progreso desde el backend.
  */
 
 import { useState, useEffect, useCallback } from "react";
@@ -13,7 +13,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type { BatchFixResult, FixTagsProgress } from "../types/beatport";
 
 /**
- * Hook para escuchar eventos de progreso de fix_tags
+ * Hook para escuchar eventos de progreso de fix_tags/find_artwork
  * 
  * @returns Estado actual del progreso y función para resetear
  */
@@ -79,27 +79,56 @@ export function useFixTags() {
 }
 
 /**
+ * Hook para buscar y aplicar SOLO artwork desde Beatport
+ * 
+ * @returns Mutation de TanStack Query con métodos y estado
+ */
+export function useFindArtwork() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (trackIds: string[]): Promise<BatchFixResult> => {
+      return await invoke<BatchFixResult>("find_artwork", { trackIds });
+    },
+    onSuccess: () => {
+      // Invalidar queries de tracks para refrescar artwork en la UI
+      queryClient.invalidateQueries({ queryKey: ["tracks"] });
+      queryClient.invalidateQueries({ queryKey: ["artwork"] });
+    },
+    onError: (error) => {
+      console.error("Error en find_artwork:", error);
+    },
+  });
+}
+
+/**
  * Hook combinado que proporciona tanto el mutation como el progreso
  * 
  * @example
  * ```tsx
- * const { fixTags, progress, isFixing, result } = useBeatport();
+ * const { fixTags, findArtwork, progress, isFixing, result } = useBeatport();
  * 
  * const handleFixTags = async () => {
  *   await fixTags.mutateAsync(selectedTrackIds);
+ * };
+ * 
+ * const handleFindArtwork = async () => {
+ *   await findArtwork.mutateAsync(selectedTrackIds);
  * };
  * ```
  */
 export function useBeatport() {
   const fixTags = useFixTags();
+  const findArtwork = useFindArtwork();
   const { progress, isActive, reset } = useBeatportProgress();
 
   return {
     fixTags,
+    findArtwork,
     progress,
-    isFixing: fixTags.isPending || isActive,
-    result: fixTags.data,
-    error: fixTags.error,
+    isFixing: fixTags.isPending || findArtwork.isPending || isActive,
+    result: fixTags.data || findArtwork.data,
+    error: fixTags.error || findArtwork.error,
     reset,
   };
 }

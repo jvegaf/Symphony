@@ -56,7 +56,7 @@ function App() {
   const importMutation = useImportLibrary();
   const { play, pause, resume, isPlaying, seek, position, duration } = useAudioPlayer();
   const { mutate: batchFilenameToTags } = useBatchFilenameToTags();
-  const { fixTags, progress: beatportProgress, isFixing } = useBeatport();
+  const { fixTags, findArtwork, progress: beatportProgress, isFixing } = useBeatport();
 
   // AIDEV-NOTE: filteredTracks se calcula para la búsqueda en la tabla
   const filteredTracks = tracks.filter((track) => {
@@ -223,6 +223,20 @@ function App() {
     });
   };
 
+  // AIDEV-NOTE: handleFindArtwork busca SOLO artwork en Beatport (sin modificar otros tags)
+  // Se invoca desde el context menu de TrackTable
+  const handleFindArtwork = (trackIds: string[]) => {
+    findArtwork.mutate(trackIds, {
+      onSuccess: (result) => {
+        // Mostrar modal con resultados (reutilizamos el mismo modal)
+        setBeatportResult(result);
+      },
+      onError: (error) => {
+        alert(`❌ Error al buscar artwork: ${error}`);
+      }
+    });
+  };
+
   /**
    * Handler para doble click en un track de la tabla
    * AIDEV-NOTE: Recibe sortedTracks (orden visual de la tabla) y el índice
@@ -336,6 +350,7 @@ function App() {
               onTrackDetails={handleTrackDetails}
               onBatchFilenameToTags={handleBatchFilenameToTags}
               onFixTags={handleFixTags}
+              onFindArtwork={handleFindArtwork}
               isLoading={isLoading}
               sortColumn={sortColumn}
               sortDirection={sortDirection}
