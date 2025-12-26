@@ -46,6 +46,9 @@ interface TrackTableProps {
   sortColumn?: SortColumn;
   sortDirection?: SortDirection;
   onSortChange?: (column: SortColumn, direction: SortDirection) => void;
+  // AIDEV-NOTE: Callback para notificar cuando cambian los tracks ordenados
+  // Esto permite a App.tsx regenerar la cola de reproducción cuando cambia el orden
+  onSortedTracksChange?: (sortedTracks: Track[], playingTrackIndex: number) => void;
 }
 
 const formatDuration = (seconds: number): string => {
@@ -77,6 +80,7 @@ export const TrackTable = ({
   sortColumn: externalSortColumn,
   sortDirection: externalSortDirection,
   onSortChange,
+  onSortedTracksChange,
 }: TrackTableProps) => {
   // AIDEV-NOTE: Hook para actualizar rating en DB y archivo MP3
   const { mutate: updateRating } = useUpdateTrackRating();
@@ -155,6 +159,17 @@ export const TrackTable = ({
     if (aValue > bValue) return sortDirection === 'asc' ? 1 : -1;
     return 0;
   });
+
+  // AIDEV-NOTE: Notificar a App.tsx cuando cambian los tracks ordenados
+  // Esto permite regenerar la cola de reproducción cuando cambia el orden
+  useEffect(() => {
+    if (onSortedTracksChange && playingTrack) {
+      const playingIndex = sortedTracks.findIndex(t => t.id === playingTrack.id);
+      if (playingIndex !== -1) {
+        onSortedTracksChange(sortedTracks, playingIndex);
+      }
+    }
+  }, [sortColumn, sortDirection, onSortedTracksChange, playingTrack, sortedTracks]);
 
   // AIDEV-NOTE: Keyboard shortcuts (Ctrl+A = Select All, Escape = Deselect All)
   useEffect(() => {

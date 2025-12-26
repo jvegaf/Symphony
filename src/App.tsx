@@ -321,6 +321,11 @@ function App() {
                 setSortColumn(column);
                 setSortDirection(direction);
               }}
+              onSortedTracksChange={(sortedTracks, playingIndex) => {
+                // AIDEV-NOTE: Regenerar cola de reproducción cuando cambia el orden
+                // Esto mantiene la cola sincronizada con el orden visual de la tabla
+                playbackQueue.generateQueue(sortedTracks, playingIndex);
+              }}
             />
           </div>
         </div>
