@@ -2,6 +2,7 @@ use serde::{Deserialize, Serialize};
 
 /// Modelo de pista musical
 /// AIDEV-NOTE: Migrado de i64 a String (UUID v4) para mejor escalabilidad
+/// AIDEV-NOTE: v4 añade campos label e isrc para integración Beatport
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Track {
@@ -24,6 +25,10 @@ pub struct Track {
     pub last_played: Option<String>,
     pub date_added: String,
     pub date_modified: String,
+    /// Sello discográfico (desde Beatport)
+    pub label: Option<String>,
+    /// International Standard Recording Code
+    pub isrc: Option<String>,
 }
 
 /// Modelo de waveform
@@ -134,6 +139,8 @@ mod tests {
             last_played: None,
             date_added: "2024-01-01".to_string(),
             date_modified: "2024-01-01".to_string(),
+            label: None,
+            isrc: None,
         };
 
         assert_eq!(track.title, "Test Track");

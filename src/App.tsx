@@ -11,11 +11,14 @@ import {
 } from "./components/layout";
 import type { SortColumn, SortDirection } from "./components/layout/TrackTable";
 import { TrackDetail } from "./components/TrackDetail";
+import { BeatportResultsModal } from "./components/ui/BeatportResultsModal";
 import { useAudioPlayer } from "./hooks/useAudioPlayer";
+import { useBeatport } from "./hooks/useBeatport";
 import { useGetAllTracks, useImportLibrary, useBatchFilenameToTags } from "./hooks/useLibrary";
 import { usePlaybackQueue } from "./hooks/usePlaybackQueue";
 import { usePlayerShortcuts } from "./hooks/usePlayerShortcuts";
 import { Settings } from "./pages/Settings";
+import type { BatchFixResult } from "./types/beatport";
 import type { ImportProgress, Track } from "./types/library";
 import { logger } from "./utils/logger";
 // AIDEV-NOTE: Import waveform debugger to expose window.debugWaveform()
@@ -41,6 +44,8 @@ function App() {
   });
   // AIDEV-NOTE: Estado para barra de progreso de batch operations
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number } | null>(null);
+  // AIDEV-NOTE: Estado para modal de resultados de Beatport
+  const [beatportResult, setBeatportResult] = useState<BatchFixResult | null>(null);
 
   // AIDEV-NOTE: Estado de ordenamiento de TrackTable - levantado a App.tsx
   // para que no se pierda al navegar a Settings y volver
@@ -51,6 +56,7 @@ function App() {
   const importMutation = useImportLibrary();
   const { play, pause, resume, isPlaying, seek, position, duration } = useAudioPlayer();
   const { mutate: batchFilenameToTags } = useBatchFilenameToTags();
+  const { fixTags, progress: beatportProgress, isFixing } = useBeatport();
 
   // AIDEV-NOTE: filteredTracks se calcula para la búsqueda en la tabla
   const filteredTracks = tracks.filter((track) => {
@@ -202,6 +208,21 @@ function App() {
     );
   };
 
+  // AIDEV-NOTE: handleFixTags busca en Beatport y completa metadatos faltantes
+  // Se invoca desde el context menu de TrackTable
+  // Al completar, muestra un modal con las canciones no encontradas
+  const handleFixTags = (trackIds: string[]) => {
+    fixTags.mutate(trackIds, {
+      onSuccess: (result) => {
+        // Mostrar modal con resultados
+        setBeatportResult(result);
+      },
+      onError: (error) => {
+        alert(`❌ Error al buscar en Beatport: ${error}`);
+      }
+    });
+  };
+
   /**
    * Handler para doble click en un track de la tabla
    * AIDEV-NOTE: Recibe sortedTracks (orden visual de la tabla) y el índice
@@ -314,6 +335,7 @@ function App() {
               onTrackDoubleClick={handleTrackDoubleClick}
               onTrackDetails={handleTrackDetails}
               onBatchFilenameToTags={handleBatchFilenameToTags}
+              onFixTags={handleFixTags}
               isLoading={isLoading}
               sortColumn={sortColumn}
               sortDirection={sortDirection}
@@ -376,6 +398,45 @@ function App() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* AIDEV-NOTE: Notificación de progreso de Beatport (Fix Tags) */}
+        {isFixing && beatportProgress && (
+          <div className="fixed bottom-4 right-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 min-w-[350px] z-50 border border-gray-200 dark:border-gray-700">
+            <div className="flex items-center gap-3">
+              <span className="material-icons text-primary animate-spin">sync</span>
+              <div className="flex-1">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm font-medium text-gray-900 dark:text-white">
+                    Completadas {beatportProgress.current} de {beatportProgress.total} Tracks
+                  </span>
+                </div>
+                <div className="text-xs text-gray-600 dark:text-gray-400 truncate mb-2">
+                  {beatportProgress.phase === 'searching' && `Buscando: ${beatportProgress.current_track_title}`}
+                  {beatportProgress.phase === 'downloading' && `Descargando artwork...`}
+                  {beatportProgress.phase === 'applying_tags' && `Aplicando tags...`}
+                  {beatportProgress.phase === 'complete' && `✅ Completado`}
+                </div>
+                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
+                  <div 
+                    className="bg-primary h-2 rounded-full transition-all duration-300"
+                    style={{ width: `${(beatportProgress.current / beatportProgress.total) * 100}%` }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* AIDEV-NOTE: Modal de resultados de Beatport (canciones no encontradas) */}
+        {beatportResult && (
+          <BeatportResultsModal
+            result={beatportResult}
+            onClose={() => setBeatportResult(null)}
+            trackTitles={tracksById && new Map(
+              Array.from(tracksById.entries()).map(([id, track]) => [id, `${track.title} - ${track.artist}`])
+            )}
+          />
         )}
       </div>
     </ErrorBoundary>

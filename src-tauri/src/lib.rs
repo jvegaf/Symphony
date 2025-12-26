@@ -173,6 +173,8 @@ pub fn run() {
             commands::conversion::convert_track_to_mp3,
             commands::conversion::batch_convert_to_mp3,
             commands::conversion::check_ffmpeg_installed,
+            // Beatport commands
+            commands::beatport::fix_tags,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

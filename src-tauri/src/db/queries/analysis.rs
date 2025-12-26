@@ -438,6 +438,8 @@ mod tests {
             last_played: None,
             date_added: "2024-01-01".to_string(),
             date_modified: "2024-01-01".to_string(),
+            label: None,
+            isrc: None,
         };
         let track_id = tracks::insert_track(&db.conn, &track).unwrap();
 
@@ -475,6 +477,8 @@ mod tests {
             last_played: None,
             date_added: "2024-01-01".to_string(),
             date_modified: "2024-01-01".to_string(),
+            label: None,
+            isrc: None,
         };
         let track_id = tracks::insert_track(&db.conn, &track).unwrap();
 

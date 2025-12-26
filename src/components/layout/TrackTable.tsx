@@ -41,6 +41,7 @@ interface TrackTableProps {
   onTrackDoubleClick: (track: Track, sortedTracks: Track[], index: number) => void;
   onTrackDetails?: (track: Track) => void;
   onBatchFilenameToTags?: (tracks: Track[]) => void;
+  onFixTags?: (trackIds: string[]) => void;
   isLoading: boolean;
   // AIDEV-NOTE: Props para sort controlado desde App.tsx (persiste al navegar)
   sortColumn?: SortColumn;
@@ -76,6 +77,7 @@ export const TrackTable = ({
   onTrackDoubleClick,
   onTrackDetails,
   onBatchFilenameToTags,
+  onFixTags,
   isLoading,
   sortColumn: externalSortColumn,
   sortDirection: externalSortDirection,
@@ -323,6 +325,23 @@ export const TrackTable = ({
         }
       });
       menuItems.push(batchFilenameItem);
+    }
+
+    // Opción "Fix Tags" - buscar en Beatport y completar metadatos
+    // AIDEV-NOTE: Usa integración con Beatport para auto-completar BPM, Key, Genre, etc.
+    if (selectedTracks.length > 0 && onFixTags) {
+      const tracksToFix = isTrackSelected ? selectedTracks : [track];
+      const fixTagsItem = await MenuItem.new({
+        id: 'fix-tags',
+        text: `Fix Tags (${tracksToFix.length} track${tracksToFix.length > 1 ? 's' : ''})`,
+        action: () => {
+          const trackIds = tracksToFix
+            .filter(t => t.id !== undefined)
+            .map(t => t.id as string);
+          onFixTags(trackIds);
+        }
+      });
+      menuItems.push(fixTagsItem);
     }
 
     // Opción "Delete Track" - elimina de DB y borra archivo

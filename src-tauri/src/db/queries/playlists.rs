@@ -172,7 +172,7 @@ pub fn get_playlist_tracks(conn: &Connection, playlist_id: &str) -> Result<Vec<T
         "SELECT t.id, t.path, t.title, t.artist, t.album, t.genre, t.year,
                 t.duration, t.bitrate, t.sample_rate, t.file_size,
                 t.bpm, t.key, t.rating, t.play_count, t.last_played,
-                t.date_added, t.date_modified
+                t.date_added, t.date_modified, t.label, t.isrc
          FROM tracks t
          INNER JOIN playlist_tracks pt ON t.id = pt.track_id
          WHERE pt.playlist_id = ?1
@@ -199,6 +199,8 @@ pub fn get_playlist_tracks(conn: &Connection, playlist_id: &str) -> Result<Vec<T
             last_played: row.get(15)?,
             date_added: row.get(16)?,
             date_modified: row.get(17)?,
+            label: row.get(18)?,
+            isrc: row.get(19)?,
         })
     })?;
 
@@ -267,6 +269,8 @@ mod tests {
             last_played: None,
             date_added: "2024-01-01".to_string(),
             date_modified: "2024-01-01".to_string(),
+            label: None,
+            isrc: None,
         };
         let track_id = tracks::insert_track(&db.conn, &track).unwrap();
 

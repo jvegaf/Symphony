@@ -26,6 +26,8 @@ export interface Track {
   lastPlayed?: string;
   dateAdded: string;
   dateModified: string;
+  label?: string;
+  isrc?: string;
 }
 
 /**

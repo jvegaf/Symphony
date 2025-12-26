@@ -212,6 +212,8 @@ impl LibraryImporter {
             last_played: None,
             date_added: now.clone(),
             date_modified: now,
+            label: None,  // Se obtendrá de Beatport
+            isrc: None,   // Se obtendrá de Beatport
         })
     }
 

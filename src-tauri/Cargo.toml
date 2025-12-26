@@ -1,6 +1,6 @@
 [package]
 name = "symphony"
-version = "0.10.0"
+version = "0.11.0"
 description = "The Old School Music Manager"
 authors = ["Jose Vega"]
 edition = "2021"
@@ -54,6 +54,12 @@ log = "0.4.29"
 lofty = "0.22" # Equivalente Rust de mutagen (lectura + escritura de metadatos)
 id3 = "1.14"   # Para lectura directa de frames POPM (Popularimeter)
 base64 = "0.22.1"
+
+# Beatport integration dependencies
+# AIDEV-NOTE: reqwest para HTTP, scraper para parsing HTML de búsqueda Beatport
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+scraper = "0.22"
+urlencoding = "2.1"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }

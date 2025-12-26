@@ -72,6 +72,8 @@ fn test_full_rating_import_flow() {
         last_played: None,
         date_added: now.clone(),
         date_modified: now,
+        label: None,
+        isrc: None,
     };
 
     println!("   ✅ Track creado:");

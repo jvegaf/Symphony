@@ -1,9 +1,9 @@
 use rusqlite::{Connection, Result};
 
 /// Versión actual del esquema
-/// AIDEV-NOTE: Versión 3 migra todos los IDs de INTEGER a TEXT (UUID)
+/// AIDEV-NOTE: Versión 4 añade columnas label e isrc para integración Beatport
 #[allow(dead_code)]
-const CURRENT_VERSION: i32 = 3;
+const CURRENT_VERSION: i32 = 4;
 
 /// Ejecuta todas las migraciones pendientes
 pub fn run_migrations(conn: &Connection) -> Result<()> {
@@ -31,6 +31,11 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
     if current_version < 3 {
         migration_003_uuid_migration(conn)?;
         update_version(conn, 3)?;
+    }
+
+    if current_version < 4 {
+        migration_004_beatport_fields(conn)?;
+        update_version(conn, 4)?;
     }
 
     Ok(())
@@ -382,6 +387,27 @@ fn migration_003_uuid_migration(conn: &Connection) -> Result<()> {
     Ok(())
 }
 
+/// Migración 004: Añade campos label e isrc para integración con Beatport
+/// 
+/// Añade columnas opcionales para almacenar información adicional
+/// extraída de Beatport al hacer "Fix Tags".
+fn migration_004_beatport_fields(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "
+        -- Añadir columna label (sello discográfico)
+        ALTER TABLE tracks ADD COLUMN label TEXT;
+
+        -- Añadir columna isrc (International Standard Recording Code)
+        ALTER TABLE tracks ADD COLUMN isrc TEXT;
+
+        -- Índice para búsquedas por label
+        CREATE INDEX IF NOT EXISTS idx_tracks_label ON tracks(label);
+        ",
+    )?;
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -400,7 +426,7 @@ mod tests {
         run_migrations(&db.conn).unwrap();
 
         let version = get_current_version(&db.conn).unwrap();
-        assert_eq!(version, 3);
+        assert_eq!(version, 4);
     }
 
     #[test]

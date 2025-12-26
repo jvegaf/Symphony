@@ -1419,6 +1419,120 @@ console.log(`✅ ${successful} exitosos, ❌ ${failed} fallidos`);
 
 ---
 
+## Beatport Integration (Milestone 5)
+
+### fix_tags
+
+Busca tracks en Beatport y completa automáticamente los metadatos faltantes (BPM, Key, Genre, Label, ISRC, Artwork).
+
+**Parámetros:**
+- `trackIds`: `string[]` - Array de UUIDs de tracks a procesar
+
+**Retorno:**
+```typescript
+interface BeatportTags {
+  bpm: number | null;
+  key: string | null;
+  genre: string | null;
+  label: string | null;
+  album: string | null;
+  year: number | null;
+  isrc: string | null;
+  catalog_number: string | null;
+  artwork_url: string | null;
+}
+
+interface FixTagsResult {
+  track_id: string;
+  success: boolean;
+  beatport_track_id?: number;
+  tags_applied?: BeatportTags;
+  error?: string;
+}
+
+interface BatchFixResult {
+  total: number;
+  success_count: number;
+  failed_count: number;
+  results: FixTagsResult[];
+}
+
+Promise<BatchFixResult>
+```
+
+**Eventos emitidos:**
+```typescript
+// Emitido para cada track procesado
+interface FixTagsProgress {
+  current: number;
+  total: number;
+  current_track_title: string;
+  phase: 'searching' | 'downloading' | 'applying_tags' | 'complete';
+}
+
+listen<FixTagsProgress>("beatport:progress", (event) => {
+  console.log(`${event.payload.current}/${event.payload.total}: ${event.payload.current_track_title}`);
+});
+```
+
+**Ejemplo:**
+```typescript
+import { invoke, listen } from "@tauri-apps/api/core";
+
+// Escuchar progreso
+const unlisten = await listen<FixTagsProgress>("beatport:progress", (event) => {
+  const { current, total, current_track_title, phase } = event.payload;
+  console.log(`[${phase}] ${current}/${total}: ${current_track_title}`);
+});
+
+// Ejecutar fix_tags
+const result = await invoke<BatchFixResult>("fix_tags", {
+  trackIds: ["uuid-1", "uuid-2", "uuid-3"]
+});
+
+console.log(`✅ Encontrados: ${result.success_count}`);
+console.log(`❌ No encontrados: ${result.failed_count}`);
+
+// Mostrar tracks fallidos
+result.results
+  .filter(r => !r.success)
+  .forEach(r => console.log(`- ${r.track_id}: ${r.error}`));
+
+// Limpiar listener
+unlisten();
+```
+
+**Lógica de Merge de Tags:**
+- **BPM:** Solo se aplica si el track local NO tiene BPM
+- **Key:** Siempre se aplica (reemplaza el existente)
+- **Genre, Album, Year:** Solo se aplican si el campo local está vacío
+- **Label, ISRC:** Siempre se aplican (generalmente no existen en local)
+- **Artwork:** Siempre se aplica si está disponible
+
+**Algoritmo de Matching:**
+- Ponderación: 50% similitud de título, 30% similitud de artista, 20% coincidencia de duración
+- Tolerancia de duración: ≤5s = match perfecto, ≤15s = aceptable, >30s = penalización
+
+**Errores:**
+- `"No se seleccionaron tracks"` - Array vacío
+- `"Track no encontrado: {artist} - {title}"` - No hay resultados en Beatport
+- `"Error de red: {mensaje}"` - Problema de conexión
+- `"Rate limited"` - Demasiadas peticiones (esperar y reintentar)
+
+**Uso con Hook (Recomendado):**
+```typescript
+import { useBeatport } from "@/hooks/useBeatport";
+
+const { fixTags, progress, isFixing, result } = useBeatport();
+
+const handleFixTags = async (trackIds: string[]) => {
+  await fixTags.mutateAsync(trackIds);
+  // El resultado está en result, progreso en progress
+};
+```
+
+---
+
 ## Próximas Funciones (Roadmap)
 
 ### Planeadas (Milestone 6+):
@@ -1429,4 +1543,4 @@ console.log(`✅ ${successful} exitosos, ❌ ${failed} fallidos`);
 
 ---
 
-*Última actualización: Diciembre 2025 (Milestone 5)*
+*Última actualización: Enero 2025 (Milestone 5 - Beatport Integration)*

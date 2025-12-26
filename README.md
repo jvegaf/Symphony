@@ -3,7 +3,7 @@
 Aplicación de escritorio profesional para gestionar bibliotecas musicales con importación, reproducción, análisis de audio y herramientas de organización avanzadas.
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![Version](https://img.shields.io/badge/version-0.10.0-blue)]()
+[![Version](https://img.shields.io/badge/version-0.11.0-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 
 ## ✨ Características
@@ -16,6 +16,22 @@ Aplicación de escritorio profesional para gestionar bibliotecas musicales con i
 - ✏️ **Edición de Metadatos:** Editor integrado con rating de pistas (nuevo sistema visual de estrellas, mejoras UX v0.4.0)
 - 🔄 **Conversión de Audio:** Opcional a MP3 durante importación
 - 🌙 **Modo Oscuro:** Interfaz optimizada para uso prolongado
+- 🎧 **Integración con Beatport:** Auto-completar tags faltantes (BPM, Key, Genre, Label, ISRC, Artwork) buscando en Beatport
+
+## 🆕 Novedades v0.11.0
+
+### 🎧 Integración con Beatport (Fix Tags)
+- **Auto-completar metadatos:** Click derecho en tracks seleccionados → "Fix Tags" para buscar en Beatport y completar automáticamente:
+  - BPM (solo si no existe en local)
+  - Key (tonalidad musical, siempre se actualiza)
+  - Género
+  - Label (sello discográfico)
+  - ISRC
+  - Artwork (portada del álbum)
+- **Matching inteligente:** Algoritmo con ponderación (50% título, 30% artista, 20% duración) para encontrar el mejor resultado
+- **Progreso visual:** Barra de progreso durante el proceso con indicadores por fase
+- **Modal de resultados:** Muestra canciones encontradas y no encontradas al finalizar
+- **Nuevos campos en DB:** Añadidos `label` e `isrc` a la tabla de tracks
 
 ## 🆕 Novedades v0.8.0
 
