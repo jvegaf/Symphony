@@ -205,6 +205,12 @@ fn update_track_in_db(
     let mut updates: Vec<String> = Vec::new();
     let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
 
+    // Title: Siempre se actualiza si tiene valor (corrige nombres)
+    if let Some(ref title) = tags.title {
+        updates.push("title = ?".to_string());
+        params.push(Box::new(title.clone()));
+    }
+
     // BPM: Solo si local no tiene y Beatport sí tiene
     if current_bpm.is_none() {
         if let Some(bpm) = tags.bpm {
@@ -219,7 +225,7 @@ fn update_track_in_db(
         params.push(Box::new(key.clone()));
     }
 
-    // Genre: Solo si tiene valor de Beatport (merge ya hecho en tagger)
+    // Genre: Siempre se actualiza si tiene valor (corrige géneros)
     if let Some(ref genre) = tags.genre {
         updates.push("genre = ?".to_string());
         params.push(Box::new(genre.clone()));

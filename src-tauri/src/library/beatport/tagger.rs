@@ -3,8 +3,10 @@
  * 
  * Coordina la búsqueda en Beatport y la aplicación de tags a archivos locales.
  * Implementa la lógica de merge de tags según las reglas definidas:
- * - BPM: Se ignora si el track local ya tiene BPM
+ * - Title: Siempre se aplica (corrige nombres mal escritos)
+ * - Genre: Siempre se aplica (corrige géneros incorrectos)
  * - Key: Siempre se aplica (reemplaza el existente)
+ * - BPM: Se ignora si el track local ya tiene BPM
  * - Otros tags: Se aplican solo si el local está vacío
  */
 
@@ -107,29 +109,30 @@ impl BeatportTagger {
     /// Aplica la lógica de merge de tags
     /// 
     /// Reglas:
-    /// - BPM: Se ignora si local tiene valor
+    /// - Title: Siempre se aplica (corrige nombres mal escritos)
+    /// - Genre: Siempre se aplica (corrige géneros incorrectos)
     /// - Key: Siempre se aplica
-    /// - Genre, Album, Year, Label, ISRC: Se aplican si local está vacío
+    /// - BPM: Se ignora si local tiene valor
+    /// - Album, Year: Se aplican si local está vacío
+    /// - Label, ISRC: Siempre se aplican (generalmente no existen en local)
     /// - Artwork: Siempre se aplica si está disponible
     fn merge_tags(
         &self,
         beatport: &BeatportTags,
         local_bpm: Option<f64>,
-        local_genre: Option<&str>,
+        _local_genre: Option<&str>,  // Ignorado - siempre aplicamos genre de Beatport
         local_album: Option<&str>,
         local_year: Option<i32>,
     ) -> BeatportTags {
         BeatportTags {
+            // Title: Siempre se aplica (corrige nombres)
+            title: beatport.title.clone(),
             // BPM: Solo si local no tiene
             bpm: if local_bpm.is_some() { None } else { beatport.bpm },
             // Key: Siempre se aplica
             key: beatport.key.clone(),
-            // Genre: Solo si local no tiene
-            genre: if local_genre.is_some() && !local_genre.unwrap().is_empty() { 
-                None 
-            } else { 
-                beatport.genre.clone() 
-            },
+            // Genre: Siempre se aplica (corrige géneros incorrectos)
+            genre: beatport.genre.clone(),
             // Album: Solo si local no tiene
             album: if local_album.is_some() && !local_album.unwrap().is_empty() { 
                 None 
@@ -193,6 +196,7 @@ impl BeatportTagger {
             Ok(()) => {
                 // Crear tags con solo artwork para el resultado
                 let tags = BeatportTags {
+                    title: None,
                     bpm: None,
                     key: None,
                     genre: None,
@@ -265,6 +269,10 @@ impl BeatportTagger {
         };
 
         // Aplicar tags solo si tienen valor y hay algo que escribir
+        if let Some(ref title) = tags.title {
+            tag.set_title(title.clone());
+        }
+
         if let Some(bpm) = tags.bpm {
             // Escribir BPM como string en el frame BPM
             tag.insert_text(ItemKey::Bpm, bpm.round().to_string());
@@ -367,6 +375,7 @@ mod tests {
     fn test_merge_tags_bpm_preserved() {
         let tagger = BeatportTagger::with_new_client().unwrap();
         let beatport = BeatportTags {
+            title: Some("Test Track".to_string()),
             bpm: Some(128.0),
             key: Some("A minor".to_string()),
             genre: Some("Techno".to_string()),
@@ -383,12 +392,15 @@ mod tests {
         let merged = tagger.merge_tags(&beatport, Some(125.0), None, None, None);
         assert!(merged.bpm.is_none()); // BPM de Beatport no se aplica
         assert_eq!(merged.key, Some("A minor".to_string())); // Key siempre se aplica
+        assert_eq!(merged.title, Some("Test Track".to_string())); // Title siempre se aplica
+        assert_eq!(merged.genre, Some("Techno".to_string())); // Genre siempre se aplica
     }
 
     #[test]
     fn test_merge_tags_bpm_applied() {
         let tagger = BeatportTagger::with_new_client().unwrap();
         let beatport = BeatportTags {
+            title: None,
             bpm: Some(128.0),
             key: Some("A minor".to_string()),
             genre: None,
@@ -410,6 +422,7 @@ mod tests {
     fn test_merge_tags_key_always_applied() {
         let tagger = BeatportTagger::with_new_client().unwrap();
         let beatport = BeatportTags {
+            title: None,
             bpm: None,
             key: Some("8A".to_string()),
             genre: None,
@@ -428,9 +441,10 @@ mod tests {
     }
 
     #[test]
-    fn test_merge_tags_genre_preserved() {
+    fn test_merge_tags_genre_always_applied() {
         let tagger = BeatportTagger::with_new_client().unwrap();
         let beatport = BeatportTags {
+            title: None,
             bpm: None,
             key: None,
             genre: Some("Techno".to_string()),
@@ -443,13 +457,35 @@ mod tests {
             artwork_data: None,
         };
 
-        // Si local tiene género, no se aplica el de Beatport
+        // Genre siempre se aplica (corrige géneros incorrectos)
         let merged = tagger.merge_tags(&beatport, None, Some("House"), None, None);
-        assert!(merged.genre.is_none());
+        assert_eq!(merged.genre, Some("Techno".to_string()));
 
-        // Si local no tiene género, se aplica el de Beatport
+        // También se aplica si local no tiene género
         let merged2 = tagger.merge_tags(&beatport, None, None, None, None);
         assert_eq!(merged2.genre, Some("Techno".to_string()));
+    }
+
+    #[test]
+    fn test_merge_tags_title_always_applied() {
+        let tagger = BeatportTagger::with_new_client().unwrap();
+        let beatport = BeatportTags {
+            title: Some("Correct Title".to_string()),
+            bpm: None,
+            key: None,
+            genre: None,
+            label: None,
+            album: None,
+            year: None,
+            isrc: None,
+            catalog_number: None,
+            artwork_url: None,
+            artwork_data: None,
+        };
+
+        // Title siempre se aplica (corrige nombres mal escritos)
+        let merged = tagger.merge_tags(&beatport, None, None, None, None);
+        assert_eq!(merged.title, Some("Correct Title".to_string()));
     }
 
     #[test]

@@ -308,6 +308,7 @@ pub struct BeatportSearchResult {
 /// Tags extraídos de Beatport para aplicar a un track local
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BeatportTags {
+    pub title: Option<String>,
     pub bpm: Option<f64>,
     pub key: Option<String>,
     pub genre: Option<String>,
@@ -338,7 +339,19 @@ impl From<&BeatportTrack> for BeatportTags {
         // (release.image, release.image_dynamic_uri, track.image, track.track_image_dynamic_uri)
         let artwork_url = track.get_artwork_url(500);
 
+        // Construir título completo con mix_name si existe
+        let title = if let Some(ref mix) = track.mix_name {
+            if !mix.is_empty() && mix.to_lowercase() != "original mix" {
+                Some(format!("{} ({})", track.name, mix))
+            } else {
+                Some(track.name.clone())
+            }
+        } else {
+            Some(track.name.clone())
+        };
+
         BeatportTags {
+            title,
             bpm: track.bpm,
             key: track.get_key_name(),
             genre: track.get_genre_name(),
@@ -481,6 +494,7 @@ mod tests {
     #[test]
     fn test_fix_tags_result_success() {
         let tags = BeatportTags {
+            title: Some("Test Track".to_string()),
             bpm: Some(128.0),
             key: Some("A minor".to_string()),
             genre: Some("Techno".to_string()),
@@ -514,6 +528,7 @@ mod tests {
     fn test_batch_fix_result() {
         let results = vec![
             FixTagsResult::success("1".to_string(), 1, BeatportTags {
+                title: None,
                 bpm: Some(128.0),
                 key: None,
                 genre: None,

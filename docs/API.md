@@ -1503,9 +1503,11 @@ unlisten();
 ```
 
 **Lógica de Merge de Tags:**
-- **BPM:** Solo se aplica si el track local NO tiene BPM
+- **Title:** Siempre se aplica (corrige nombres mal escritos)
+- **Genre:** Siempre se aplica (corrige géneros incorrectos)
 - **Key:** Siempre se aplica (reemplaza el existente)
-- **Genre, Album, Year:** Solo se aplican si el campo local está vacío
+- **BPM:** Solo se aplica si el track local NO tiene BPM
+- **Album, Year:** Solo se aplican si el campo local está vacío
 - **Label, ISRC:** Siempre se aplican (generalmente no existen en local)
 - **Artwork:** Siempre se aplica si está disponible
 
