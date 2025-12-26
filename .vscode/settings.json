@@ -1,0 +1,21 @@
+{
+  // Oculta carpetas pesadas para el explorador y evita que aparezcan en búsquedas/problemas
+  "files.exclude": {
+    "**/node_modules": true,
+    "**/src-tauri/target": true,
+    "**/.cache": true
+  },
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/src-tauri/target": true
+  },
+  // Evita que problemas provenientes de dependencias se muestren en el panel de Problemas
+  "problems.exclude": {
+    "**/node_modules/**": true,
+    "**/src-tauri/target/**": true
+  },
+  // Configuración para la extensión markdownlint (si está instalada)
+  "markdownlint.config": {
+    "MD041": false
+  }
+}
