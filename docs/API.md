@@ -440,6 +440,57 @@ console.log(`Formatos:`, stats.formatDistribution);
 
 ---
 
+### get_track_artwork
+
+Obtiene el artwork (imagen de portada) de una pista de audio.
+
+**Parámetros:**
+- `id`: `string` - UUID de la pista
+
+**Retorno:**
+```typescript
+string | null // Base64 data URI o null si no hay artwork
+```
+
+**Ejemplo:**
+```typescript
+const artwork = await invoke<string | null>("get_track_artwork", { id: "track-uuid" });
+
+if (artwork) {
+  // artwork es data URI lista para usar en <img src>
+  // ej: "data:image/jpeg;base64,/9j/4AAQSkZJRg..."
+  document.getElementById("album-art").src = artwork;
+} else {
+  console.log("Track sin artwork embebido");
+}
+```
+
+**Uso con React Hook (recomendado):**
+```typescript
+import { useArtwork } from "@/hooks/useArtwork";
+
+const MyComponent = ({ trackId }) => {
+  const { artwork, isLoading, error } = useArtwork(trackId);
+
+  if (isLoading) return <Spinner />;
+  if (!artwork) return <PlaceholderIcon />;
+  
+  return <img src={artwork} alt="Album art" />;
+};
+```
+
+**Notas:**
+- Extrae imágenes embebidas de archivos MP3 (ID3), FLAC, OGG, M4A
+- Prioriza portada frontal (CoverFront) sobre otros tipos
+- Retorna data URI con MIME type correcto (image/jpeg, image/png, etc.)
+- El hook `useArtwork` incluye cache en memoria para evitar re-extracciones
+
+**Errores:**
+- `"Track not found"` - No existe pista con ese ID
+- `"Error extracting artwork"` - No se pudo leer el archivo
+
+---
+
 ## Playlists (Milestone 3)
 
 ### get_playlists

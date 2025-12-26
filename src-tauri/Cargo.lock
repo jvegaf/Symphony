@@ -4444,6 +4444,7 @@ name = "symphony"
 version = "0.10.0"
 dependencies = [
  "atomic-wait",
+ "base64 0.22.1",
  "bincode",
  "chrono",
  "cpal",

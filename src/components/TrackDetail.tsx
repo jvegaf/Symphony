@@ -6,6 +6,7 @@ import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
 import { Star, ChevronLeft, ChevronRight, FileText } from "lucide-react";
 import type { Track } from "../types/library";
+import { useArtwork } from "../hooks/useArtwork";
 
 interface TrackDetailProps {
   trackId: string; // AIDEV-NOTE: UUID v4, no number
@@ -82,6 +83,9 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId, tracks = [], 
       return result;
     },
   });
+
+  // AIDEV-NOTE: Hook para obtener artwork on-demand
+  const { artwork, isLoading: isArtworkLoading } = useArtwork(trackId);
 
   // AIDEV-NOTE: Lógica de navegación entre tracks
   const currentIndex = tracks.findIndex((t) => t.id === trackId);
@@ -338,16 +342,31 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId, tracks = [], 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Columna izquierda: Artwork del disco */}
           <div className="md:col-span-1 flex items-center justify-center">
-            <div className="w-full max-w-[280px] aspect-square bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 rounded-lg shadow-lg flex items-center justify-center">
-              {/* AIDEV-NOTE: Placeholder para artwork - TODO: implementar extracción de artwork desde MP3 */}
-              <div className="text-center p-6">
-                <span className="material-icons text-6xl text-gray-400 dark:text-gray-500 mb-2">
-                  album
-                </span>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  No artwork
-                </p>
-              </div>
+            <div className="w-full max-w-[280px] aspect-square bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 rounded-lg shadow-lg flex items-center justify-center overflow-hidden">
+              {/* AIDEV-NOTE: Muestra artwork extraído del archivo o placeholder */}
+              {isArtworkLoading ? (
+                <div className="text-center p-6">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-400 dark:border-gray-500 mx-auto mb-2" />
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Cargando...
+                  </p>
+                </div>
+              ) : artwork ? (
+                <img
+                  src={artwork}
+                  alt={`Artwork de ${track?.title || "track"}`}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="text-center p-6">
+                  <span className="material-icons text-6xl text-gray-400 dark:text-gray-500 mb-2">
+                    album
+                  </span>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    Sin artwork
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 

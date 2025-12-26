@@ -291,6 +291,33 @@ pub struct DeleteTrackResult {
     pub file_path: String,
 }
 
+/// Obtiene el artwork (imagen de portada) de una pista
+///
+/// AIDEV-NOTE: Extrae la imagen embedded del archivo de audio usando lofty.
+/// Retorna base64 data URI listo para usar en <img src="...">
+///
+/// # Arguments
+/// * `id` - UUID de la pista en la base de datos
+///
+/// # Returns
+/// - `Ok(Some(base64_data_uri))` si hay artwork
+/// - `Ok(None)` si no hay artwork embedded
+/// - `Err` si la pista no existe o hay error leyendo el archivo
+#[tauri::command]
+pub async fn get_track_artwork(id: String) -> Result<Option<String>, String> {
+    let db = crate::db::get_connection().map_err(|e| e.to_string())?;
+    
+    // Obtener la pista para conocer su ruta
+    let track = queries::get_track(&db.conn, &id)
+        .map_err(|e| format!("Track not found: {}", e))?;
+    
+    let file_path = Path::new(&track.path);
+    
+    // Extraer artwork usando MetadataExtractor
+    MetadataExtractor::extract_artwork(file_path)
+        .map_err(|e| format!("Error extracting artwork: {}", e))
+}
+
 /// Resetea la biblioteca eliminando todas las pistas, playlists y caché de waveforms
 ///
 /// AIDEV-NOTE: Esta operación es destructiva pero no elimina archivos físicos.

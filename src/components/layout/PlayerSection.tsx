@@ -16,6 +16,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import type { Track } from "../../types/library";
 import { useAudioPlayer } from "../../hooks/useAudioPlayer";
+import { useArtwork } from "../../hooks/useArtwork";
 import {
   useGetBeatgrid,
   useAnalyzeBeatgrid,
@@ -54,6 +55,9 @@ export const PlayerSection = ({ track, tracks = [], onTrackChange }: PlayerSecti
     volume,
     setVolume,
   } = useAudioPlayer();
+
+  // AIDEV-NOTE: Hook para obtener artwork on-demand
+  const { artwork } = useArtwork(track?.id);
 
   // Ref para obtener dimensiones del waveform
   const waveformContainerRef = useRef<HTMLDivElement>(null);
@@ -216,12 +220,20 @@ export const PlayerSection = ({ track, tracks = [], onTrackChange }: PlayerSecti
       <div className="flex items-start">
         {/* Album Art */}
         <div
-          className="w-16 h-16 rounded mr-4 bg-gray-200 dark:bg-gray-800 flex items-center justify-center"
+          className="w-16 h-16 rounded mr-4 bg-gray-200 dark:bg-gray-800 flex items-center justify-center overflow-hidden"
           data-testid="player-album-art"
         >
-          <span className="material-icons text-3xl text-gray-400">
-            {track ? "album" : "library_music"}
-          </span>
+          {artwork ? (
+            <img
+              src={artwork}
+              alt={`Artwork de ${track?.title || "track"}`}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <span className="material-icons text-3xl text-gray-400">
+              {track ? "album" : "library_music"}
+            </span>
+          )}
         </div>
 
         {/* Track Details - ALTURA FIJA */}

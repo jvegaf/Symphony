@@ -53,6 +53,7 @@ log = "0.4.29"
 # AIDEV-NOTE: lofty para lectura/escritura de tags ID3v2, ID3v1, APEv2, Vorbis Comments, MP4
 lofty = "0.22" # Equivalente Rust de mutagen (lectura + escritura de metadatos)
 id3 = "1.14"   # Para lectura directa de frames POPM (Popularimeter)
+base64 = "0.22.1"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }
