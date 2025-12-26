@@ -3,7 +3,7 @@
 Aplicación de escritorio profesional para gestionar bibliotecas musicales con importación, reproducción, análisis de audio y herramientas de organización avanzadas.
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![Version](https://img.shields.io/badge/version-0.11.0-blue)]()
+[![Version](https://img.shields.io/badge/version-0.12.0-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 
 ## ✨ Características
@@ -17,6 +17,12 @@ Aplicación de escritorio profesional para gestionar bibliotecas musicales con i
 - 🔄 **Conversión de Audio:** Opcional a MP3 durante importación
 - 🌙 **Modo Oscuro:** Interfaz optimizada para uso prolongado
 - 🎧 **Integración con Beatport:** Auto-completar tags faltantes (BPM, Key, Genre, Label, ISRC, Artwork) buscando en Beatport
+
+## 🆕 Novedades v0.12.0
+
+### 🔧 Mejoras de UX
+- **Ordenamiento por Genre y Key:** Ahora puedes ordenar la tabla de tracks por las columnas Genre y Key haciendo click en el header
+- **Indicadores visuales:** Las columnas Genre y Key muestran flechas de dirección al ordenar (↑ ascendente, ↓ descendente)
 
 ## 🆕 Novedades v0.11.0
 

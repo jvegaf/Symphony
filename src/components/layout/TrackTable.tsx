@@ -24,7 +24,7 @@ import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { confirm } from "@tauri-apps/plugin-dialog";
 
 // AIDEV-NOTE: Tipos exportados para que App.tsx pueda usarlos
-export type SortColumn = 'title' | 'artist' | 'album' | 'duration' | 'bpm' | 'rating' | 'year' | 'dateAdded' | 'bitrate';
+export type SortColumn = 'title' | 'artist' | 'album' | 'duration' | 'bpm' | 'rating' | 'year' | 'dateAdded' | 'bitrate' | 'genre' | 'key';
 export type SortDirection = 'asc' | 'desc';
 
 interface TrackTableProps {
@@ -159,6 +159,14 @@ export const TrackTable = ({
       case 'bitrate':
         aValue = a.bitrate ?? 0;
         bValue = b.bitrate ?? 0;
+        break;
+      case 'genre':
+        aValue = (a.genre ?? '').toLowerCase();
+        bValue = (b.genre ?? '').toLowerCase();
+        break;
+      case 'key':
+        aValue = (a.key ?? '').toLowerCase();
+        bValue = (b.key ?? '').toLowerCase();
         break;
     }
 
@@ -534,7 +542,19 @@ export const TrackTable = ({
                 )}
               </div>
             </th>
-            <th className="p-2 font-medium text-gray-600 dark:text-gray-400">Key</th>
+            <th 
+              className="p-2 font-medium text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-gray-100"
+              onClick={() => handleSort('key')}
+            >
+              <div className="flex items-center gap-1">
+                Key
+                {sortColumn === 'key' && (
+                  <span className="material-icons text-base">
+                    {sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward'}
+                  </span>
+                )}
+              </div>
+            </th>
             <th 
               className="p-2 font-medium text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-gray-100"
               onClick={() => handleSort('rating')}
@@ -548,7 +568,19 @@ export const TrackTable = ({
                 )}
               </div>
             </th>
-            <th className="p-2 font-medium text-gray-600 dark:text-gray-400">Genre</th>
+            <th 
+              className="p-2 font-medium text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-gray-100"
+              onClick={() => handleSort('genre')}
+            >
+              <div className="flex items-center gap-1">
+                Genre
+                {sortColumn === 'genre' && (
+                  <span className="material-icons text-base">
+                    {sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward'}
+                  </span>
+                )}
+              </div>
+            </th>
             <th 
               className="p-2 font-medium text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-gray-100"
               onClick={() => handleSort('year')}

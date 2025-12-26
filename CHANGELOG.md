@@ -5,6 +5,14 @@ Todos los cambios notables de Symphony se documentan aquí.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/),
 y este proyecto sigue [Semantic Versioning](https://semver.org/lang/es/).
 
+## [0.12.0] - 2025-01-26
+
+### Agregado
+- **Ordenamiento por Genre y Key:** Ahora las columnas Genre y Key en la tabla de tracks son ordenables
+  - Click en header de columna para ordenar
+  - Indicador visual de dirección (↑/↓)
+  - Tipo `SortColumn` actualizado para incluir 'genre' | 'key'
+
 ## [0.11.0] - 2025-01-20
 
 ### Agregado
