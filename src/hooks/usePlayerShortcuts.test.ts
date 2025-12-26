@@ -2,7 +2,7 @@
  * Tests para usePlayerShortcuts
  *
  * AIDEV-NOTE: Hook para atajos de teclado del reproductor:
- * - A: Ir al inicio de la canción, si se pulsa otra vez antes de 3 seg → pista anterior
+ * - A: Si position < 3s → pista anterior; Si position >= 3s → ir al inicio
  * - D: Siguiente pista (usa la cola de reproducción)
  * - S: Avanzar 10 segundos
  * - W: Retroceder 10 segundos
@@ -274,12 +274,12 @@ describe("usePlayerShortcuts", () => {
   });
 
   describe("Tecla A - Ir al inicio / pista anterior", () => {
-    it("debería ir al inicio de la canción la primera vez que se presiona A", () => {
+    it("debería ir al inicio de la canción cuando position >= 3 segundos", () => {
       const { result } = renderHook(() =>
         usePlayerShortcuts({
           currentTrack: mockTracks[1],
           tracksById,
-          position: 60,
+          position: 60, // Más de 3 segundos
           duration: 240,
           seek: mockSeek,
           play: mockPlay,
@@ -299,14 +299,14 @@ describe("usePlayerShortcuts", () => {
       expect(mockPlay).not.toHaveBeenCalled();
     });
 
-    it("debería ir a la pista anterior si se presiona A dos veces en menos de 3 segundos", async () => {
+    it("debería ir a la pista anterior cuando position < 3 segundos y hay pista anterior", async () => {
       mockQueuePrevious = vi.fn().mockReturnValue("uuid-1");
 
       const { result } = renderHook(() =>
         usePlayerShortcuts({
           currentTrack: mockTracks[1], // Track 2
           tracksById,
-          position: 60,
+          position: 2, // Menos de 3 segundos
           duration: 240,
           seek: mockSeek,
           play: mockPlay,
@@ -317,18 +317,6 @@ describe("usePlayerShortcuts", () => {
           hasPrevious: true,
         })
       );
-
-      // Primera pulsación - ir al inicio
-      act(() => {
-        result.current.handleKeyPress("a");
-      });
-
-      expect(mockSeek).toHaveBeenCalledWith(0);
-
-      // Segunda pulsación antes de 3 segundos - ir a pista anterior
-      act(() => {
-        vi.advanceTimersByTime(2000); // 2 segundos
-      });
 
       await act(async () => {
         await result.current.handleKeyPress("a");
@@ -337,53 +325,15 @@ describe("usePlayerShortcuts", () => {
       expect(mockQueuePrevious).toHaveBeenCalled();
       expect(mockPlay).toHaveBeenCalledWith("/music/track1.mp3");
       expect(mockOnTrackChange).toHaveBeenCalledWith(mockTracks[0]);
+      expect(mockSeek).not.toHaveBeenCalled();
     });
 
-    it("debería ir al inicio de nuevo si se presiona A después de 3 segundos", () => {
-      const { result } = renderHook(() =>
-        usePlayerShortcuts({
-          currentTrack: mockTracks[1],
-          tracksById,
-          position: 60,
-          duration: 240,
-          seek: mockSeek,
-          play: mockPlay,
-          onTrackChange: mockOnTrackChange,
-          queueNext: mockQueueNext,
-          queuePrevious: mockQueuePrevious,
-          hasNext: true,
-          hasPrevious: true,
-        })
-      );
-
-      // Primera pulsación
-      act(() => {
-        result.current.handleKeyPress("a");
-      });
-
-      expect(mockSeek).toHaveBeenCalledWith(0);
-      vi.mocked(mockSeek).mockClear();
-
-      // Esperar más de 3 segundos
-      act(() => {
-        vi.advanceTimersByTime(4000);
-      });
-
-      // Segunda pulsación - debería ir al inicio de nuevo
-      act(() => {
-        result.current.handleKeyPress("a");
-      });
-
-      expect(mockSeek).toHaveBeenCalledWith(0);
-      expect(mockPlay).not.toHaveBeenCalled();
-    });
-
-    it("no debería ir a la pista anterior si hasPrevious es false", () => {
+    it("debería ir al inicio cuando position < 3 segundos pero no hay pista anterior", () => {
       const { result } = renderHook(() =>
         usePlayerShortcuts({
           currentTrack: mockTracks[0], // Primera pista
           tracksById,
-          position: 60,
+          position: 1, // Menos de 3 segundos
           duration: 180,
           seek: mockSeek,
           play: mockPlay,
@@ -395,27 +345,66 @@ describe("usePlayerShortcuts", () => {
         })
       );
 
-      // Primera pulsación - ir al inicio
       act(() => {
         result.current.handleKeyPress("a");
       });
 
-      expect(mockSeek).toHaveBeenCalledWith(0);
-      vi.mocked(mockSeek).mockClear();
-
-      // Segunda pulsación antes de 3 segundos
-      act(() => {
-        vi.advanceTimersByTime(1000);
-      });
-
-      act(() => {
-        result.current.handleKeyPress("a");
-      });
-
-      // Debería ir al inicio de nuevo, no a pista anterior
+      // Debería ir al inicio, no a pista anterior
       expect(mockSeek).toHaveBeenCalledWith(0);
       expect(mockQueuePrevious).not.toHaveBeenCalled();
       expect(mockPlay).not.toHaveBeenCalled();
+    });
+
+    it("debería ir al inicio cuando position es exactamente 3 segundos", () => {
+      const { result } = renderHook(() =>
+        usePlayerShortcuts({
+          currentTrack: mockTracks[1],
+          tracksById,
+          position: 3, // Exactamente 3 segundos (>= threshold)
+          duration: 240,
+          seek: mockSeek,
+          play: mockPlay,
+          onTrackChange: mockOnTrackChange,
+          queueNext: mockQueueNext,
+          queuePrevious: mockQueuePrevious,
+          hasNext: true,
+          hasPrevious: true,
+        })
+      );
+
+      act(() => {
+        result.current.handleKeyPress("a");
+      });
+
+      expect(mockSeek).toHaveBeenCalledWith(0);
+      expect(mockPlay).not.toHaveBeenCalled();
+    });
+
+    it("debería ir a pista anterior cuando position es 2.9 segundos", async () => {
+      mockQueuePrevious = vi.fn().mockReturnValue("uuid-1");
+
+      const { result } = renderHook(() =>
+        usePlayerShortcuts({
+          currentTrack: mockTracks[1],
+          tracksById,
+          position: 2.9, // Justo por debajo de 3 segundos
+          duration: 240,
+          seek: mockSeek,
+          play: mockPlay,
+          onTrackChange: mockOnTrackChange,
+          queueNext: mockQueueNext,
+          queuePrevious: mockQueuePrevious,
+          hasNext: true,
+          hasPrevious: true,
+        })
+      );
+
+      await act(async () => {
+        await result.current.handleKeyPress("a");
+      });
+
+      expect(mockQueuePrevious).toHaveBeenCalled();
+      expect(mockPlay).toHaveBeenCalledWith("/music/track1.mp3");
     });
   });
 

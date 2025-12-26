@@ -1,4 +1,4 @@
-import { useCallback, useRef } from "react";
+import { useCallback } from "react";
 
 import type { Track } from "../types/library";
 
@@ -6,7 +6,7 @@ import type { Track } from "../types/library";
  * Constantes de configuración para los atajos de teclado
  */
 const SEEK_STEP_SECONDS = 10;
-const DOUBLE_PRESS_THRESHOLD_MS = 3000;
+const PREVIOUS_TRACK_THRESHOLD_SECONDS = 3;
 
 /**
  * Teclas válidas para los atajos del reproductor
@@ -84,10 +84,6 @@ export function usePlayerShortcuts({
   queuePrevious,
   hasPrevious,
 }: UsePlayerShortcutsProps) {
-  // AIDEV-NOTE: Ref para rastrear el timestamp de la última pulsación de A
-  // para implementar el comportamiento de doble pulsación → pista anterior
-  const lastAPressRef = useRef<number>(0);
-
   /**
    * Retrocede 10 segundos (tecla W)
    */
@@ -151,34 +147,22 @@ export function usePlayerShortcuts({
   /**
    * Maneja la tecla A: ir al inicio o pista anterior
    *
-   * AIDEV-NOTE: Lógica de doble pulsación:
-   * 1. Primera pulsación: siempre ir al inicio (seek(0))
-   * 2. Si se pulsa A de nuevo en < 3 segundos:
-   *    - Si hay pista anterior en la cola → reproducir pista anterior
-   *    - Si no hay pista anterior → ir al inicio de nuevo
+   * AIDEV-NOTE: Lógica basada en posición actual:
+   * - Si position < 3 segundos Y hay pista anterior → reproducir pista anterior
+   * - Si position >= 3 segundos O no hay pista anterior → ir al inicio (seek 0)
    */
   const handleGoToStartOrPrevious = useCallback(async () => {
     if (!currentTrack) return;
 
-    const now = Date.now();
-    const timeSinceLastPress = now - lastAPressRef.current;
-
-    if (
-      timeSinceLastPress < DOUBLE_PRESS_THRESHOLD_MS &&
-      lastAPressRef.current > 0
-    ) {
-      // Segunda pulsación dentro de 3 segundos → intentar ir a pista anterior
-      if (hasPrevious) {
-        await handlePreviousTrack();
-        lastAPressRef.current = 0; // Reset para siguiente ciclo
-        return;
-      }
+    // Si estamos en los primeros 3 segundos y hay pista anterior → pista anterior
+    if (position < PREVIOUS_TRACK_THRESHOLD_SECONDS && hasPrevious) {
+      await handlePreviousTrack();
+      return;
     }
 
-    // Primera pulsación o no hay pista anterior → ir al inicio
+    // En cualquier otro caso → ir al inicio
     seek(0);
-    lastAPressRef.current = now;
-  }, [currentTrack, hasPrevious, handlePreviousTrack, seek]);
+  }, [currentTrack, position, hasPrevious, handlePreviousTrack, seek]);
 
   /**
    * Verifica si una tecla es un atajo válido
