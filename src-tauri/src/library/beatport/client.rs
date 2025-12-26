@@ -335,10 +335,26 @@ impl BeatportClient {
             .max_by(|a, b| a.1.partial_cmp(&b.1).unwrap_or(std::cmp::Ordering::Equal))
             .map(|(track, _)| track);
 
-        best.ok_or_else(|| BeatportError::TrackNotFound {
-            title: title.to_string(),
-            artist: artist.to_string(),
-        })
+        // Si encontramos un match, obtener los datos completos desde la API v4
+        // para tener todos los campos (incluyendo artwork con URL completa)
+        match best {
+            Some(track) => {
+                // Intentar obtener datos completos de la API v4
+                // Si falla, usar los datos del scraping (puede que no tenga artwork)
+                match self.get_track(track.id).await {
+                    Ok(full_track) => Ok(full_track),
+                    Err(_) => {
+                        // Fallback a datos del scraping si la API v4 falla
+                        eprintln!("Warning: No se pudieron obtener datos completos para track {}, usando datos de búsqueda", track.id);
+                        Ok(track)
+                    }
+                }
+            }
+            None => Err(BeatportError::TrackNotFound {
+                title: title.to_string(),
+                artist: artist.to_string(),
+            })
+        }
     }
 }
 

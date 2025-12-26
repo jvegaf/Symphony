@@ -334,10 +334,9 @@ impl From<&BeatportTrack> for BeatportTags {
             d.split('-').next().and_then(|y| y.parse::<i32>().ok())
         });
 
-        let artwork_url = track.release.as_ref()
-            .and_then(|r| r.image.as_ref())
-            .map(|img| img.get_url(500))
-            .or_else(|| track.image.as_ref().map(|img| img.get_url(500)));
+        // Usar el helper get_artwork_url que busca en todas las fuentes posibles
+        // (release.image, release.image_dynamic_uri, track.image, track.track_image_dynamic_uri)
+        let artwork_url = track.get_artwork_url(500);
 
         BeatportTags {
             bpm: track.bpm,
