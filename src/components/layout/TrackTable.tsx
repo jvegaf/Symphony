@@ -450,7 +450,9 @@ export const TrackTable = ({
       <table className="w-full text-left text-sm whitespace-nowrap">
         <thead className="sticky top-0 bg-gray-100 dark:bg-gray-800 z-10">
           <tr className="border-b border-gray-200/50 dark:border-gray-700/50">
-            <th className="p-2 font-medium text-gray-600 dark:text-gray-400">Art</th>
+            <th className="p-2 font-medium text-gray-600 dark:text-gray-400" title="Beatport Fix Status">
+              <span className="material-icons text-base">verified</span>
+            </th>
             <th 
               className="p-2 font-medium text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-gray-100"
               onClick={() => handleSort('dateAdded')}
@@ -626,9 +628,15 @@ export const TrackTable = ({
                 `}
               >
                 <td className="p-2">
-                  <span className={`material-icons text-2xl ${isPlaying ? "text-primary" : "text-gray-400 dark:text-gray-600"}`}>
-                    music_note
-                  </span>
+                  {track.beatportId ? (
+                    <span className="material-icons text-lg text-green-500" title="Fixeado con Beatport">
+                      check_circle
+                    </span>
+                  ) : (
+                    <span className="material-icons text-lg text-gray-300 dark:text-gray-600" title="Sin fixear">
+                      radio_button_unchecked
+                    </span>
+                  )}
                 </td>
                 <td className={`p-2 ${isPlaying || isSelected ? "text-primary font-medium" : ""}`}>
                   {formatDate(track.dateAdded)}
@@ -649,7 +657,7 @@ export const TrackTable = ({
                   {track.bitrate ? `${track.bitrate}` : ""}
                 </td>
                 <td className={`p-2 ${isPlaying || isSelected ? "text-primary font-medium" : ""}`}>
-                  {track.bpm ? track.bpm.toFixed(2) : ""}
+                  {track.bpm ? Math.round(track.bpm) : ""}
                 </td>
                 <td className={`p-2 ${isPlaying || isSelected ? "text-primary font-medium" : ""}`}>
                   {track.key && (
@@ -674,7 +682,7 @@ export const TrackTable = ({
                   {track.genre ?? ""}
                 </td>
                 <td className={`p-2 ${isPlaying || isSelected ? "text-primary font-medium" : ""}`}>
-                  {track.year ?? ""}
+                  {track.year && track.year > 0 ? track.year : ""}
                 </td>
               </tr>
             );

@@ -5,7 +5,7 @@
 
 /**
  * Modelo de pista musical
- * AIDEV-NOTE: Migrado de number a string (UUID v4)
+ * AIDEV-NOTE: v5 añade beatportId para tracking de pistas fixeadas con Beatport
  */
 export interface Track {
   id?: string;
@@ -28,6 +28,8 @@ export interface Track {
   dateModified: string;
   label?: string;
   isrc?: string;
+  /** ID del track en Beatport (solo si fue fixeado con Beatport) */
+  beatportId?: number;
 }
 
 /**

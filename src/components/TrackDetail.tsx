@@ -4,7 +4,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card } from "./ui/Card";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
-import { Star, ChevronLeft, ChevronRight, FileText } from "lucide-react";
+import { Star, ChevronLeft, ChevronRight, FileText, Search, X } from "lucide-react";
 import type { Track } from "../types/library";
 import { useArtwork } from "../hooks/useArtwork";
 
@@ -12,6 +12,7 @@ interface TrackDetailProps {
   trackId: string; // AIDEV-NOTE: UUID v4, no number
   tracks?: Track[]; // Lista completa de tracks para navegación
   onNavigate?: (trackId: string) => void; // Callback para cambiar de track
+  onFixTags?: (trackIds: string[]) => void; // Callback para Fix Tags con Beatport
 }
 
 interface UpdateTrackMetadataRequest {
@@ -46,7 +47,7 @@ interface UpdateTrackMetadataRequest {
  * - Fix: Removido campo 'comment' (no existe en DB schema ni en Track model)
  * - Fix: Agregado 'key' parameter a queries::update_track_metadata en Rust
  */
-export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId, tracks = [], onNavigate }) => {
+export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId, tracks = [], onNavigate, onFixTags }) => {
   const queryClient = useQueryClient();
 
   // Estado local para campos editables
@@ -177,16 +178,18 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId, tracks = [], 
   const updateMutation = useMutation({
     mutationFn: async (metadata: UpdateTrackMetadataRequest["metadata"]) => {
       // AIDEV-NOTE: El comando Rust espera un objeto 'request' con los campos
+      // Enviamos strings vacíos para borrar campos (el backend los interpreta como "borrar")
+      // Solo enviamos null si no queremos cambiar el campo
       const request = {
         id: trackId,
-        title: metadata.title || null,
-        artist: metadata.artist || null,
-        album: metadata.album || null,
-        year: metadata.year > 0 ? metadata.year : null,
-        genre: metadata.genre || null,
+        title: metadata.title,           // String vacío = borrar, valor = actualizar
+        artist: metadata.artist,
+        album: metadata.album,
+        year: metadata.year,             // 0 = borrar
+        genre: metadata.genre,
         rating: metadata.rating,
-        bpm: metadata.bpm && metadata.bpm > 0 ? metadata.bpm : null,
-        key: metadata.key || null,
+        bpm: metadata.bpm,               // 0 = borrar
+        key: metadata.key,
       };
       
       console.log("=== SAVING TRACK METADATA ===");
@@ -372,8 +375,8 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId, tracks = [], 
 
           {/* Columna derecha: Campos de edición */}
           <div className="md:col-span-2 space-y-4">
-          {/* Botón para extraer artista y título del filename */}
-          <div className="flex justify-end">
+          {/* Botones de acciones rápidas */}
+          <div className="flex justify-end gap-2">
             <button
               type="button"
               onClick={handleExtractFromFilename}
@@ -383,6 +386,17 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId, tracks = [], 
               <FileText className="w-4 h-4" />
               <span>Filename→Tags</span>
             </button>
+            {onFixTags && (
+              <button
+                type="button"
+                onClick={() => onFixTags([trackId])}
+                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-md transition-colors"
+                title="Buscar en Beatport y completar metadatos (BPM, Key, Genre, Label, Artwork)"
+              >
+                <Search className="w-4 h-4" />
+                <span>Fix Tags</span>
+              </button>
+            )}
           </div>
 
           {/* Título */}
@@ -393,13 +407,25 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId, tracks = [], 
             >
               Título
             </label>
-            <Input
-              id="title"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Título del track"
-              className={getModifiedFieldClass(title, originalTitle)}
-            />
+            <div className="relative">
+              <Input
+                id="title"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Título del track"
+                className={`${getModifiedFieldClass(title, originalTitle)} pr-8`}
+              />
+              {title && (
+                <button
+                  type="button"
+                  onClick={() => setTitle("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-red-500 transition-colors"
+                  title="Borrar título"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Artista */}
@@ -410,13 +436,25 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId, tracks = [], 
             >
               Artista
             </label>
-            <Input
-              id="artist"
-              value={artist}
-              onChange={(e) => setArtist(e.target.value)}
-              placeholder="Artista"
-              className={getModifiedFieldClass(artist, originalArtist)}
-            />
+            <div className="relative">
+              <Input
+                id="artist"
+                value={artist}
+                onChange={(e) => setArtist(e.target.value)}
+                placeholder="Artista"
+                className={`${getModifiedFieldClass(artist, originalArtist)} pr-8`}
+              />
+              {artist && (
+                <button
+                  type="button"
+                  onClick={() => setArtist("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-red-500 transition-colors"
+                  title="Borrar artista"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Álbum */}
@@ -427,13 +465,25 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId, tracks = [], 
             >
               Álbum
             </label>
-            <Input
-              id="album"
-              value={album}
-              onChange={(e) => setAlbum(e.target.value)}
-              placeholder="Álbum"
-              className={getModifiedFieldClass(album, originalAlbum)}
-            />
+            <div className="relative">
+              <Input
+                id="album"
+                value={album}
+                onChange={(e) => setAlbum(e.target.value)}
+                placeholder="Álbum"
+                className={`${getModifiedFieldClass(album, originalAlbum)} pr-8`}
+              />
+              {album && (
+                <button
+                  type="button"
+                  onClick={() => setAlbum("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-red-500 transition-colors"
+                  title="Borrar álbum"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Año y Género en fila */}
@@ -445,14 +495,26 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId, tracks = [], 
               >
                 Año
               </label>
-              <Input
-                id="year"
-                type="number"
-                value={year}
-                onChange={(e) => setYear(parseInt(e.target.value) || 0)}
-                placeholder="Año"
-                className={getModifiedFieldClass(year, originalYear)}
-              />
+              <div className="relative">
+                <Input
+                  id="year"
+                  type="number"
+                  value={year || ""}
+                  onChange={(e) => setYear(parseInt(e.target.value) || 0)}
+                  placeholder="Año"
+                  className={`${getModifiedFieldClass(year, originalYear)} pr-8`}
+                />
+                {year > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setYear(0)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-red-500 transition-colors"
+                    title="Borrar año"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
             <div>
               <label
@@ -461,13 +523,25 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId, tracks = [], 
               >
                 Género
               </label>
-              <Input
-                id="genre"
-                value={genre}
-                onChange={(e) => setGenre(e.target.value)}
-                placeholder="Género"
-                className={getModifiedFieldClass(genre, originalGenre)}
-              />
+              <div className="relative">
+                <Input
+                  id="genre"
+                  value={genre}
+                  onChange={(e) => setGenre(e.target.value)}
+                  placeholder="Género"
+                  className={`${getModifiedFieldClass(genre, originalGenre)} pr-8`}
+                />
+                {genre && (
+                  <button
+                    type="button"
+                    onClick={() => setGenre("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-red-500 transition-colors"
+                    title="Borrar género"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -480,14 +554,26 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId, tracks = [], 
               >
                 BPM
               </label>
-              <Input
-                id="bpm"
-                type="number"
-                value={bpm || ""}
-                onChange={(e) => setBpm(parseFloat(e.target.value) || 0)}
-                placeholder="BPM"
-                className={getModifiedFieldClass(bpm, originalBpm)}
-              />
+              <div className="relative">
+                <Input
+                  id="bpm"
+                  type="number"
+                  value={bpm || ""}
+                  onChange={(e) => setBpm(parseFloat(e.target.value) || 0)}
+                  placeholder="BPM"
+                  className={`${getModifiedFieldClass(bpm, originalBpm)} pr-8`}
+                />
+                {bpm > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setBpm(0)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-red-500 transition-colors"
+                    title="Borrar BPM"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
             <div>
               <label
@@ -496,13 +582,25 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId, tracks = [], 
               >
                 Tonalidad
               </label>
-              <Input
-                id="key"
-                value={key}
-                onChange={(e) => setKey(e.target.value)}
-                placeholder="Ej: Am, C#m"
-                className={getModifiedFieldClass(key, originalKey)}
-              />
+              <div className="relative">
+                <Input
+                  id="key"
+                  value={key}
+                  onChange={(e) => setKey(e.target.value)}
+                  placeholder="Ej: Am, C#m"
+                  className={`${getModifiedFieldClass(key, originalKey)} pr-8`}
+                />
+                {key && (
+                  <button
+                    type="button"
+                    onClick={() => setKey("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-red-500 transition-colors"
+                    title="Borrar tonalidad"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 

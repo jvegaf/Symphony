@@ -12,7 +12,7 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 
 use super::error::BeatportError;
-use super::models::{BeatportOAuth, BeatportSearchResult, BeatportTrack};
+use super::models::{BeatportCandidate, BeatportOAuth, BeatportSearchResult, BeatportTrack};
 
 const API_BASE: &str = "https://api.beatport.com/v4";
 const SEARCH_URL: &str = "https://www.beatport.com/search/tracks";
@@ -310,9 +310,8 @@ impl BeatportClient {
                 // Score de duración (si está disponible)
                 // Tolerancia de 5 segundos = score perfecto
                 // Más de 30 segundos de diferencia = penalización significativa
-                let duration_score = match (duration_secs, track.length_ms) {
-                    (Some(local_dur), Some(remote_ms)) => {
-                        let remote_dur = remote_ms as f64 / 1000.0;
+                let duration_score = match (duration_secs, track.get_duration_secs()) {
+                    (Some(local_dur), Some(remote_dur)) => {
                         let diff = (local_dur - remote_dur).abs();
                         if diff <= 5.0 {
                             1.0 // Match casi perfecto
@@ -355,6 +354,95 @@ impl BeatportClient {
                 artist: artist.to_string(),
             })
         }
+    }
+
+    /// Busca candidatos para un track local (máximo N resultados con score mínimo)
+    /// 
+    /// A diferencia de `find_best_match`, este método devuelve múltiples candidatos
+    /// con sus scores de similitud para que el usuario pueda elegir el correcto.
+    /// 
+    /// # Arguments
+    /// * `title` - Título del track local
+    /// * `artist` - Artista del track local
+    /// * `duration_secs` - Duración en segundos (opcional, mejora precisión)
+    /// * `max_results` - Número máximo de candidatos a devolver
+    /// * `min_score` - Score mínimo de similitud (0.0 - 1.0)
+    /// 
+    /// # Returns
+    /// Vector de `BeatportCandidate` ordenados por score descendente
+    pub async fn search_candidates(
+        &self,
+        title: &str,
+        artist: &str,
+        duration_secs: Option<f64>,
+        max_results: usize,
+        min_score: f64,
+    ) -> Result<Vec<BeatportCandidate>, BeatportError> {
+        let results = self.search(title, artist).await?;
+
+        if results.tracks.is_empty() {
+            return Ok(Vec::new());
+        }
+
+        // Normalizar strings para comparación
+        let normalize = |s: &str| -> String {
+            s.to_lowercase()
+                .chars()
+                .filter(|c| c.is_alphanumeric() || c.is_whitespace())
+                .collect::<String>()
+                .split_whitespace()
+                .collect::<Vec<_>>()
+                .join(" ")
+        };
+
+        let title_norm = normalize(title);
+        let artist_norm = normalize(artist);
+
+        // Calcular scores para todos los tracks
+        let mut scored_tracks: Vec<(BeatportTrack, f64)> = results.tracks.into_iter()
+            .map(|track| {
+                let track_title = normalize(&track.name);
+                let track_artist = track.artists.iter()
+                    .map(|a| normalize(&a.name))
+                    .collect::<Vec<_>>()
+                    .join(" ");
+
+                let title_score = similarity(&title_norm, &track_title);
+                let artist_score = similarity(&artist_norm, &track_artist);
+                
+                let duration_score = match (duration_secs, track.get_duration_secs()) {
+                    (Some(local_dur), Some(remote_dur)) => {
+                        let diff = (local_dur - remote_dur).abs();
+                        if diff <= 5.0 {
+                            1.0
+                        } else if diff <= 15.0 {
+                            0.8
+                        } else if diff <= 30.0 {
+                            0.5
+                        } else {
+                            0.2
+                        }
+                    }
+                    _ => 0.7,
+                };
+
+                let total_score = (title_score * 0.5) + (artist_score * 0.3) + (duration_score * 0.2);
+                (track, total_score)
+            })
+            .filter(|(_, score)| *score >= min_score)
+            .collect();
+
+        // Ordenar por score descendente
+        scored_tracks.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+        // Tomar los N mejores y convertir a BeatportCandidate
+        let candidates: Vec<BeatportCandidate> = scored_tracks
+            .into_iter()
+            .take(max_results)
+            .map(|(track, score)| BeatportCandidate::from_track(&track, score))
+            .collect();
+
+        Ok(candidates)
     }
 }
 

@@ -74,6 +74,7 @@ fn test_full_rating_import_flow() {
         date_modified: now,
         label: None,
         isrc: None,
+        beatport_id: None,
     };
 
     println!("   ✅ Track creado:");

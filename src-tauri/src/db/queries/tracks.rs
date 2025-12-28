@@ -47,7 +47,7 @@ pub fn get_track(conn: &Connection, id: &str) -> Result<Track> {
         "SELECT id, path, title, artist, album, genre, year,
                 duration, bitrate, sample_rate, file_size,
                 bpm, key, rating, play_count, last_played,
-                date_added, date_modified, label, isrc
+                date_added, date_modified, label, isrc, beatport_id
          FROM tracks WHERE id = ?1",
         [id],
         |row| {
@@ -72,6 +72,7 @@ pub fn get_track(conn: &Connection, id: &str) -> Result<Track> {
                 date_modified: row.get(17)?,
                 label: row.get(18)?,
                 isrc: row.get(19)?,
+                beatport_id: row.get(20)?,
             })
         },
     )
@@ -83,7 +84,7 @@ pub fn get_all_tracks(conn: &Connection) -> Result<Vec<Track>> {
         "SELECT id, path, title, artist, album, genre, year,
                 duration, bitrate, sample_rate, file_size,
                 bpm, key, rating, play_count, last_played,
-                date_added, date_modified, label, isrc
+                date_added, date_modified, label, isrc, beatport_id
          FROM tracks ORDER BY date_added DESC",
     )?;
 
@@ -109,6 +110,7 @@ pub fn get_all_tracks(conn: &Connection) -> Result<Vec<Track>> {
             date_modified: row.get(17)?,
             label: row.get(18)?,
             isrc: row.get(19)?,
+            beatport_id: row.get(20)?,
         })
     })?;
 
@@ -212,7 +214,7 @@ pub fn search_tracks(conn: &Connection, query: &str) -> Result<Vec<Track>> {
         "SELECT id, path, title, artist, album, genre, year,
                 duration, bitrate, sample_rate, file_size,
                 bpm, key, rating, play_count, last_played,
-                date_added, date_modified, label, isrc
+                date_added, date_modified, label, isrc, beatport_id
          FROM tracks 
          WHERE title LIKE ?1 OR artist LIKE ?1 OR album LIKE ?1
          ORDER BY date_added DESC",
@@ -240,6 +242,7 @@ pub fn search_tracks(conn: &Connection, query: &str) -> Result<Vec<Track>> {
             date_modified: row.get(17)?,
             label: row.get(18)?,
             isrc: row.get(19)?,
+            beatport_id: row.get(20)?,
         })
     })?;
 
@@ -359,6 +362,7 @@ mod tests {
             date_modified: "2024-01-01".to_string(),
             label: None,
             isrc: None,
+            beatport_id: None,
         };
 
         let id = insert_track(&db.conn, &track).unwrap();
@@ -396,6 +400,7 @@ mod tests {
             date_modified: "2024-01-01".to_string(),
             label: None,
             isrc: None,
+            beatport_id: None,
         };
 
         insert_track(&db.conn, &track).unwrap();
@@ -430,6 +435,7 @@ mod tests {
             date_modified: "2024-01-01".to_string(),
             label: None,
             isrc: None,
+            beatport_id: None,
         };
 
         let id = insert_track(&db.conn, &track).unwrap();
@@ -478,6 +484,7 @@ mod tests {
             date_modified: "2024-01-01".to_string(),
             label: None,
             isrc: None,
+            beatport_id: None,
         };
 
         let id = insert_track(&db.conn, &track).unwrap();
@@ -512,8 +519,9 @@ mod tests {
                 last_played: None,
                 date_added: "2024-01-01".to_string(),
                 date_modified: "2024-01-01".to_string(),
-            label: None,
-            isrc: None,
+                label: None,
+                isrc: None,
+                beatport_id: None,
             };
             insert_track(&db.conn, &track).unwrap();
         }

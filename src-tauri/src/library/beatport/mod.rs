@@ -13,6 +13,7 @@ pub mod tagger;
 pub use client::BeatportClient;
 pub use error::BeatportError;
 pub use models::{
-    BatchFixResult, BeatportTags, FixTagsPhase, FixTagsProgress, FixTagsResult,
+    BatchFixResult, BeatportCandidate, BeatportTags, FixTagsPhase, FixTagsProgress, 
+    FixTagsResult, SearchCandidatesResult, TrackCandidates, TrackSelection,
 };
 pub use tagger::BeatportTagger;

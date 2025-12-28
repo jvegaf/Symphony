@@ -222,6 +222,7 @@ mod tests {
             date_modified: "2024-01-01".to_string(),
             label: None,
             isrc: None,
+            beatport_id: None,
         };
 
         let track_id = insert_track(&db.conn, &track).unwrap();

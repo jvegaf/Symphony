@@ -5,6 +5,55 @@ Todos los cambios notables de Symphony se documentan aquí.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/),
 y este proyecto sigue [Semantic Versioning](https://semver.org/lang/es/).
 
+## [0.13.0] - 2025-01-28
+
+### Agregado
+- **Sistema de tracking de pistas fixeadas con Beatport:**
+  - Nueva columna `beatport_id` en la base de datos (migración v5)
+  - Indicador visual preciso en TrackTable (verde solo para pistas procesadas con Beatport)
+  - Índice de base de datos para optimizar consultas por beatport_id
+- **Indicador de duración coincidente en BeatportSelectionModal:**
+  - Resalta visualmente candidatos con duración similar (±5s tolerancia)
+  - Texto verde + icono de check cuando la duración coincide
+  - Ayuda a identificar el match correcto más rápidamente
+
+### Cambiado
+- El indicador de "fixeado" en TrackTable ahora usa `beatportId` en lugar de `label || isrc`
+- El comando `apply_selected_tags` ahora guarda el beatport_id al aplicar tags
+- Todos los tipos TypeScript y Rust actualizados con el nuevo campo `beatport_id`
+
+### Corregido
+- **Falsos positivos en indicador de fixeado:** El indicador ahora solo muestra verde para tracks que realmente fueron procesados con Beatport, no para tracks que tenían label/isrc de otras fuentes
+
+### Técnico
+- Migración de base de datos de v4 a v5
+- Actualizado modelo Track con campo `beatport_id: Option<i64>` (Rust) y `beatportId?: number` (TypeScript)
+- Todas las queries SQL actualizadas para incluir beatport_id
+- Todos los tests actualizados con el nuevo campo
+
+## [0.13.0] - 2025-01-27
+
+### Agregado
+- **Selección Manual de Matches de Beatport:** Nueva UI para evitar falsos positivos
+  - Modal de selección con hasta 4 candidatos por track
+  - Badges de similitud con colores (verde >80%, amarillo 50-80%, rojo <50%)
+  - Artwork preview de cada candidato
+  - Opción "No está en Beatport" para tracks sin match
+  - Auto-selección inteligente para matches con >85% similitud
+- Nuevos comandos Tauri: `search_beatport_candidates` y `apply_selected_tags`
+- Hook `useSearchCandidates` y `useApplySelectedTags` para el nuevo flujo
+- Componente `BeatportSelectionModal` para la interfaz de selección
+- Nuevos tipos TypeScript: `BeatportCandidate`, `TrackCandidates`, `TrackSelection`, `SearchCandidatesResult`
+
+### Cambiado
+- Flujo de "Fix Tags" ahora usa selección manual en lugar de matching automático
+- El comando `fix_tags` original se mantiene pero se marca como deprecado
+- Documentación actualizada con el nuevo flujo recomendado
+
+### Corregido
+- **Falsos positivos eliminados:** Ya no se aplican tags a tracks que no están en Beatport
+- El algoritmo de matching ahora incluye un score mínimo de 0.25 (25%)
+
 ## [0.12.0] - 2025-01-26
 
 ### Agregado

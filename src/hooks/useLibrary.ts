@@ -214,9 +214,9 @@ interface UpdateTrackMetadataRequest {
  * Extrae artista y título del filename usando patrón "Artista - Título"
  * 
  * @param path - Path completo del archivo
- * @returns Objeto con artist y title extraídos
+ * @returns Objeto con artist, title y matched (si coincidió con el patrón)
  */
-export const extractMetadataFromFilename = (path: string): { artist: string; title: string } => {
+export const extractMetadataFromFilename = (path: string): { artist: string; title: string; matched: boolean } => {
   // Extraer filename sin extensión
   const fullFilename = path.split('/').pop() || path.split('\\').pop() || '';
   const lastDotIndex = fullFilename.lastIndexOf('.');
@@ -229,10 +229,12 @@ export const extractMetadataFromFilename = (path: string): { artist: string; tit
     // Extraer y limpiar artista y título
     const artist = filename.substring(0, separatorIndex).trim();
     const title = filename.substring(separatorIndex + 1).trim();
-    return { artist, title };
+    // Solo es match válido si ambos tienen contenido
+    const matched = artist.length > 0 && title.length > 0;
+    return { artist, title, matched };
   } else {
-    // Si no hay separador, asignar todo al título
-    return { artist: '', title: filename.trim() };
+    // Si no hay separador, no coincide con el patrón
+    return { artist: '', title: filename.trim(), matched: false };
   }
 };
 
@@ -346,13 +348,14 @@ export const useBatchFilenameToTags = () => {
   const queryClient = useQueryClient();
 
   return useMutation<
-    { success: number; failed: number; errors: string[] },
+    { success: number; failed: number; skipped: number; errors: string[] },
     Error,
     { tracks: Track[]; onProgress?: (current: number, total: number) => void }
   >({
     mutationFn: async ({ tracks, onProgress }) => {
       const total = tracks.length;
       let completed = 0;
+      let skipped = 0;
 
       const results = await Promise.allSettled(
         tracks.map(async (track) => {
@@ -360,7 +363,18 @@ export const useBatchFilenameToTags = () => {
             throw new Error(`Track sin ID: ${track.path}`);
           }
 
-          const { artist, title } = extractMetadataFromFilename(track.path);
+          const { artist, title, matched } = extractMetadataFromFilename(track.path);
+          
+          // Solo actualizar si coincide con el patrón "Artista - Título"
+          if (!matched) {
+            skipped++;
+            completed++;
+            if (onProgress) {
+              onProgress(completed, total);
+            }
+            // Retornar null para indicar que fue saltado (no es error)
+            return null;
+          }
           
           const request: UpdateTrackMetadataRequest = {
             id: track.id,
@@ -380,20 +394,21 @@ export const useBatchFilenameToTags = () => {
         })
       );
 
-      const success = results.filter(r => r.status === 'fulfilled').length;
+      // Contar solo los que realmente se procesaron (no nulls)
+      const success = results.filter(r => r.status === 'fulfilled' && r.value !== null).length;
       const failed = results.filter(r => r.status === 'rejected').length;
       const errors = results
         .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
         .map(r => r.reason?.message || String(r.reason));
 
-      return { success, failed, errors };
+      return { success, failed, skipped, errors };
     },
     onSuccess: (result) => {
       // Invalidar queries para refrescar UI
       queryClient.invalidateQueries({ queryKey: ["tracks"] });
       
       // Log resultado
-      console.log(`Batch update complete: ${result.success} success, ${result.failed} failed`);
+      console.log(`Batch update complete: ${result.success} success, ${result.failed} failed, ${result.skipped} skipped (no pattern match)`);
       if (result.errors.length > 0) {
         console.error('Batch errors:', result.errors);
       }

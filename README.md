@@ -3,7 +3,7 @@
 Aplicación de escritorio profesional para gestionar bibliotecas musicales con importación, reproducción, análisis de audio y herramientas de organización avanzadas.
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![Version](https://img.shields.io/badge/version-0.12.0-blue)]()
+[![Version](https://img.shields.io/badge/version-0.13.0-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 
 ## ✨ Características
@@ -16,7 +16,15 @@ Aplicación de escritorio profesional para gestionar bibliotecas musicales con i
 - ✏️ **Edición de Metadatos:** Editor integrado con rating de pistas (nuevo sistema visual de estrellas, mejoras UX v0.4.0)
 - 🔄 **Conversión de Audio:** Opcional a MP3 durante importación
 - 🌙 **Modo Oscuro:** Interfaz optimizada para uso prolongado
-- 🎧 **Integración con Beatport:** Auto-completar tags faltantes (BPM, Key, Genre, Label, ISRC, Artwork) buscando en Beatport
+- 🎧 **Integración con Beatport:** Selección manual de matches con indicadores visuales precisos
+
+## 🆕 Novedades v0.13.0
+
+### 🎯 Sistema de Tracking de Pistas Fixeadas
+- **Indicador preciso en TrackTable:** Ahora solo muestra verde (✅) para tracks que realmente fueron procesados con Beatport
+- **Nueva columna `beatport_id` en BD:** Tracking explícito de qué tracks fueron fixeados con Beatport (migración v5)
+- **Indicador de duración coincidente:** En el modal de selección, los candidatos con duración similar (±5s) se resaltan en verde con ✓
+- **Corrección de falsos positivos:** El indicador ya no muestra tracks con label/isrc de otras fuentes como "fixeados"
 
 ## 🆕 Novedades v0.12.0
 

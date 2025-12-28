@@ -176,6 +176,8 @@ pub fn run() {
             // Beatport commands
             commands::beatport::fix_tags,
             commands::beatport::find_artwork,
+            commands::beatport::search_beatport_candidates,
+            commands::beatport::apply_selected_tags,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

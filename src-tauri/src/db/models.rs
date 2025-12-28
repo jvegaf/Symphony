@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 /// Modelo de pista musical
 /// AIDEV-NOTE: Migrado de i64 a String (UUID v4) para mejor escalabilidad
 /// AIDEV-NOTE: v4 añade campos label e isrc para integración Beatport
+/// AIDEV-NOTE: v5 añade beatport_id para tracking de pistas fixeadas
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Track {
@@ -29,6 +30,8 @@ pub struct Track {
     pub label: Option<String>,
     /// International Standard Recording Code
     pub isrc: Option<String>,
+    /// ID del track en Beatport (se establece cuando se aplica Fix Tags)
+    pub beatport_id: Option<i64>,
 }
 
 /// Modelo de waveform
@@ -141,6 +144,7 @@ mod tests {
             date_modified: "2024-01-01".to_string(),
             label: None,
             isrc: None,
+            beatport_id: None,
         };
 
         assert_eq!(track.title, "Test Track");

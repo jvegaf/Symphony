@@ -12,13 +12,14 @@ import {
 import type { SortColumn, SortDirection } from "./components/layout/TrackTable";
 import { TrackDetail } from "./components/TrackDetail";
 import { BeatportResultsModal } from "./components/ui/BeatportResultsModal";
+import { BeatportSelectionModal } from "./components/ui/BeatportSelectionModal";
 import { useAudioPlayer } from "./hooks/useAudioPlayer";
 import { useBeatport } from "./hooks/useBeatport";
 import { useGetAllTracks, useImportLibrary, useBatchFilenameToTags } from "./hooks/useLibrary";
 import { usePlaybackQueue } from "./hooks/usePlaybackQueue";
 import { usePlayerShortcuts } from "./hooks/usePlayerShortcuts";
 import { Settings } from "./pages/Settings";
-import type { BatchFixResult } from "./types/beatport";
+import type { BatchFixResult, SearchCandidatesResult, TrackSelection } from "./types/beatport";
 import type { ImportProgress, Track } from "./types/library";
 import { logger } from "./utils/logger";
 // AIDEV-NOTE: Import waveform debugger to expose window.debugWaveform()
@@ -46,6 +47,8 @@ function App() {
   const [batchProgress, setBatchProgress] = useState<{ current: number; total: number } | null>(null);
   // AIDEV-NOTE: Estado para modal de resultados de Beatport
   const [beatportResult, setBeatportResult] = useState<BatchFixResult | null>(null);
+  // AIDEV-NOTE: Estado para modal de selección manual de candidatos de Beatport
+  const [beatportCandidates, setBeatportCandidates] = useState<SearchCandidatesResult | null>(null);
 
   // AIDEV-NOTE: Estado de ordenamiento de TrackTable - levantado a App.tsx
   // para que no se pierda al navegar a Settings y volver
@@ -56,7 +59,7 @@ function App() {
   const importMutation = useImportLibrary();
   const { play, pause, resume, isPlaying, seek, position, duration } = useAudioPlayer();
   const { mutate: batchFilenameToTags } = useBatchFilenameToTags();
-  const { fixTags, findArtwork, progress: beatportProgress, isFixing } = useBeatport();
+  const { findArtwork, searchCandidates, applySelectedTags, progress: beatportProgress, isFixing, isSearching, isApplying } = useBeatport();
 
   // AIDEV-NOTE: filteredTracks se calcula para la búsqueda en la tabla
   const filteredTracks = tracks.filter((track) => {
@@ -182,6 +185,7 @@ function App() {
 
   // AIDEV-NOTE: handleBatchFilenameToTags actualiza metadatos desde nombre de archivo
   // para múltiples pistas seleccionadas (contextMenu en TrackTable)
+  // Solo actualiza pistas que coincidan con el patrón "Artista - Título"
   const handleBatchFilenameToTags = (tracks: Track[]) => {
     setBatchProgress({ current: 0, total: tracks.length });
     
@@ -195,9 +199,16 @@ function App() {
       {
         onSuccess: (result) => {
           setBatchProgress(null);
-          const message = result.failed === 0
-            ? `✅ ${result.success} pistas actualizadas correctamente`
-            : `✅ ${result.success} actualizadas\n❌ ${result.failed} fallaron\n\nErrores:\n${result.errors.join('\n')}`;
+          
+          // Construir mensaje con información de skipped
+          let message = '';
+          if (result.failed === 0 && result.skipped === 0) {
+            message = `✅ ${result.success} pistas actualizadas correctamente`;
+          } else if (result.failed === 0) {
+            message = `✅ ${result.success} pistas actualizadas\n⏭️ ${result.skipped} saltadas (sin patrón "Artista - Título")`;
+          } else {
+            message = `✅ ${result.success} actualizadas\n⏭️ ${result.skipped} saltadas (sin patrón)\n❌ ${result.failed} fallaron\n\nErrores:\n${result.errors.join('\n')}`;
+          }
           alert(message);
         },
         onError: (error) => {
@@ -208,17 +219,52 @@ function App() {
     );
   };
 
-  // AIDEV-NOTE: handleFixTags busca en Beatport y completa metadatos faltantes
-  // Se invoca desde el context menu de TrackTable
-  // Al completar, muestra un modal con las canciones no encontradas
+  // AIDEV-NOTE: handleFixTags ahora usa selección manual de candidatos
+  // Fase 1: Busca candidatos en Beatport (hasta 4 por track)
+  // Fase 2: El usuario selecciona la correcta en el modal
+  // Fase 3: Se aplican los tags de las selecciones confirmadas
   const handleFixTags = (trackIds: string[]) => {
-    fixTags.mutate(trackIds, {
+    searchCandidates.mutate(trackIds, {
+      onSuccess: (result) => {
+        // Mostrar modal de selección con los candidatos
+        setBeatportCandidates(result);
+      },
+      onError: (error) => {
+        alert(`❌ Error al buscar en Beatport: ${error}`);
+      }
+    });
+  };
+
+  // AIDEV-NOTE: Handler para cuando el usuario confirma sus selecciones en el modal
+  const handleApplySelectedTags = (selections: TrackSelection[]) => {
+    // Cerrar el modal de selección
+    setBeatportCandidates(null);
+    
+    // Solo aplicar tags para selecciones que tienen un beatport_track_id (no "No está en Beatport")
+    const validSelections = selections.filter(s => s.beatport_track_id !== null);
+    
+    if (validSelections.length === 0) {
+      // Si no hay selecciones válidas, mostrar resultado vacío
+      setBeatportResult({
+        total: selections.length,
+        success_count: 0,
+        failed_count: selections.length,
+        results: selections.map(s => ({
+          track_id: s.local_track_id,
+          success: false,
+          error: "No seleccionado"
+        }))
+      });
+      return;
+    }
+    
+    applySelectedTags.mutate(validSelections, {
       onSuccess: (result) => {
         // Mostrar modal con resultados
         setBeatportResult(result);
       },
       onError: (error) => {
-        alert(`❌ Error al buscar en Beatport: ${error}`);
+        alert(`❌ Error al aplicar tags: ${error}`);
       }
     });
   };
@@ -385,6 +431,7 @@ function App() {
                 trackId={trackDetailsId} 
                 tracks={filteredTracks}
                 onNavigate={setTrackDetailsId}
+                onFixTags={handleFixTags}
               />
             </div>
           </div>
@@ -415,15 +462,15 @@ function App() {
           </div>
         )}
 
-        {/* AIDEV-NOTE: Notificación de progreso de Beatport (Fix Tags) */}
-        {isFixing && beatportProgress && (
+        {/* AIDEV-NOTE: Notificación de progreso de Beatport (Fix Tags / Selección Manual) */}
+        {(isFixing || isSearching || isApplying) && beatportProgress && (
           <div className="fixed bottom-4 right-4 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 min-w-[350px] z-50 border border-gray-200 dark:border-gray-700">
             <div className="flex items-center gap-3">
               <span className="material-icons text-primary animate-spin">sync</span>
               <div className="flex-1">
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-sm font-medium text-gray-900 dark:text-white">
-                    Completadas {beatportProgress.current} de {beatportProgress.total} Tracks
+                    {isSearching ? "Buscando candidatos..." : isApplying ? "Aplicando tags..." : `Completadas ${beatportProgress.current} de ${beatportProgress.total} Tracks`}
                   </span>
                 </div>
                 <div className="text-xs text-gray-600 dark:text-gray-400 truncate mb-2">
@@ -441,6 +488,15 @@ function App() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* AIDEV-NOTE: Modal de selección manual de candidatos de Beatport */}
+        {beatportCandidates && (
+          <BeatportSelectionModal
+            trackCandidates={beatportCandidates.tracks}
+            onConfirm={handleApplySelectedTags}
+            onCancel={() => setBeatportCandidates(null)}
+          />
         )}
 
         {/* AIDEV-NOTE: Modal de resultados de Beatport (canciones no encontradas) */}

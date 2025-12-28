@@ -1,9 +1,9 @@
 use rusqlite::{Connection, Result};
 
 /// Versión actual del esquema
-/// AIDEV-NOTE: Versión 4 añade columnas label e isrc para integración Beatport
+/// AIDEV-NOTE: Versión 5 añade columna beatport_id para tracking de pistas fixeadas
 #[allow(dead_code)]
-const CURRENT_VERSION: i32 = 4;
+const CURRENT_VERSION: i32 = 5;
 
 /// Ejecuta todas las migraciones pendientes
 pub fn run_migrations(conn: &Connection) -> Result<()> {
@@ -36,6 +36,11 @@ pub fn run_migrations(conn: &Connection) -> Result<()> {
     if current_version < 4 {
         migration_004_beatport_fields(conn)?;
         update_version(conn, 4)?;
+    }
+
+    if current_version < 5 {
+        migration_005_beatport_id(conn)?;
+        update_version(conn, 5)?;
     }
 
     Ok(())
@@ -408,6 +413,24 @@ fn migration_004_beatport_fields(conn: &Connection) -> Result<()> {
     Ok(())
 }
 
+/// Migración 005: Añade campo beatport_id para tracking de pistas fixeadas
+/// 
+/// Este campo almacena el ID de Beatport cuando una pista fue fixeada,
+/// permitiendo identificar rápidamente qué pistas fueron procesadas.
+fn migration_005_beatport_id(conn: &Connection) -> Result<()> {
+    conn.execute_batch(
+        "
+        -- Añadir columna beatport_id (ID del track en Beatport cuando fue fixeado)
+        ALTER TABLE tracks ADD COLUMN beatport_id INTEGER;
+
+        -- Índice para búsquedas de pistas fixeadas
+        CREATE INDEX IF NOT EXISTS idx_tracks_beatport_id ON tracks(beatport_id);
+        ",
+    )?;
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -426,7 +449,7 @@ mod tests {
         run_migrations(&db.conn).unwrap();
 
         let version = get_current_version(&db.conn).unwrap();
-        assert_eq!(version, 4);
+        assert_eq!(version, 5);
     }
 
     #[test]

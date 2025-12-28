@@ -22,7 +22,7 @@ use lofty::config::WriteOptions;
 
 use super::client::BeatportClient;
 use super::error::BeatportError;
-use super::models::{BeatportTags, FixTagsResult};
+use super::models::{BeatportTags, BeatportTrack, FixTagsResult};
 
 /// Tagger que aplica metadatos de Beatport a archivos locales
 pub struct BeatportTagger {
@@ -213,6 +213,56 @@ impl BeatportTagger {
                 };
                 FixTagsResult::success(track_id.to_string(), beatport_track.id, tags)
             }
+            Err(e) => FixTagsResult::error(track_id.to_string(), e.to_string()),
+        }
+    }
+
+    /// Aplica los tags de un track de Beatport ya obtenido (sin búsqueda)
+    /// 
+    /// Este método se usa cuando el usuario ha seleccionado manualmente
+    /// un candidato de Beatport y queremos aplicar sus tags.
+    /// 
+    /// # Arguments
+    /// * `track_id` - ID del track en la base de datos Symphony
+    /// * `file_path` - Ruta al archivo de audio
+    /// * `beatport_track` - Track de Beatport con los datos a aplicar
+    /// * `current_bpm` - BPM actual del track local (para decidir si sobrescribir)
+    pub async fn apply_tags_from_track(
+        &self,
+        track_id: &str,
+        file_path: &Path,
+        beatport_track: &BeatportTrack,
+        current_bpm: Option<f64>,
+    ) -> FixTagsResult {
+        // 1. Extraer tags de Beatport
+        let mut beatport_tags = BeatportTags::from(beatport_track);
+
+        // 2. Descargar artwork si está disponible
+        if let Some(ref url) = beatport_tags.artwork_url {
+            match self.client.download_artwork(url).await {
+                Ok(data) => beatport_tags.artwork_data = Some(data),
+                Err(e) => {
+                    eprintln!("Warning: No se pudo descargar artwork: {}", e);
+                }
+            }
+        }
+
+        // 3. Aplicar lógica de merge (respeta BPM local si existe)
+        let merged_tags = self.merge_tags(
+            &beatport_tags,
+            current_bpm,
+            None, // genre - siempre aplicamos de Beatport
+            None, // album - siempre aplicamos de Beatport
+            None, // year - siempre aplicamos de Beatport
+        );
+
+        // 4. Escribir tags al archivo
+        match self.write_tags(file_path, &merged_tags) {
+            Ok(()) => FixTagsResult::success(
+                track_id.to_string(),
+                beatport_track.id,
+                merged_tags,
+            ),
             Err(e) => FixTagsResult::error(track_id.to_string(), e.to_string()),
         }
     }

@@ -184,20 +184,50 @@ pub async fn update_track_metadata(request: UpdateTrackMetadataRequest) -> Resul
     let extractor = MetadataExtractor::new();
     let file_path = Path::new(&track.path);
 
-    // Crear TrackMetadata con los valores actualizados (merge con valores existentes)
+    // Crear TrackMetadata con los valores actualizados
+    // AIDEV-NOTE: Si el request contiene Some(""), borra el campo (no usa valor anterior)
+    // Si es None, mantiene el valor existente del track
     let metadata_to_write = TrackMetadata {
         path: track.path.clone(),
-        title: request.title.or(Some(track.title)),
-        artist: request.artist.or(Some(track.artist)),
-        album: request.album.or(track.album),
-        year: request.year.or(track.year),
-        genre: request.genre.or(track.genre),
-        bpm: request
-            .bpm
-            .map(|b| b as i32)
-            .or(track.bpm.map(|b| b as i32)),
-        key: request.key.or(track.key),
-        rating: request.rating.or(track.rating),
+        title: match &request.title {
+            Some(s) if s.is_empty() => None,  // String vacío = borrar
+            Some(s) => Some(s.clone()),       // Valor nuevo
+            None => Some(track.title.clone()), // Mantener existente
+        },
+        artist: match &request.artist {
+            Some(s) if s.is_empty() => None,
+            Some(s) => Some(s.clone()),
+            None => Some(track.artist.clone()),
+        },
+        album: match &request.album {
+            Some(s) if s.is_empty() => None,
+            Some(s) => Some(s.clone()),
+            None => track.album.clone(),
+        },
+        year: match request.year {
+            Some(0) => None,  // Year 0 = borrar
+            Some(y) => Some(y),
+            None => track.year,
+        },
+        genre: match &request.genre {
+            Some(s) if s.is_empty() => None,
+            Some(s) => Some(s.clone()),
+            None => track.genre.clone(),
+        },
+        bpm: match request.bpm {
+            Some(b) if b <= 0.0 => None,  // BPM 0 o negativo = borrar
+            Some(b) => Some(b as i32),
+            None => track.bpm.map(|b| b as i32),
+        },
+        key: match &request.key {
+            Some(s) if s.is_empty() => None,
+            Some(s) => Some(s.clone()),
+            None => track.key.clone(),
+        },
+        rating: match request.rating {
+            Some(r) => Some(r),
+            None => track.rating,
+        },
         comment: None, // Comment no existe en Track model
         // Campos técnicos no cambian
         duration: track.duration,

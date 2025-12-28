@@ -1421,7 +1421,131 @@ console.log(`✅ ${successful} exitosos, ❌ ${failed} fallidos`);
 
 ## Beatport Integration (Milestone 5)
 
-### fix_tags
+### Flujo de Selección Manual (Recomendado)
+
+A partir de v0.13.0, el flujo recomendado es la **selección manual de candidatos**, que evita falsos positivos:
+
+1. **Fase 1 - Búsqueda:** Llamar `search_beatport_candidates` para obtener hasta 4 candidatos por track
+2. **Fase 2 - Selección:** El usuario elige el match correcto (o "No está en Beatport")
+3. **Fase 3 - Aplicación:** Llamar `apply_selected_tags` con las selecciones confirmadas
+
+Este flujo permite al usuario verificar visualmente cada match antes de aplicar los tags.
+
+---
+
+### search_beatport_candidates
+
+Busca candidatos en Beatport para una lista de tracks locales. Retorna hasta 4 candidatos por track con un score de similitud.
+
+**Parámetros:**
+- `trackIds`: `string[]` - Array de UUIDs de tracks locales
+
+**Retorno:**
+```typescript
+interface BeatportCandidate {
+  beatport_id: number;
+  title: string;
+  artists: string;
+  bpm: number | null;
+  key: string | null;
+  duration_secs: number | null;
+  artwork_url: string | null;
+  similarity_score: number;  // 0.0 - 1.0
+  genre: string | null;
+  label: string | null;
+}
+
+interface TrackCandidates {
+  local_track_id: string;
+  local_title: string;
+  local_artist: string;
+  local_duration: number | null;
+  candidates: BeatportCandidate[];  // Máximo 4
+  error: string | null;
+}
+
+interface SearchCandidatesResult {
+  tracks: TrackCandidates[];
+  total: number;
+  with_candidates: number;
+  without_candidates: number;
+}
+
+Promise<SearchCandidatesResult>
+```
+
+**Ejemplo:**
+```typescript
+const result = await invoke<SearchCandidatesResult>("search_beatport_candidates", {
+  trackIds: ["uuid-1", "uuid-2", "uuid-3"]
+});
+
+result.tracks.forEach(track => {
+  console.log(`${track.local_title} - ${track.local_artist}`);
+  track.candidates.forEach(candidate => {
+    console.log(`  ${candidate.title} (${Math.round(candidate.similarity_score * 100)}%)`);
+  });
+});
+```
+
+**Notas:**
+- `min_score` por defecto: 0.25 (25% similitud mínima)
+- `max_results` por defecto: 4 candidatos
+- Candidatos ordenados por `similarity_score` descendente
+- Tracks sin candidatos tendrán `candidates: []`
+
+---
+
+### apply_selected_tags
+
+Aplica tags de Beatport a tracks locales basándose en las selecciones del usuario.
+
+**Parámetros:**
+- `selections`: `TrackSelection[]` - Array de selecciones del usuario
+
+```typescript
+interface TrackSelection {
+  local_track_id: string;       // UUID del track local
+  beatport_track_id: number | null;  // ID de Beatport o null si "No está"
+}
+```
+
+**Retorno:**
+```typescript
+interface BatchFixResult {
+  total: number;
+  success_count: number;
+  failed_count: number;
+  results: FixTagsResult[];
+}
+```
+
+**Ejemplo:**
+```typescript
+// Usuario seleccionó candidatos en el modal
+const selections: TrackSelection[] = [
+  { local_track_id: "uuid-1", beatport_track_id: 12345678 },
+  { local_track_id: "uuid-2", beatport_track_id: null },  // No está en Beatport
+  { local_track_id: "uuid-3", beatport_track_id: 87654321 },
+];
+
+const result = await invoke<BatchFixResult>("apply_selected_tags", {
+  selections: selections.filter(s => s.beatport_track_id !== null)
+});
+
+console.log(`✅ Aplicados: ${result.success_count}`);
+```
+
+**Notas:**
+- Solo enviar selecciones con `beatport_track_id !== null`
+- Emite eventos `beatport:progress` durante el proceso
+- Descarga artwork y aplica todos los tags disponibles
+
+---
+
+### fix_tags (Automático - Legacy)
+
+> **⚠️ Deprecado:** Usar `search_beatport_candidates` + `apply_selected_tags` para evitar falsos positivos.
 
 Busca tracks en Beatport y completa automáticamente los metadatos faltantes (BPM, Key, Genre, Label, ISRC, Artwork).
 
@@ -1527,11 +1651,26 @@ unlisten();
 ```typescript
 import { useBeatport } from "@/hooks/useBeatport";
 
-const { fixTags, progress, isFixing, result } = useBeatport();
+// Flujo de selección manual (recomendado)
+const { searchCandidates, applySelectedTags, progress, isSearching, isApplying } = useBeatport();
 
-const handleFixTags = async (trackIds: string[]) => {
+const handleFixTagsWithSelection = async (trackIds: string[]) => {
+  // Fase 1: Buscar candidatos
+  const candidates = await searchCandidates.mutateAsync(trackIds);
+  
+  // Fase 2: Mostrar modal de selección (el usuario elige)
+  // ... UI logic ...
+  
+  // Fase 3: Aplicar tags seleccionados
+  const selections = getUserSelections(); // Del modal
+  await applySelectedTags.mutateAsync(selections);
+};
+
+// Flujo automático (legacy - no recomendado)
+const { fixTags } = useBeatport();
+
+const handleFixTagsAutomatic = async (trackIds: string[]) => {
   await fixTags.mutateAsync(trackIds);
-  // El resultado está en result, progreso en progress
 };
 ```
 
@@ -1547,4 +1686,4 @@ const handleFixTags = async (trackIds: string[]) => {
 
 ---
 
-*Última actualización: Enero 2025 (Milestone 5 - Beatport Integration)*
+*Última actualización: Enero 2025 (Milestone 5 - Beatport Integration con Selección Manual)*

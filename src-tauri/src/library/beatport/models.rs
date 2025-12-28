@@ -200,9 +200,9 @@ pub struct BeatportTrack {
     /// Duración en ms (desde length_ms)
     #[serde(default, deserialize_with = "deserialize_length_ms")]
     pub length_ms: Option<i64>,
-    /// Campo length ignorado (API v4 lo envía como string "MM:SS")
-    #[serde(default, rename = "length", skip_serializing)]
-    _length: serde_json::Value,
+    /// Campo length (API v4 lo envía como string "MM:SS" o segundos como número)
+    #[serde(default, rename = "length")]
+    pub length: Option<serde_json::Value>,
     #[serde(default)]
     pub image: Option<BeatportImage>,
     /// Imagen como string (scraping)
@@ -217,6 +217,44 @@ impl BeatportTrack {
     pub fn get_key_name(&self) -> Option<String> {
         self.key.as_ref().map(|k| k.name.clone())
             .or_else(|| self.key_name.clone())
+    }
+    
+    /// Obtiene la duración en segundos
+    /// Intenta primero `length_ms`, luego parsea `length` (puede ser ms, segundos o "MM:SS")
+    pub fn get_duration_secs(&self) -> Option<f64> {
+        // Primero intentar desde length_ms
+        if let Some(ms) = self.length_ms {
+            return Some(ms as f64 / 1000.0);
+        }
+        
+        // Fallback: parsear length
+        if let Some(ref length_val) = self.length {
+            // Si es número
+            if let Some(num) = length_val.as_i64() {
+                // Si es > 10000, probablemente son milisegundos
+                if num > 10000 {
+                    return Some(num as f64 / 1000.0);
+                }
+                return Some(num as f64);
+            }
+            if let Some(num) = length_val.as_f64() {
+                if num > 10000.0 {
+                    return Some(num / 1000.0);
+                }
+                return Some(num);
+            }
+            // Si es string "MM:SS"
+            if let Some(s) = length_val.as_str() {
+                let parts: Vec<&str> = s.split(':').collect();
+                if parts.len() == 2 {
+                    if let (Ok(mins), Ok(secs)) = (parts[0].parse::<i64>(), parts[1].parse::<i64>()) {
+                        return Some((mins * 60 + secs) as f64);
+                    }
+                }
+            }
+        }
+        
+        None
     }
     
     /// Obtiene el nombre del género principal
@@ -446,6 +484,150 @@ pub enum FixTagsPhase {
     Downloading,
     ApplyingTags,
     Complete,
+}
+
+// ============================================================================
+// Tipos para selección manual de candidatos de Beatport
+// ============================================================================
+
+/// Candidato de Beatport para un track local
+/// Contiene información resumida para mostrar en la UI de selección
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BeatportCandidate {
+    /// ID del track en Beatport
+    pub beatport_id: i64,
+    /// Título del track
+    pub title: String,
+    /// Mix name (Original Mix, Extended Mix, etc.)
+    pub mix_name: Option<String>,
+    /// Artistas concatenados
+    pub artists: String,
+    /// BPM detectado
+    pub bpm: Option<f64>,
+    /// Key musical
+    pub key: Option<String>,
+    /// Duración en segundos
+    pub duration_secs: Option<f64>,
+    /// URL del artwork (thumbnail para UI)
+    pub artwork_url: Option<String>,
+    /// Score de similitud (0.0 - 1.0)
+    pub similarity_score: f64,
+    /// Género
+    pub genre: Option<String>,
+    /// Label/Sello
+    pub label: Option<String>,
+    /// Fecha de publicación (YYYY-MM-DD)
+    pub release_date: Option<String>,
+}
+
+impl BeatportCandidate {
+    /// Crea un candidato desde un BeatportTrack con su score de similitud
+    pub fn from_track(track: &BeatportTrack, score: f64) -> Self {
+        let artists = track.artists.iter()
+            .map(|a| a.name.clone())
+            .collect::<Vec<_>>()
+            .join(", ");
+        
+        Self {
+            beatport_id: track.id,
+            title: track.name.clone(),
+            mix_name: track.mix_name.clone(),
+            artists,
+            bpm: track.bpm,
+            key: track.get_key_name(),
+            duration_secs: track.get_duration_secs(),
+            artwork_url: track.get_artwork_url(100), // Thumbnail pequeño
+            similarity_score: score,
+            genre: track.get_genre_name(),
+            label: track.get_label_name(),
+            release_date: track.publish_date.clone(),
+        }
+    }
+}
+
+/// Candidatos de Beatport para un track local
+/// Agrupa el track local con sus posibles matches de Beatport
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TrackCandidates {
+    /// ID del track local en Symphony
+    pub local_track_id: String,
+    /// Título del track local
+    pub local_title: String,
+    /// Artista del track local
+    pub local_artist: String,
+    /// Nombre del archivo local
+    pub local_filename: Option<String>,
+    /// Duración del track local en segundos
+    pub local_duration: Option<f64>,
+    /// Lista de candidatos de Beatport (máximo 4)
+    pub candidates: Vec<BeatportCandidate>,
+    /// Indica si hubo error al buscar
+    pub error: Option<String>,
+}
+
+impl TrackCandidates {
+    /// Crea un TrackCandidates con candidatos encontrados
+    pub fn with_candidates(
+        local_track_id: String,
+        local_title: String,
+        local_artist: String,
+        local_filename: Option<String>,
+        local_duration: Option<f64>,
+        candidates: Vec<BeatportCandidate>,
+    ) -> Self {
+        Self {
+            local_track_id,
+            local_title,
+            local_artist,
+            local_filename,
+            local_duration,
+            candidates,
+            error: None,
+        }
+    }
+
+    /// Crea un TrackCandidates con error
+    pub fn with_error(
+        local_track_id: String,
+        local_title: String,
+        local_artist: String,
+        local_filename: Option<String>,
+        local_duration: Option<f64>,
+        error: String,
+    ) -> Self {
+        Self {
+            local_track_id,
+            local_title,
+            local_artist,
+            local_filename,
+            local_duration,
+            candidates: Vec::new(),
+            error: Some(error),
+        }
+    }
+}
+
+/// Selección del usuario para un track
+/// El usuario elige qué candidato de Beatport usar (o ninguno)
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TrackSelection {
+    /// ID del track local en Symphony
+    pub local_track_id: String,
+    /// ID del track de Beatport seleccionado (None = "No está en Beatport")
+    pub beatport_track_id: Option<i64>,
+}
+
+/// Resultado de búsqueda de candidatos para múltiples tracks
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SearchCandidatesResult {
+    /// Candidatos por cada track
+    pub tracks: Vec<TrackCandidates>,
+    /// Total de tracks procesados
+    pub total: usize,
+    /// Tracks con al menos un candidato
+    pub with_candidates: usize,
+    /// Tracks sin candidatos encontrados
+    pub without_candidates: usize,
 }
 
 #[cfg(test)]
