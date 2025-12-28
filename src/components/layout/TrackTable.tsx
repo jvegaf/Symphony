@@ -24,7 +24,7 @@ import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { confirm } from "@tauri-apps/plugin-dialog";
 
 // AIDEV-NOTE: Tipos exportados para que App.tsx pueda usarlos
-export type SortColumn = 'title' | 'artist' | 'album' | 'duration' | 'bpm' | 'rating' | 'year' | 'dateAdded' | 'bitrate' | 'genre' | 'key';
+export type SortColumn = 'fixed' | 'title' | 'artist' | 'album' | 'duration' | 'bpm' | 'rating' | 'year' | 'dateAdded' | 'bitrate' | 'genre' | 'key';
 export type SortDirection = 'asc' | 'desc';
 
 interface TrackTableProps {
@@ -124,6 +124,11 @@ export const TrackTable = ({
       let bValue: string | number = '';
 
     switch (sortColumn) {
+      case 'fixed':
+        // Ordenar por presence de beatportId (1 = tiene beatportId, 0 = no tiene)
+        aValue = a.beatportId ? 1 : 0;
+        bValue = b.beatportId ? 1 : 0;
+        break;
       case 'title':
         aValue = a.title.toLowerCase();
         bValue = b.title.toLowerCase();
@@ -451,7 +456,18 @@ export const TrackTable = ({
         <thead className="sticky top-0 bg-gray-100 dark:bg-gray-800 z-10">
           <tr className="border-b border-gray-200/50 dark:border-gray-700/50">
             <th className="p-2 font-medium text-gray-600 dark:text-gray-400" title="Beatport Fix Status">
-              <span className="material-icons text-base">verified</span>
+              <div
+                className="flex items-center gap-1 cursor-pointer"
+                onClick={() => handleSort('fixed')}
+                title="Ordenar por estado de fixeo"
+              >
+                <span className="material-icons text-base">verified</span>
+                {sortColumn === 'fixed' && (
+                  <span className="material-icons text-base">
+                    {sortDirection === 'asc' ? 'arrow_upward' : 'arrow_downward'}
+                  </span>
+                )}
+              </div>
             </th>
             <th 
               className="p-2 font-medium text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-gray-100"

@@ -123,7 +123,11 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId, tracks = [], 
   };
   
   const filename = track ? getFilenameWithoutExtension(track.path) : '';
-  const filepath = track?.path || '';
+  // AIDEV-NOTE: Extraer solo el nombre del archivo (con extensión) de la ruta completa
+  const getFilenameFromPath = (path: string): string => {
+    return path.split('/').pop() || path.split('\\').pop() || '';
+  };
+  const filepath = track ? getFilenameFromPath(track.path) : '';
 
   // Sincronizar estado local con datos del servidor
   useEffect(() => {
