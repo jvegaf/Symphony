@@ -493,15 +493,17 @@ const MyComponent = ({ trackId }) => {
 
 ### consolidate_library
 
-Consolida la biblioteca verificando archivos, eliminando huérfanos y duplicados.
+Consolida la biblioteca verificando archivos, eliminando huérfanos, duplicados y agregando archivos nuevos.
 
-**Parámetros:** Ninguno
+**Parámetros:**
+- `library_paths`: `string[]` - Array de rutas a carpetas de biblioteca
 
 **Retorno:**
 ```typescript
 interface ConsolidateLibraryResult {
   orphansRemoved: number;      // Tracks sin archivo físico
   duplicatesRemoved: number;    // Tracks duplicados (mismo path)
+  newTracksAdded: number;       // Archivos nuevos detectados e importados
   totalTracks: number;          // Total de tracks después de consolidar
   initialTracks: number;        // Total de tracks antes de consolidar
 }
@@ -509,10 +511,19 @@ interface ConsolidateLibraryResult {
 
 **Ejemplo:**
 ```typescript
-const result = await invoke<ConsolidateLibraryResult>("consolidate_library");
+// Obtener rutas de biblioteca
+const tracks = await invoke<Track[]>("get_all_tracks");
+const libraryPaths = [...new Set(
+  tracks.map(t => t.path.split('/').slice(0, -1).join('/'))
+)];
+
+const result = await invoke<ConsolidateLibraryResult>("consolidate_library", {
+  libraryPaths
+});
 
 console.log(`Huérfanos eliminados: ${result.orphansRemoved}`);
 console.log(`Duplicados eliminados: ${result.duplicatesRemoved}`);
+console.log(`Nuevas pistas agregadas: ${result.newTracksAdded}`);
 console.log(`Pistas antes: ${result.initialTracks}`);
 console.log(`Pistas ahora: ${result.totalTracks}`);
 ```
@@ -521,13 +532,17 @@ console.log(`Pistas ahora: ${result.totalTracks}`);
 1. **Verifica archivos:** Comprueba que cada track tenga su archivo físico en disco
 2. **Elimina huérfanos:** Borra entradas de la BD cuyos archivos no existen
 3. **Elimina duplicados:** Detecta y elimina tracks con el mismo path (mantiene el más antiguo)
-4. **Optimiza BD:** Ejecuta VACUUM y ANALYZE para mejorar el rendimiento
+4. **Detecta archivos nuevos:** Escanea las carpetas de biblioteca buscando archivos no importados
+5. **Importa archivos nuevos:** Extrae metadatos e inserta en la base de datos
+6. **Optimiza BD:** Ejecuta VACUUM y ANALYZE para mejorar el rendimiento
 
 **Notas:**
 - **Operación segura:** Solo elimina entradas de la base de datos, nunca archivos físicos
 - **No destructiva:** Mantiene la integridad de tu colección musical en disco
-- **Recomendado:** Ejecutar después de mover o reorganizar archivos manualmente
+- **Auto-detección:** Encuentra y agrega automáticamente archivos nuevos
+- **Recomendado:** Ejecutar después de mover, reorganizar o agregar archivos manualmente
 - **Duración:** Puede tomar varios minutos en bibliotecas grandes (>10,000 tracks)
+- **Formatos soportados:** MP3, FLAC, WAV, OGG, M4A, AAC
 
 **Uso con Hook (Recomendado):**
 ```typescript

@@ -6,6 +6,7 @@ import { invoke } from '@tauri-apps/api/core';
 
 import { useSettings } from '../hooks/useSettings';
 import { DEFAULT_SETTINGS } from '../types/settings';
+import type { Track, ConsolidateLibraryResult } from '../types/library';
 
 type TabId = 'ui' | 'audio' | 'library' | 'conversion';
 
@@ -405,6 +406,7 @@ const LibrarySettingsTab = ({
       '• Verificar que todos los archivos existen\n' +
       '• Eliminar entradas huérfanas (sin archivo)\n' +
       '• Detectar y eliminar duplicados\n' +
+      '• Agregar archivos nuevos no importados\n' +
       '• Optimizar la base de datos\n\n' +
       '¿Deseas continuar?'
     );
@@ -413,15 +415,34 @@ const LibrarySettingsTab = ({
 
     setIsConsolidating(true);
     try {
-      const result = await invoke<{ 
-        orphansRemoved: number; 
-        duplicatesRemoved: number; 
-        totalTracks: number 
-      }>('consolidate_library');
+      // Obtener rutas de biblioteca desde tracks existentes
+      const tracks = await invoke<Track[]>('get_all_tracks');
+      const libraryPaths = [...new Set(
+        tracks.map(t => {
+          const parts = t.path.split('/');
+          // Buscar carpeta Music/Música
+          const musicIndex = parts.findIndex(p => p === 'Music' || p === 'Música' || p === 'music');
+          if (musicIndex > 0) {
+            return parts.slice(0, musicIndex + 1).join('/');
+          }
+          // Fallback: directorio padre
+          return parts.slice(0, -1).join('/');
+        })
+      )];
+
+      const result = await invoke<ConsolidateLibraryResult>('consolidate_library', {
+        libraryPaths
+      });
+      
+      const messages = [];
+      if (result.orphansRemoved > 0) messages.push(`${result.orphansRemoved} huérfanas`);
+      if (result.duplicatesRemoved > 0) messages.push(`${result.duplicatesRemoved} duplicados`);
+      if (result.newTracksAdded > 0) messages.push(`${result.newTracksAdded} nuevas`);
+      
+      const action = messages.length > 0 ? messages.join(', ') : 'ningún cambio';
       
       onShowToast(
-        `✅ Biblioteca consolidada: ${result.orphansRemoved} huérfanas eliminadas, ` +
-        `${result.duplicatesRemoved} duplicados eliminados. Total: ${result.totalTracks} pistas.`
+        `✅ Biblioteca consolidada: ${action}. Total: ${result.totalTracks} pistas.`
       );
     } catch (error) {
       console.error('Error al consolidar biblioteca:', error);

@@ -207,15 +207,18 @@ pub struct ResetLibraryResult {
     pub waveforms_deleted: usize,
 }
 
-/// Consolida la biblioteca verificando archivos, eliminando huérfanos y duplicados
+/// Consolida la biblioteca verificando archivos, eliminando huérfanos, duplicados y agregando nuevos
 /// AIDEV-NOTE: Operación de mantenimiento que:
 /// 1. Verifica que todos los archivos existan en disco
 /// 2. Elimina entradas sin archivo (huérfanos)
-/// 3. Elimina duplicados (mismo path o mismo hash)
-/// 4. Optimiza la base de datos (VACUUM)
-pub fn consolidate_library(conn: &Connection) -> Result<ConsolidateLibraryResult> {
+/// 3. Elimina duplicados (mismo path)
+/// 4. Detecta y agrega archivos nuevos no importados
+/// 5. Optimiza la base de datos (VACUUM)
+pub fn consolidate_library(conn: &Connection, library_paths: &[String]) -> Result<ConsolidateLibraryResult> {
     use std::collections::HashSet;
     use std::path::Path;
+    use walkdir::WalkDir;
+    use crate::library::metadata::MetadataExtractor;
 
     // Contar tracks iniciales
     let initial_count: i64 = conn.query_row(
@@ -273,7 +276,106 @@ pub fn consolidate_library(conn: &Connection) -> Result<ConsolidateLibraryResult
         conn.execute("DELETE FROM tracks WHERE id = ?", [&id])?;
     }
 
-    // 5. Optimizar base de datos
+    // 5. Buscar archivos nuevos en las carpetas de biblioteca
+    let extractor = MetadataExtractor::new();
+    let mut new_tracks_added = 0;
+
+    // Obtener todos los paths ya en la BD
+    let existing_paths: HashSet<String> = conn
+        .prepare("SELECT path FROM tracks")?
+        .query_map([], |row| row.get(0))?
+        .collect::<Result<HashSet<_>, _>>()?;
+
+    // Escanear carpetas buscando archivos nuevos
+    for library_path in library_paths {
+        let path = Path::new(library_path);
+        if !path.exists() || !path.is_dir() {
+            continue;
+        }
+
+        for entry in WalkDir::new(path)
+            .follow_links(true)
+            .into_iter()
+            .filter_map(|e| e.ok())
+        {
+            let file_path = entry.path();
+            if !file_path.is_file() {
+                continue;
+            }
+
+            // Verificar si es un formato soportado
+            let extension = file_path
+                .extension()
+                .and_then(|e| e.to_str())
+                .map(|s| s.to_lowercase());
+
+            let is_supported = matches!(
+                extension.as_deref(),
+                Some("mp3" | "flac" | "wav" | "ogg" | "m4a" | "aac")
+            );
+
+            if !is_supported {
+                continue;
+            }
+
+            // Verificar si ya está en la BD
+            let path_str = file_path.to_string_lossy().to_string();
+            if existing_paths.contains(&path_str) {
+                continue;
+            }
+
+            // Extraer metadatos e insertar
+            match extractor.extract_metadata(file_path) {
+                Ok(metadata) => {
+                    let track_id = uuid::Uuid::new_v4().to_string();
+                    let now = chrono::Utc::now().to_rfc3339();
+
+                    // Obtener file_size manualmente
+                    let file_size = std::fs::metadata(file_path)
+                        .map(|m| m.len() as i64)
+                        .unwrap_or(0);
+
+                    match conn.execute(
+                        "INSERT INTO tracks (
+                            id, path, title, artist, album, genre, year, duration, bitrate,
+                            sample_rate, file_size, bpm, key, rating, play_count, date_added, date_modified
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        params![
+                            track_id,
+                            path_str,
+                            metadata.title.unwrap_or_else(|| "Unknown".to_string()),
+                            metadata.artist.unwrap_or_else(|| "Unknown Artist".to_string()),
+                            metadata.album,
+                            metadata.genre,
+                            metadata.year,
+                            metadata.duration,
+                            metadata.bitrate,
+                            metadata.sample_rate,
+                            file_size,
+                            metadata.bpm,
+                            metadata.key,
+                            0, // rating
+                            0, // play_count
+                            now.clone(),
+                            now,
+                        ],
+                    ) {
+                        Ok(_) => {
+                            new_tracks_added += 1;
+                        }
+                        Err(e) => {
+                            log::warn!("Error al insertar track nuevo {}: {}", path_str, e);
+                        }
+                    }
+                }
+                Err(e) => {
+                    log::warn!("Error al extraer metadatos de {}: {}", path_str, e);
+                }
+            }
+        }
+    }
+
+    // 6. Optimizar base de datos
     conn.execute("VACUUM", [])?;
     conn.execute("ANALYZE", [])?;
 
@@ -287,6 +389,7 @@ pub fn consolidate_library(conn: &Connection) -> Result<ConsolidateLibraryResult
     Ok(ConsolidateLibraryResult {
         orphans_removed,
         duplicates_removed,
+        new_tracks_added,
         total_tracks: final_count as usize,
         initial_tracks: initial_count as usize,
     })
@@ -298,6 +401,7 @@ pub fn consolidate_library(conn: &Connection) -> Result<ConsolidateLibraryResult
 pub struct ConsolidateLibraryResult {
     pub orphans_removed: usize,
     pub duplicates_removed: usize,
+    pub new_tracks_added: usize,
     pub total_tracks: usize,
     pub initial_tracks: usize,
 }

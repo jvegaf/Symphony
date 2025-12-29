@@ -371,28 +371,30 @@ pub async fn reset_library() -> Result<queries::ResetLibraryResult, String> {
     Ok(result)
 }
 
-/// Consolida la biblioteca verificando archivos, eliminando huérfanos y duplicados
+/// Consolida la biblioteca verificando archivos, eliminando huérfanos, duplicados y agregando nuevos
 ///
 /// AIDEV-NOTE: Operación de mantenimiento que:
 /// 1. Verifica que todos los archivos de tracks existan en disco
 /// 2. Elimina entradas sin archivo correspondiente (huérfanos)
 /// 3. Elimina tracks duplicados (mismo path)
-/// 4. Optimiza la base de datos (VACUUM + ANALYZE)
+/// 4. Detecta y agrega archivos nuevos en las carpetas de biblioteca
+/// 5. Optimiza la base de datos (VACUUM + ANALYZE)
 ///
 /// Esta operación es segura: solo elimina entradas de la BD, no archivos físicos.
 #[tauri::command]
-pub async fn consolidate_library() -> Result<queries::ConsolidateLibraryResult, String> {
+pub async fn consolidate_library(library_paths: Vec<String>) -> Result<queries::ConsolidateLibraryResult, String> {
     let db = crate::db::get_connection().map_err(|e| e.to_string())?;
     
     log::info!("🔧 Iniciando consolidación de biblioteca...");
     
-    let result = queries::consolidate_library(&db.conn)
+    let result = queries::consolidate_library(&db.conn, &library_paths)
         .map_err(|e| format!("Error al consolidar biblioteca: {}", e))?;
     
     log::info!(
-        "✅ Biblioteca consolidada: {} huérfanos, {} duplicados eliminados. Total: {} pistas (antes: {})",
+        "✅ Biblioteca consolidada: {} huérfanos, {} duplicados eliminados, {} nuevas pistas agregadas. Total: {} pistas (antes: {})",
         result.orphans_removed,
         result.duplicates_removed,
+        result.new_tracks_added,
         result.total_tracks,
         result.initial_tracks
     );

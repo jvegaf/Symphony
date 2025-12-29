@@ -16,11 +16,12 @@ y este proyecto sigue [Semantic Versioning](https://semver.org/lang/es/).
   - Resalta visualmente candidatos con duración similar (±5s tolerancia)
   - Texto verde + icono de check cuando la duración coincide
   - Ayuda a identificar el match correcto más rápidamente
-- **Consolidación de biblioteca:**
-  - Nuevo comando `consolidate_library` para mantenimiento de biblioteca
+- **Consolidación de biblioteca mejorada:**
+  - Nuevo comando `consolidate_library` para mantenimiento integral
   - Verifica que todos los archivos existan en disco
   - Elimina entradas huérfanas (sin archivo correspondiente)
   - Detecta y elimina tracks duplicados (mismo path)
+  - **Detecta y agrega automáticamente archivos nuevos** en carpetas de biblioteca
   - Optimiza la base de datos (VACUUM + ANALYZE)
   - Opción en Settings > Library > Maintenance
 - **Búsqueda en menú contextual:**

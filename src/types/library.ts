@@ -82,6 +82,7 @@ export interface SearchOptions {
 export interface ConsolidateLibraryResult {
   orphansRemoved: number;
   duplicatesRemoved: number;
+  newTracksAdded: number;
   totalTracks: number;
   initialTracks: number;
 }
