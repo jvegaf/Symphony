@@ -16,6 +16,17 @@ y este proyecto sigue [Semantic Versioning](https://semver.org/lang/es/).
   - Resalta visualmente candidatos con duración similar (±5s tolerancia)
   - Texto verde + icono de check cuando la duración coincide
   - Ayuda a identificar el match correcto más rápidamente
+- **Consolidación de biblioteca:**
+  - Nuevo comando `consolidate_library` para mantenimiento de biblioteca
+  - Verifica que todos los archivos existan en disco
+  - Elimina entradas huérfanas (sin archivo correspondiente)
+  - Detecta y elimina tracks duplicados (mismo path)
+  - Optimiza la base de datos (VACUUM + ANALYZE)
+  - Opción en Settings > Library > Maintenance
+- **Búsqueda en menú contextual:**
+  - Submenu "Buscar en..." en el menú contextual de tracks
+  - Búsqueda rápida en Google y Beatport
+  - Abre resultados en el navegador del sistema
 
 ### Cambiado
 - El indicador de "fixeado" en TrackTable ahora usa `beatportId` en lugar de `label || isrc`
@@ -30,6 +41,7 @@ y este proyecto sigue [Semantic Versioning](https://semver.org/lang/es/).
 - Actualizado modelo Track con campo `beatport_id: Option<i64>` (Rust) y `beatportId?: number` (TypeScript)
 - Todas las queries SQL actualizadas para incluir beatport_id
 - Todos los tests actualizados con el nuevo campo
+- Nuevo tipo `ConsolidateLibraryResult` en Rust y TypeScript
 
 ## [0.13.0] - 2025-01-27
 

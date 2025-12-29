@@ -415,23 +415,14 @@ function App() {
 
         {/* Modal de detalles del track */}
         {trackDetailsId && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-            <div className="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-auto">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-white">Track Details</h2>
-                <button
-                  type="button"
-                  onClick={() => setTrackDetailsId(null)}
-                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                >
-                  <span className="material-icons">close</span>
-                </button>
-              </div>
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+            <div className="max-w-6xl w-full max-h-[95vh] overflow-auto rounded-lg">
               <TrackDetail 
                 trackId={trackDetailsId} 
                 tracks={filteredTracks}
                 onNavigate={setTrackDetailsId}
                 onFixTags={handleFixTags}
+                onClose={() => setTrackDetailsId(null)}
               />
             </div>
           </div>

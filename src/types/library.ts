@@ -75,3 +75,13 @@ export interface SearchOptions {
   query: string;
   limit?: number;
 }
+
+/**
+ * Resultado de consolidar biblioteca
+ */
+export interface ConsolidateLibraryResult {
+  orphansRemoved: number;
+  duplicatesRemoved: number;
+  totalTracks: number;
+  initialTracks: number;
+}

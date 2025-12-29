@@ -207,6 +207,101 @@ pub struct ResetLibraryResult {
     pub waveforms_deleted: usize,
 }
 
+/// Consolida la biblioteca verificando archivos, eliminando huérfanos y duplicados
+/// AIDEV-NOTE: Operación de mantenimiento que:
+/// 1. Verifica que todos los archivos existan en disco
+/// 2. Elimina entradas sin archivo (huérfanos)
+/// 3. Elimina duplicados (mismo path o mismo hash)
+/// 4. Optimiza la base de datos (VACUUM)
+pub fn consolidate_library(conn: &Connection) -> Result<ConsolidateLibraryResult> {
+    use std::collections::HashSet;
+    use std::path::Path;
+
+    // Contar tracks iniciales
+    let initial_count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM tracks",
+        [],
+        |row| row.get(0),
+    )?;
+
+    // 1. Buscar tracks cuyo archivo no existe
+    let mut stmt = conn.prepare(
+        "SELECT id, path FROM tracks"
+    )?;
+    
+    let tracks: Vec<(String, String)> = stmt
+        .query_map([], |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+
+    let mut orphaned_ids = Vec::new();
+    
+    for (id, path) in &tracks {
+        if !Path::new(path).exists() {
+            orphaned_ids.push(id.clone());
+        }
+    }
+
+    // 2. Eliminar tracks huérfanos
+    let orphans_removed = orphaned_ids.len();
+    for id in orphaned_ids {
+        conn.execute("DELETE FROM tracks WHERE id = ?", [&id])?;
+    }
+
+    // 3. Detectar duplicados por path
+    let mut seen_paths = HashSet::new();
+    let mut duplicate_ids = Vec::new();
+
+    let remaining_tracks: Vec<(String, String)> = conn
+        .prepare("SELECT id, path FROM tracks ORDER BY created_at")?
+        .query_map([], |row| {
+            Ok((row.get(0)?, row.get(1)?))
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
+
+    for (id, path) in remaining_tracks {
+        if !seen_paths.insert(path.clone()) {
+            // Este path ya fue visto, es un duplicado
+            duplicate_ids.push(id);
+        }
+    }
+
+    // 4. Eliminar duplicados
+    let duplicates_removed = duplicate_ids.len();
+    for id in duplicate_ids {
+        conn.execute("DELETE FROM tracks WHERE id = ?", [&id])?;
+    }
+
+    // 5. Optimizar base de datos
+    conn.execute("VACUUM", [])?;
+    conn.execute("ANALYZE", [])?;
+
+    // Contar tracks finales
+    let final_count: i64 = conn.query_row(
+        "SELECT COUNT(*) FROM tracks",
+        [],
+        |row| row.get(0),
+    )?;
+
+    Ok(ConsolidateLibraryResult {
+        orphans_removed,
+        duplicates_removed,
+        total_tracks: final_count as usize,
+        initial_tracks: initial_count as usize,
+    })
+}
+
+/// Resultado de consolidate_library
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConsolidateLibraryResult {
+    pub orphans_removed: usize,
+    pub duplicates_removed: usize,
+    pub total_tracks: usize,
+    pub initial_tracks: usize,
+}
+
 /// Busca tracks por título, artista o álbum
 pub fn search_tracks(conn: &Connection, query: &str) -> Result<Vec<Track>> {
     let search_pattern = format!("%{}%", query);

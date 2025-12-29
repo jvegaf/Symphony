@@ -1,53 +1,34 @@
+/**
+ * Componente para ver y editar metadatos de un track individual
+ *
+ * AIDEV-NOTE: Rediseño basado en mockup detail.html
+ * - Header con icono, filename y botones Save/Cancel
+ * - Layout 2 columnas: izquierda (artwork + botones), derecha (todos los campos)
+ * - Inputs con estilo rounded-full y colores oscuros
+ * - Soporte para navegación entre tracks (Previous/Next)
+ */
+
 import React, { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Card } from "./ui/Card";
-import { Button } from "./ui/Button";
-import { Input } from "./ui/Input";
-import { Star, ChevronLeft, ChevronRight, FileText, Search, X } from "lucide-react";
 import type { Track } from "../types/library";
 import { useArtwork } from "../hooks/useArtwork";
 
 interface TrackDetailProps {
-  trackId: string; // AIDEV-NOTE: UUID v4, no number
-  tracks?: Track[]; // Lista completa de tracks para navegación
-  onNavigate?: (trackId: string) => void; // Callback para cambiar de track
-  onFixTags?: (trackIds: string[]) => void; // Callback para Fix Tags con Beatport
+  trackId: string;
+  tracks?: Track[];
+  onNavigate?: (trackId: string) => void;
+  onFixTags?: (trackIds: string[]) => void;
+  onClose?: () => void;
 }
 
-interface UpdateTrackMetadataRequest {
-  track_id: string; // AIDEV-NOTE: UUID v4, no number
-  metadata: {
-    title: string;
-    artist: string;
-    album: string;
-    year: number;
-    genre: string;
-    rating: number;
-    bpm?: number;
-    key?: string;
-  };
-}
-
-/**
- * Componente para ver y editar metadatos de un track individual
- * 
- * AIDEV-NOTE: Cambios recientes:
- * - Filename SIN extensión mostrado en título del header (reemplaza "Editar Track")
- * - Path completo mostrado en subtítulo con fuente monospace (reemplaza texto descriptivo)
- * - Ambos con truncate y tooltip para rutas largas
- * - Agregados botones de navegación Previous/Next para cambiar entre tracks
- * - Soporte para navegación sin cerrar el modal
- * - Header usa min-w-0 y flex-1 para truncar correctamente en containers flex
- * - Función getFilenameWithoutExtension() maneja casos edge (archivos ocultos, sin extensión)
- * - Botón "Filename→Tags" extrae artista y título del nombre del archivo
- * - Tracking de cambios: campos modificados se marcan con ring-2 ring-yellow-400
- * - Botón "Guardar" solo aparece cuando hay cambios pendientes (hasChanges)
- * - Fix: comando update_track_metadata usa 'id' y campos directos (no 'track_id' y 'metadata')
- * - Fix: Removido campo 'comment' (no existe en DB schema ni en Track model)
- * - Fix: Agregado 'key' parameter a queries::update_track_metadata en Rust
- */
-export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId, tracks = [], onNavigate, onFixTags }) => {
+export const TrackDetail: React.FC<TrackDetailProps> = ({
+  trackId,
+  tracks = [],
+  onNavigate,
+  onFixTags,
+  onClose,
+}) => {
   const queryClient = useQueryClient();
 
   // Estado local para campos editables
@@ -56,20 +37,23 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId, tracks = [], 
   const [album, setAlbum] = useState("");
   const [year, setYear] = useState<number>(0);
   const [genre, setGenre] = useState("");
-  const [rating, setRating] = useState(0);
   const [bpm, setBpm] = useState<number>(0);
   const [key, setKey] = useState("");
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
-  // AIDEV-NOTE: Estados originales para detectar cambios
+  // Estados originales para detectar cambios
   const [originalTitle, setOriginalTitle] = useState("");
   const [originalArtist, setOriginalArtist] = useState("");
   const [originalAlbum, setOriginalAlbum] = useState("");
   const [originalYear, setOriginalYear] = useState<number>(0);
   const [originalGenre, setOriginalGenre] = useState("");
-  const [originalRating, setOriginalRating] = useState(0);
   const [originalBpm, setOriginalBpm] = useState<number>(0);
   const [originalKey, setOriginalKey] = useState("");
+  const [originalRating, setOriginalRating] = useState(0);
+  const [originalComment, setOriginalComment] = useState("");
 
   // Query para obtener el track
   const {
@@ -79,16 +63,15 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId, tracks = [], 
   } = useQuery<Track>({
     queryKey: ["track", trackId],
     queryFn: async () => {
-      // AIDEV-NOTE: Comando correcto es get_track_by_id con parámetro 'id'
       const result = await invoke<Track>("get_track_by_id", { id: trackId });
       return result;
     },
   });
 
-  // AIDEV-NOTE: Hook para obtener artwork on-demand
+  // Hook para obtener artwork
   const { artwork, isLoading: isArtworkLoading } = useArtwork(trackId);
 
-  // AIDEV-NOTE: Lógica de navegación entre tracks
+  // Navegación entre tracks
   const currentIndex = tracks.findIndex((t) => t.id === trackId);
   const hasPrevious = currentIndex > 0;
   const hasNext = currentIndex >= 0 && currentIndex < tracks.length - 1;
@@ -96,38 +79,40 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId, tracks = [], 
   const handlePrevious = () => {
     if (hasPrevious && onNavigate) {
       const prevTrack = tracks[currentIndex - 1];
-      if (prevTrack.id) {
-        onNavigate(prevTrack.id);
-      }
+      if (prevTrack.id) onNavigate(prevTrack.id);
     }
   };
 
   const handleNext = () => {
     if (hasNext && onNavigate) {
       const nextTrack = tracks[currentIndex + 1];
-      if (nextTrack.id) {
-        onNavigate(nextTrack.id);
-      }
+      if (nextTrack.id) onNavigate(nextTrack.id);
     }
   };
 
-  // AIDEV-NOTE: Extraer filename y path del track
-  // Extrae el nombre del archivo sin la extensión
-  const getFilenameWithoutExtension = (path: string): string => {
-    const fullFilename = path.split('/').pop() || path.split('\\').pop() || '';
-    const lastDotIndex = fullFilename.lastIndexOf('.');
-    if (lastDotIndex === -1 || lastDotIndex === 0) {
-      return fullFilename; // No hay extensión o archivo oculto tipo .gitignore
+  // Extraer filename del path
+  const getFilename = (path: string): string => {
+    return path.split("/").pop() || path.split("\\").pop() || "";
+  };
+
+  // Extraer artista y título del filename usando patrón {artista} - {titulo}
+  const handleExtractFromFilename = () => {
+    if (!track) return;
+    const filename = getFilename(track.path);
+    // Quitar extensión
+    const nameWithoutExt = filename.replace(/\.[^/.]+$/, "");
+    // Buscar separador " - "
+    const separatorIndex = nameWithoutExt.indexOf(" - ");
+    if (separatorIndex > 0) {
+      setArtist(nameWithoutExt.substring(0, separatorIndex).trim());
+      setTitle(nameWithoutExt.substring(separatorIndex + 3).trim());
+    } else {
+      // Sin separador, todo es título
+      setTitle(nameWithoutExt.trim());
     }
-    return fullFilename.substring(0, lastDotIndex);
   };
-  
-  const filename = track ? getFilenameWithoutExtension(track.path) : '';
-  // AIDEV-NOTE: Extraer solo el nombre del archivo (con extensión) de la ruta completa
-  const getFilenameFromPath = (path: string): string => {
-    return path.split('/').pop() || path.split('\\').pop() || '';
-  };
-  const filepath = track ? getFilenameFromPath(track.path) : '';
+
+  const filename = track ? getFilename(track.path) : "";
 
   // Sincronizar estado local con datos del servidor
   useEffect(() => {
@@ -137,150 +122,152 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId, tracks = [], 
       const trackAlbum = track.album || "";
       const trackYear = track.year || 0;
       const trackGenre = track.genre || "";
-      const trackRating = track.rating || 0;
       const trackBpm = track.bpm || 0;
       const trackKey = track.key || "";
+      const trackRating = track.rating || 0;
 
       setTitle(trackTitle);
       setArtist(trackArtist);
       setAlbum(trackAlbum);
       setYear(trackYear);
       setGenre(trackGenre);
-      setRating(trackRating);
       setBpm(trackBpm);
       setKey(trackKey);
+      setRating(trackRating);
+      setComment("");
 
-      // Guardar valores originales
       setOriginalTitle(trackTitle);
       setOriginalArtist(trackArtist);
       setOriginalAlbum(trackAlbum);
       setOriginalYear(trackYear);
       setOriginalGenre(trackGenre);
-      setOriginalRating(trackRating);
       setOriginalBpm(trackBpm);
       setOriginalKey(trackKey);
+      setOriginalRating(trackRating);
+      setOriginalComment("");
     }
   }, [track]);
 
-  // AIDEV-NOTE: Detectar si hay cambios comparando con valores originales
-  const hasChanges = 
+  // Detectar cambios
+  const hasChanges =
     title !== originalTitle ||
     artist !== originalArtist ||
     album !== originalAlbum ||
     year !== originalYear ||
     genre !== originalGenre ||
-    rating !== originalRating ||
     bpm !== originalBpm ||
-    key !== originalKey;
+    key !== originalKey ||
+    rating !== originalRating ||
+    comment !== originalComment;
 
-  // Helper para obtener clases de campo modificado
-  const getModifiedFieldClass = (current: string | number, original: string | number): string => {
-    return current !== original ? "ring-2 ring-yellow-400 dark:ring-yellow-500" : "";
-  };
+  // Manejar tecla Escape para cerrar el modal
+  // AIDEV-NOTE: Usamos capture:true para interceptar el evento antes que TrackTable
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        e.stopPropagation(); // Evita que TrackTable también lo procese
+        if (hasChanges) {
+          setShowConfirmDialog(true);
+        } else {
+          onClose?.();
+        }
+      }
+    };
+
+    // Capturar en la fase de capture para que se ejecute antes que otros listeners
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [hasChanges, onClose]);
 
   // Mutation para actualizar metadatos
   const updateMutation = useMutation({
-    mutationFn: async (metadata: UpdateTrackMetadataRequest["metadata"]) => {
-      // AIDEV-NOTE: El comando Rust espera un objeto 'request' con los campos
-      // Enviamos strings vacíos para borrar campos (el backend los interpreta como "borrar")
-      // Solo enviamos null si no queremos cambiar el campo
+    mutationFn: async () => {
       const request = {
         id: trackId,
-        title: metadata.title,           // String vacío = borrar, valor = actualizar
-        artist: metadata.artist,
-        album: metadata.album,
-        year: metadata.year,             // 0 = borrar
-        genre: metadata.genre,
-        rating: metadata.rating,
-        bpm: metadata.bpm,               // 0 = borrar
-        key: metadata.key,
+        title,
+        artist,
+        album,
+        year,
+        genre,
+        rating,
+        bpm,
+        key,
       };
-      
-      console.log("=== SAVING TRACK METADATA ===");
-      console.log("Request:", JSON.stringify(request, null, 2));
-      
-      try {
-        // El comando espera { request: {...} }
-        await invoke("update_track_metadata", { request });
-        console.log("✅ Save successful");
-      } catch (error) {
-        console.error("❌ Error saving track metadata:");
-        console.error("Error object:", error);
-        console.error("Error type:", typeof error);
-        console.error("Error stringified:", JSON.stringify(error, null, 2));
-        
-        // Show alert with error details
-        const errorMessage = typeof error === 'string' 
-          ? error 
-          : error instanceof Error 
-            ? error.message 
-            : JSON.stringify(error);
-        
-        alert(`Error al guardar:\n\n${errorMessage}\n\nMira la consola (F12) para más detalles.`);
-        throw error;
-      }
+      await invoke("update_track_metadata", { request });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["track", trackId] });
       queryClient.invalidateQueries({ queryKey: ["tracks"] });
       setShowSuccess(true);
       setTimeout(() => setShowSuccess(false), 3000);
+      // Actualizar valores originales
+      setOriginalTitle(title);
+      setOriginalArtist(artist);
+      setOriginalAlbum(album);
+      setOriginalYear(year);
+      setOriginalGenre(genre);
+      setOriginalBpm(bpm);
+      setOriginalKey(key);
+      setOriginalRating(rating);
+      setOriginalComment(comment);
     },
     onError: (error) => {
-      console.error("=== MUTATION ERROR ===");
-      console.error(error);
+      console.error("Error saving track metadata:", error);
+      alert(`Error al guardar: ${error}`);
     },
   });
 
-  const handleSave = () => {
-    updateMutation.mutate({
-      title: title || "",
-      artist: artist || "",
-      album: album || "",
-      year: year || 0,
-      genre: genre || "",
-      rating,
-      bpm: bpm || 0,
-      key: key || "",
-    });
-  };
-
+  // Manejo de rating con auto-save
   const handleRatingChange = (newRating: number) => {
     const clampedRating = Math.max(0, Math.min(5, newRating));
     setRating(clampedRating);
-    
-    // Auto-save rating
-    updateMutation.mutate({
-      title: title || "",
-      artist: artist || "",
-      album: album || "",
-      year: year || 0,
-      genre: genre || "",
-      rating: clampedRating,
-      bpm: bpm || 0,
-      key: key || "",
+  };
+
+  const handleSave = () => {
+    updateMutation.mutate();
+  };
+
+  const handleCancel = () => {
+    if (hasChanges) {
+      setShowConfirmDialog(true);
+    } else {
+      // Restaurar valores originales
+      setTitle(originalTitle);
+      setArtist(originalArtist);
+      setAlbum(originalAlbum);
+      setYear(originalYear);
+      setGenre(originalGenre);
+      setBpm(originalBpm);
+      setKey(originalKey);
+      setComment(originalComment);
+      onClose?.();
+    }
+  };
+
+  // Confirmar y guardar cambios antes de cerrar
+  const handleConfirmSave = () => {
+    setShowConfirmDialog(false);
+    updateMutation.mutate(undefined, {
+      onSuccess: () => {
+        onClose?.();
+      },
     });
   };
 
-  // AIDEV-NOTE: Extrae artista y título del filename usando patrón {artista}-{titulo}
-  const handleExtractFromFilename = () => {
-    if (!filename) return;
-
-    // Buscar el separador "-" en el filename
-    const separatorIndex = filename.indexOf('-');
-    
-    if (separatorIndex > 0 && separatorIndex < filename.length - 1) {
-      // Extraer y limpiar artista y título
-      const extractedArtist = filename.substring(0, separatorIndex).trim();
-      const extractedTitle = filename.substring(separatorIndex + 1).trim();
-      
-      // Actualizar estados
-      setArtist(extractedArtist);
-      setTitle(extractedTitle);
-    } else {
-      // Si no hay separador, asignar todo al título
-      setTitle(filename.trim());
-    }
+  // Descartar cambios y cerrar
+  const handleDiscardChanges = () => {
+    setShowConfirmDialog(false);
+    setTitle(originalTitle);
+    setArtist(originalArtist);
+    setAlbum(originalAlbum);
+    setYear(originalYear);
+    setGenre(originalGenre);
+    setBpm(originalBpm);
+    setKey(originalKey);
+    setRating(originalRating);
+    setComment(originalComment);
+    onClose?.();
   };
 
   if (isLoading) {
@@ -294,373 +281,448 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({ trackId, tracks = [], 
   if (isError) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-red-600 dark:text-red-400">
-          Error al cargar el track
-        </p>
+        <p className="text-red-600 dark:text-red-400">Error al cargar el track</p>
       </div>
     );
   }
 
+  // Estilos comunes para inputs (matching mockup)
+  const inputClass =
+    "form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden rounded-full text-white focus:outline-none focus:ring-2 focus:ring-primary/80 border border-[#55483a] bg-[#2a2a2a] h-14 placeholder:text-[#bbac9b] px-5 text-base font-normal leading-normal";
+  const labelClass = "text-white text-base font-medium leading-normal pb-2";
+
   return (
-    <Card>
-      <div className="space-y-4">
-        {/* Header con botones de navegación */}
-        <div className="border-b border-gray-200 dark:border-gray-800 pb-4">
-          <div className="flex items-center justify-between">
-            <div className="flex-1 min-w-0 pr-4">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100 truncate" title={filename}>
-                {filename || 'Editar Track'}
-              </h2>
-              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1 truncate font-mono" title={filepath}>
-                {filepath || 'Modifica los metadatos del track'}
-              </p>
-            </div>
-            
-            {/* Botones de navegación */}
-            {tracks.length > 0 && onNavigate && (
-              <div className="flex items-center gap-2 flex-shrink-0">
-                <button
-                  type="button"
-                  onClick={handlePrevious}
-                  disabled={!hasPrevious}
-                  className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  title="Track anterior"
-                >
-                  <ChevronLeft className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-                </button>
-                <span className="text-sm text-gray-600 dark:text-gray-400">
-                  {currentIndex + 1} / {tracks.length}
-                </span>
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  disabled={!hasNext}
-                  className="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  title="Track siguiente"
-                >
-                  <ChevronRight className="w-5 h-5 text-gray-700 dark:text-gray-300" />
-                </button>
-              </div>
-            )}
+    <div className="w-full rounded-lg bg-[#231a0f] text-white">
+      {/* Header */}
+      <header className="flex items-center justify-between whitespace-nowrap border-b border-solid border-b-[#3a3127] px-6 py-4">
+        <div className="flex items-center gap-4 min-w-0 flex-1">
+          <div className="size-6 text-primary flex-shrink-0">
+            <span className="material-icons text-3xl">music_note</span>
           </div>
+          <h2 className="text-white text-lg font-bold leading-tight tracking-[-0.015em] truncate">
+            {filename}
+          </h2>
         </div>
 
-        {/* AIDEV-NOTE: Layout de dos columnas - Imagen del disco y campos de edición */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Columna izquierda: Artwork del disco */}
-          <div className="md:col-span-1 flex items-center justify-center">
-            <div className="w-full max-w-[280px] aspect-square bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800 rounded-lg shadow-lg flex items-center justify-center overflow-hidden">
-              {/* AIDEV-NOTE: Muestra artwork extraído del archivo o placeholder */}
-              {isArtworkLoading ? (
-                <div className="text-center p-6">
-                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-400 dark:border-gray-500 mx-auto mb-2" />
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Cargando...
-                  </p>
-                </div>
-              ) : artwork ? (
-                <img
-                  src={artwork}
-                  alt={`Artwork de ${track?.title || "track"}`}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="text-center p-6">
-                  <span className="material-icons text-6xl text-gray-400 dark:text-gray-500 mb-2">
-                    album
-                  </span>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">
-                    Sin artwork
-                  </p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Columna derecha: Campos de edición */}
-          <div className="md:col-span-2 space-y-4">
-          {/* Botones de acciones rápidas */}
-          <div className="flex justify-end gap-2">
+        {/* Botones de navegación (si hay tracks) */}
+        {tracks.length > 1 && onNavigate && (
+          <div className="flex items-center gap-2 mx-4 flex-shrink-0">
             <button
               type="button"
-              onClick={handleExtractFromFilename}
-              className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors"
-              title="Extrae Artista y Título del nombre del archivo (formato: Artista-Título)"
+              onClick={handlePrevious}
+              disabled={!hasPrevious}
+              className="p-2 rounded-full hover:bg-[#3a3127] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              title="Track anterior"
             >
-              <FileText className="w-4 h-4" />
-              <span>Filename→Tags</span>
+              <span className="material-icons text-white">chevron_left</span>
             </button>
-            {onFixTags && (
+            <span className="text-sm text-[#bbac9b]">
+              {currentIndex + 1} / {tracks.length}
+            </span>
+            <button
+              type="button"
+              onClick={handleNext}
+              disabled={!hasNext}
+              className="p-2 rounded-full hover:bg-[#3a3127] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              title="Track siguiente"
+            >
+              <span className="material-icons text-white">chevron_right</span>
+            </button>
+          </div>
+        )}
+
+        {/* Botones de acción */}
+        <div className="hidden md:flex gap-2 flex-shrink-0">
+          <button
+            onClick={handleSave}
+            disabled={!hasChanges || updateMutation.isPending}
+            className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-primary text-[#181511] text-sm font-bold leading-normal tracking-[0.015em] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
+          >
+            <span className="truncate">
+              {updateMutation.isPending ? "Saving..." : "Save Changes"}
+            </span>
+          </button>
+          <button
+            onClick={handleCancel}
+            className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#3a3127] text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-[#4a4137] transition-colors"
+          >
+            <span className="truncate">Cancel</span>
+          </button>
+        </div>
+      </header>
+
+      {/* Main content */}
+      <main className="px-6 py-4">
+        {/* Success message */}
+        {showSuccess && (
+          <div className="mb-4 p-3 rounded-lg bg-green-500/20 text-green-400 text-sm">
+            ✓ Guardado correctamente
+          </div>
+        )}
+
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-5">
+          {/* Columna izquierda: Artwork + Botones */}
+          <div className="flex flex-col gap-4 lg:col-span-2">
+            {/* Artwork */}
+            <div
+              className="relative group aspect-square w-full bg-center bg-no-repeat bg-cover flex flex-col justify-end overflow-hidden bg-[#2a2a2a] rounded-lg"
+              style={artwork ? { backgroundImage: `url("${artwork}")` } : {}}
+            >
+              {!artwork && !isArtworkLoading && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center">
+                    <span className="material-icons text-6xl text-[#55483a]">album</span>
+                    <p className="text-sm text-[#bbac9b] mt-2">Sin artwork</p>
+                  </div>
+                </div>
+              )}
+              {isArtworkLoading && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
+                </div>
+              )}
+              {/* Hover overlay para cambiar artwork */}
+              <div className="absolute inset-0 flex cursor-pointer items-center justify-center bg-black/50 opacity-0 transition-opacity group-hover:opacity-100">
+                <div className="flex flex-col items-center text-white">
+                  <span className="material-icons text-4xl">upload_file</span>
+                  <span className="text-sm font-semibold">Change Art</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Botones de acción */}
+            <div className="flex flex-col gap-2">
+              {/* Fix Tags button */}
+              {onFixTags && (
+                <button
+                  type="button"
+                  onClick={() => onFixTags([trackId])}
+                  className="flex w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-full h-10 px-4 bg-purple-600 text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-purple-700 transition-colors"
+                >
+                  <span className="material-icons text-lg">search</span>
+                  <span className="truncate">Fix Tags (Beatport)</span>
+                </button>
+              )}
+
+              {/* Filename to Tags button */}
               <button
                 type="button"
-                onClick={() => onFixTags([trackId])}
-                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-md transition-colors"
-                title="Buscar en Beatport y completar metadatos (BPM, Key, Genre, Label, Artwork)"
+                onClick={handleExtractFromFilename}
+                className="flex w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-full h-10 px-4 bg-[#3a3127] text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-[#4a4137] transition-colors"
               >
-                <Search className="w-4 h-4" />
-                <span>Fix Tags</span>
+                <span className="material-icons text-lg">drive_file_rename_outline</span>
+                <span className="truncate">Filename → Tags</span>
               </button>
-            )}
-          </div>
 
-          {/* Título */}
-          <div>
-            <label
-              htmlFor="title"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-            >
-              Título
-            </label>
-            <div className="relative">
-              <Input
-                id="title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="Título del track"
-                className={`${getModifiedFieldClass(title, originalTitle)} pr-8`}
-              />
-              {title && (
+              {/* Search buttons row */}
+              <div className="grid grid-cols-2 gap-2">
+                {/* Search in Google */}
                 <button
                   type="button"
-                  onClick={() => setTitle("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-red-500 transition-colors"
-                  title="Borrar título"
+                  onClick={() => {
+                    const query = encodeURIComponent(`${artist} ${title}`.trim());
+                    window.open(`https://www.google.com/search?q=${query}`, "_blank");
+                  }}
+                  disabled={!artist && !title}
+                  className="flex w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-full h-10 px-4 bg-blue-600 text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Buscar en Google"
                 >
-                  <X className="w-4 h-4" />
+                  <span className="material-icons text-lg">travel_explore</span>
+                  <span className="truncate">Google</span>
                 </button>
-              )}
-            </div>
-          </div>
 
-          {/* Artista */}
-          <div>
-            <label
-              htmlFor="artist"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-            >
-              Artista
-            </label>
-            <div className="relative">
-              <Input
-                id="artist"
-                value={artist}
-                onChange={(e) => setArtist(e.target.value)}
-                placeholder="Artista"
-                className={`${getModifiedFieldClass(artist, originalArtist)} pr-8`}
-              />
-              {artist && (
+                {/* Search in Beatport */}
                 <button
                   type="button"
-                  onClick={() => setArtist("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-red-500 transition-colors"
-                  title="Borrar artista"
+                  onClick={() => {
+                    const query = encodeURIComponent(`${artist} ${title}`.trim());
+                    window.open(`https://www.beatport.com/search?q=${query}`, "_blank");
+                  }}
+                  disabled={!artist && !title}
+                  className="flex w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-full h-10 px-4 bg-green-600 text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Buscar en Beatport"
                 >
-                  <X className="w-4 h-4" />
+                  <span className="material-icons text-lg">library_music</span>
+                  <span className="truncate">Beatport</span>
                 </button>
-              )}
-            </div>
-          </div>
-
-          {/* Álbum */}
-          <div>
-            <label
-              htmlFor="album"
-              className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-            >
-              Álbum
-            </label>
-            <div className="relative">
-              <Input
-                id="album"
-                value={album}
-                onChange={(e) => setAlbum(e.target.value)}
-                placeholder="Álbum"
-                className={`${getModifiedFieldClass(album, originalAlbum)} pr-8`}
-              />
-              {album && (
-                <button
-                  type="button"
-                  onClick={() => setAlbum("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-red-500 transition-colors"
-                  title="Borrar álbum"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Año y Género en fila */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor="year"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-              >
-                Año
-              </label>
-              <div className="relative">
-                <Input
-                  id="year"
-                  type="number"
-                  value={year || ""}
-                  onChange={(e) => setYear(parseInt(e.target.value) || 0)}
-                  placeholder="Año"
-                  className={`${getModifiedFieldClass(year, originalYear)} pr-8`}
-                />
-                {year > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setYear(0)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-red-500 transition-colors"
-                    title="Borrar año"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
               </div>
             </div>
-            <div>
-              <label
-                htmlFor="genre"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-              >
-                Género
-              </label>
-              <div className="relative">
-                <Input
-                  id="genre"
-                  value={genre}
-                  onChange={(e) => setGenre(e.target.value)}
-                  placeholder="Género"
-                  className={`${getModifiedFieldClass(genre, originalGenre)} pr-8`}
-                />
-                {genre && (
+
+            {/* Rating */}
+            <div className="flex flex-col gap-2">
+              <p className={labelClass}>Rating</p>
+              <div className="flex items-center gap-1">
+                {[1, 2, 3, 4, 5].map((star) => (
                   <button
+                    key={star}
                     type="button"
-                    onClick={() => setGenre("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-red-500 transition-colors"
-                    title="Borrar género"
+                    onClick={() => handleRatingChange(star === rating ? 0 : star)}
+                    className="text-2xl transition-colors hover:scale-110"
                   >
-                    <X className="w-4 h-4" />
+                    <span
+                      className={`material-icons ${
+                        star <= rating ? "text-yellow-400" : "text-[#55483a]"
+                      }`}
+                    >
+                      {star <= rating ? "star" : "star_border"}
+                    </span>
                   </button>
-                )}
+                ))}
               </div>
             </div>
           </div>
 
-          {/* BPM y Key en fila */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label
-                htmlFor="bpm"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-              >
-                BPM
-              </label>
-              <div className="relative">
-                <Input
-                  id="bpm"
-                  type="number"
-                  value={bpm || ""}
-                  onChange={(e) => setBpm(parseFloat(e.target.value) || 0)}
-                  placeholder="BPM"
-                  className={`${getModifiedFieldClass(bpm, originalBpm)} pr-8`}
-                />
-                {bpm > 0 && (
-                  <button
-                    type="button"
-                    onClick={() => setBpm(0)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-red-500 transition-colors"
-                    title="Borrar BPM"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-            <div>
-              <label
-                htmlFor="key"
-                className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
-              >
-                Tonalidad
-              </label>
-              <div className="relative">
-                <Input
-                  id="key"
-                  value={key}
-                  onChange={(e) => setKey(e.target.value)}
-                  placeholder="Ej: Am, C#m"
-                  className={`${getModifiedFieldClass(key, originalKey)} pr-8`}
-                />
-                {key && (
-                  <button
-                    type="button"
-                    onClick={() => setKey("")}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-red-500 transition-colors"
-                    title="Borrar tonalidad"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Rating con estrellas */}
-          <div>
-            <div className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-              Rating
-            </div>
-            <div className="flex gap-1">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => handleRatingChange(star)}
-                  className="p-1 hover:scale-110 transition-transform"
-                  aria-label={`Star ${star}`}
-                >
-                  <Star
-                    className={`w-6 h-6 ${
-                      star <= rating
-                        ? "fill-yellow-400 text-yellow-400"
-                        : "text-gray-300 dark:text-gray-600"
-                    }`}
+          {/* Columna derecha: Todos los campos */}
+          <div className="flex flex-col gap-4 lg:col-span-3">
+            {/* Title y Artist */}
+            <div className="grid grid-cols-1 gap-3">
+              <div className="flex flex-col w-full">
+                <p className={labelClass}>Title</p>
+                <div className="relative flex items-center">
+                  <input
+                    className={inputClass}
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Title"
                   />
-                </button>
-              ))}
-            </div>
-          </div>
+                  {title && (
+                    <button
+                      type="button"
+                      onClick={() => setTitle("")}
+                      className="absolute right-3 text-[#bbac9b] hover:text-white transition-colors"
+                      title="Borrar título"
+                    >
+                      <span className="material-icons text-lg">close</span>
+                    </button>
+                  )}
+                </div>
+              </div>
 
-          {/* Botones de acción */}
-          <div className="flex items-center justify-between pt-4">
-            <div>
-              {showSuccess && (
-                <p className="text-sm text-green-600 dark:text-green-400">
-                  Guardado correctamente
-                </p>
-              )}
-              {updateMutation.isError && (
-                <p className="text-sm text-red-600 dark:text-red-400">
-                  Error al guardar cambios
-                </p>
-              )}
+              <div className="flex flex-col w-full">
+                <p className={labelClass}>Artist</p>
+                <div className="relative flex items-center">
+                  <input
+                    className={inputClass}
+                    value={artist}
+                    onChange={(e) => setArtist(e.target.value)}
+                    placeholder="Artist"
+                  />
+                  {artist && (
+                    <button
+                      type="button"
+                      onClick={() => setArtist("")}
+                      className="absolute right-3 text-[#bbac9b] hover:text-white transition-colors"
+                      title="Borrar artista"
+                    >
+                      <span className="material-icons text-lg">close</span>
+                    </button>
+                  )}
+                </div>
+              </div>
             </div>
-            {hasChanges && (
-              <Button
-                onClick={handleSave}
-                disabled={updateMutation.isPending}
-              >
-                {updateMutation.isPending ? "Guardando..." : "Guardar"}
-              </Button>
-            )}
-          </div>
+
+            {/* Album */}
+            <div className="flex flex-col w-full">
+              <p className={labelClass}>Album</p>
+              <div className="relative flex items-center">
+                <input
+                  className={inputClass}
+                  value={album}
+                  onChange={(e) => setAlbum(e.target.value)}
+                  placeholder="Album"
+                />
+                {album && (
+                  <button
+                    type="button"
+                    onClick={() => setAlbum("")}
+                    className="absolute right-3 text-[#bbac9b] hover:text-white transition-colors"
+                    title="Borrar álbum"
+                  >
+                    <span className="material-icons text-lg">close</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Year y Genre */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col w-full">
+                <p className={labelClass}>Year</p>
+                <div className="relative flex items-center">
+                  <input
+                    className={inputClass}
+                    type="number"
+                    value={year || ""}
+                    onChange={(e) => setYear(parseInt(e.target.value) || 0)}
+                    placeholder="Year"
+                  />
+                  {year > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setYear(0)}
+                      className="absolute right-3 text-[#bbac9b] hover:text-white transition-colors"
+                      title="Borrar año"
+                    >
+                      <span className="material-icons text-lg">close</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col w-full">
+                <p className={labelClass}>Genre</p>
+                <div className="relative flex items-center">
+                  <input
+                    className={inputClass}
+                    value={genre}
+                    onChange={(e) => setGenre(e.target.value)}
+                    placeholder="Genre"
+                  />
+                  {genre && (
+                    <button
+                      type="button"
+                      onClick={() => setGenre("")}
+                      className="absolute right-3 text-[#bbac9b] hover:text-white transition-colors"
+                      title="Borrar género"
+                    >
+                      <span className="material-icons text-lg">close</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* BPM y Key */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex flex-col w-full">
+                <p className={labelClass}>BPM</p>
+                <div className="relative flex items-center">
+                  <input
+                    className={inputClass}
+                    type="number"
+                    value={bpm || ""}
+                    onChange={(e) => setBpm(parseFloat(e.target.value) || 0)}
+                    placeholder="BPM"
+                  />
+                  {bpm > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setBpm(0)}
+                      className="absolute right-3 text-[#bbac9b] hover:text-white transition-colors"
+                      title="Borrar BPM"
+                    >
+                      <span className="material-icons text-lg">close</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex flex-col w-full">
+                <p className={labelClass}>Key</p>
+                <div className="relative flex items-center">
+                  <input
+                    className={inputClass}
+                    value={key}
+                    onChange={(e) => setKey(e.target.value)}
+                    placeholder="Am, C#m..."
+                  />
+                  {key && (
+                    <button
+                      type="button"
+                      onClick={() => setKey("")}
+                      className="absolute right-3 text-[#bbac9b] hover:text-white transition-colors"
+                      title="Borrar key"
+                    >
+                      <span className="material-icons text-lg">close</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Comments */}
+            <div className="flex flex-col w-full">
+              <p className={labelClass}>Comments</p>
+              <div className="relative">
+                <textarea
+                  className="form-textarea flex w-full min-w-0 flex-1 resize-y overflow-hidden rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-primary/80 border border-[#55483a] bg-[#2a2a2a] min-h-24 placeholder:text-[#bbac9b] p-4 pr-10 text-base font-normal leading-normal"
+                  value={comment}
+                  onChange={(e) => setComment(e.target.value)}
+                  placeholder="Add comments..."
+                />
+                {comment && (
+                  <button
+                    type="button"
+                    onClick={() => setComment("")}
+                    className="absolute right-3 top-3 text-[#bbac9b] hover:text-white transition-colors"
+                    title="Borrar comentarios"
+                  >
+                    <span className="material-icons text-lg">close</span>
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </Card>
+      </main>
+
+      {/* Footer móvil */}
+      <footer className="flex md:hidden gap-2 px-6 pb-4">
+        <button
+          onClick={handleSave}
+          disabled={!hasChanges || updateMutation.isPending}
+          className="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-4 bg-primary text-[#181511] text-sm font-bold leading-normal tracking-[0.015em] disabled:opacity-50"
+        >
+          <span className="truncate">
+            {updateMutation.isPending ? "Saving..." : "Save Changes"}
+          </span>
+        </button>
+        <button
+          onClick={handleCancel}
+          className="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-4 bg-[#3a3127] text-white text-sm font-bold leading-normal tracking-[0.015em]"
+        >
+          <span className="truncate">Cancel</span>
+        </button>
+      </footer>
+
+      {/* Diálogo de confirmación para cambios sin guardar */}
+      {showConfirmDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
+          <div className="bg-[#231a0f] border border-[#3a3127] rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="material-icons text-yellow-500 text-2xl">warning</span>
+              <h3 className="text-white text-lg font-bold">Cambios sin guardar</h3>
+            </div>
+            <p className="text-[#bbac9b] mb-6">
+              Tienes cambios sin guardar. ¿Qué deseas hacer?
+            </p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={handleConfirmSave}
+                disabled={updateMutation.isPending}
+                className="flex w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-full h-10 px-4 bg-primary text-[#181511] text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                <span className="material-icons text-lg">save</span>
+                <span>{updateMutation.isPending ? "Guardando..." : "Guardar cambios"}</span>
+              </button>
+              <button
+                onClick={handleDiscardChanges}
+                className="flex w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-full h-10 px-4 bg-red-600 text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-red-700 transition-colors"
+              >
+                <span className="material-icons text-lg">delete</span>
+                <span>Descartar cambios</span>
+              </button>
+              <button
+                onClick={() => setShowConfirmDialog(false)}
+                className="flex w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-full h-10 px-4 bg-[#3a3127] text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-[#4a4137] transition-colors"
+              >
+                <span>Seguir editando</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 

@@ -491,6 +491,65 @@ const MyComponent = ({ trackId }) => {
 
 ---
 
+### consolidate_library
+
+Consolida la biblioteca verificando archivos, eliminando huérfanos y duplicados.
+
+**Parámetros:** Ninguno
+
+**Retorno:**
+```typescript
+interface ConsolidateLibraryResult {
+  orphansRemoved: number;      // Tracks sin archivo físico
+  duplicatesRemoved: number;    // Tracks duplicados (mismo path)
+  totalTracks: number;          // Total de tracks después de consolidar
+  initialTracks: number;        // Total de tracks antes de consolidar
+}
+```
+
+**Ejemplo:**
+```typescript
+const result = await invoke<ConsolidateLibraryResult>("consolidate_library");
+
+console.log(`Huérfanos eliminados: ${result.orphansRemoved}`);
+console.log(`Duplicados eliminados: ${result.duplicatesRemoved}`);
+console.log(`Pistas antes: ${result.initialTracks}`);
+console.log(`Pistas ahora: ${result.totalTracks}`);
+```
+
+**Operaciones realizadas:**
+1. **Verifica archivos:** Comprueba que cada track tenga su archivo físico en disco
+2. **Elimina huérfanos:** Borra entradas de la BD cuyos archivos no existen
+3. **Elimina duplicados:** Detecta y elimina tracks con el mismo path (mantiene el más antiguo)
+4. **Optimiza BD:** Ejecuta VACUUM y ANALYZE para mejorar el rendimiento
+
+**Notas:**
+- **Operación segura:** Solo elimina entradas de la base de datos, nunca archivos físicos
+- **No destructiva:** Mantiene la integridad de tu colección musical en disco
+- **Recomendado:** Ejecutar después de mover o reorganizar archivos manualmente
+- **Duración:** Puede tomar varios minutos en bibliotecas grandes (>10,000 tracks)
+
+**Uso con Hook (Recomendado):**
+```typescript
+import { invoke } from "@tauri-apps/api/core";
+import { useMutation } from "@tanstack/react-query";
+
+const useConsolidateLibrary = () => {
+  return useMutation({
+    mutationFn: () => invoke<ConsolidateLibraryResult>("consolidate_library"),
+    onSuccess: (result) => {
+      console.log(`Biblioteca consolidada: ${result.orphansRemoved + result.duplicatesRemoved} elementos eliminados`);
+    },
+  });
+};
+```
+
+**Errores:**
+- `"DatabaseError"` - Error al acceder a la base de datos
+- `"Error al consolidar biblioteca"` - Error durante la consolidación
+
+---
+
 ## Playlists (Milestone 3)
 
 ### get_playlists

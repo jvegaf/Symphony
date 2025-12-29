@@ -140,6 +140,7 @@ pub fn run() {
             commands::library::update_track_metadata,
             commands::library::delete_track,
             commands::library::reset_library,
+            commands::library::consolidate_library,
             commands::library::get_track_artwork,
             // Playlist commands
             commands::playlists::create_playlist,

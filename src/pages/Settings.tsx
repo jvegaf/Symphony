@@ -384,6 +384,7 @@ const LibrarySettingsTab = ({
 }) => {
   const [isClearingCache, setIsClearingCache] = useState(false);
   const [isResettingLibrary, setIsResettingLibrary] = useState(false);
+  const [isConsolidating, setIsConsolidating] = useState(false);
 
   const handleClearWaveformCache = async () => {
     setIsClearingCache(true);
@@ -395,6 +396,38 @@ const LibrarySettingsTab = ({
       onShowToast('❌ Error al limpiar el caché de waveforms');
     } finally {
       setIsClearingCache(false);
+    }
+  };
+
+  const handleConsolidateLibrary = async () => {
+    const confirmed = confirm(
+      '🔧 Consolidar biblioteca realizará:\n\n' +
+      '• Verificar que todos los archivos existen\n' +
+      '• Eliminar entradas huérfanas (sin archivo)\n' +
+      '• Detectar y eliminar duplicados\n' +
+      '• Optimizar la base de datos\n\n' +
+      '¿Deseas continuar?'
+    );
+    
+    if (!confirmed) return;
+
+    setIsConsolidating(true);
+    try {
+      const result = await invoke<{ 
+        orphansRemoved: number; 
+        duplicatesRemoved: number; 
+        totalTracks: number 
+      }>('consolidate_library');
+      
+      onShowToast(
+        `✅ Biblioteca consolidada: ${result.orphansRemoved} huérfanas eliminadas, ` +
+        `${result.duplicatesRemoved} duplicados eliminados. Total: ${result.totalTracks} pistas.`
+      );
+    } catch (error) {
+      console.error('Error al consolidar biblioteca:', error);
+      onShowToast('❌ Error al consolidar la biblioteca');
+    } finally {
+      setIsConsolidating(false);
     }
   };
 
@@ -519,6 +552,25 @@ const LibrarySettingsTab = ({
               className="ml-4 shrink-0 text-sm px-3 py-1.5"
             >
               {isClearingCache ? 'Limpiando...' : 'Limpiar caché'}
+            </Button>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                🔧 Consolidar biblioteca
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                Limpia entradas huérfanas, elimina duplicados y optimiza la base de datos.
+              </p>
+            </div>
+            <Button
+              variant="secondary"
+              onClick={handleConsolidateLibrary}
+              disabled={isConsolidating}
+              className="ml-4 shrink-0 text-sm px-3 py-1.5"
+            >
+              {isConsolidating ? 'Consolidando...' : 'Consolidar'}
             </Button>
           </div>
 

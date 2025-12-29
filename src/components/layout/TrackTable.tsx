@@ -22,6 +22,7 @@ import { useUpdateTrackRating, useDeleteTrack } from "../../hooks/useLibrary";
 import { Menu, MenuItem } from "@tauri-apps/api/menu";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { confirm } from "@tauri-apps/plugin-dialog";
+import { openUrl } from "@tauri-apps/plugin-opener";
 
 // AIDEV-NOTE: Tipos exportados para que App.tsx pueda usarlos
 export type SortColumn = 'fixed' | 'title' | 'artist' | 'album' | 'duration' | 'bpm' | 'rating' | 'year' | 'dateAdded' | 'bitrate' | 'genre' | 'key';
@@ -328,6 +329,48 @@ export const TrackTable = ({
         }
       });
       menuItems.push(detailsItem);
+    }
+
+    // Opciones de búsqueda - solo si hay 1 track seleccionado
+    if (selectedTracks.length === 1) {
+      const currentTrack = selectedTracks[0];
+      const hasSearchableData = currentTrack.artist && currentTrack.title;
+
+      if (hasSearchableData) {
+        // Separador antes de búsquedas
+        const separator1 = await MenuItem.new({
+          id: 'separator1',
+          text: '─────── Search ───────'
+        });
+        menuItems.push(separator1);
+
+        const googleSearchItem = await MenuItem.new({
+          id: 'search-google',
+          text: '🔍 Search on Google',
+          action: async () => {
+            const query = encodeURIComponent(`${currentTrack.artist} ${currentTrack.title}`);
+            await openUrl(`https://www.google.com/search?q=${query}`);
+          }
+        });
+        menuItems.push(googleSearchItem);
+
+        const beatportSearchItem = await MenuItem.new({
+          id: 'search-beatport',
+          text: '🎵 Search on Beatport',
+          action: async () => {
+            const query = encodeURIComponent(`${currentTrack.artist} ${currentTrack.title}`);
+            await openUrl(`https://www.beatport.com/search?q=${query}`);
+          }
+        });
+        menuItems.push(beatportSearchItem);
+
+        // Separador después de búsquedas
+        const separator2 = await MenuItem.new({
+          id: 'separator2',
+          text: '─────────────────────'
+        });
+        menuItems.push(separator2);
+      }
     }
 
     // Opción "Filename→Tags" para batch edit
