@@ -172,7 +172,7 @@ export const Settings = () => {
 
       {/* Content with better spacing */}
       <div className="flex-1 overflow-y-auto p-8">
-        <div className="max-w-5xl mx-auto space-y-6">
+        <div className="w-full space-y-6">
           {activeTab === 'ui' && (
             <UISettingsTab settings={localSettings} onChange={setLocalSettings} />
           )}
