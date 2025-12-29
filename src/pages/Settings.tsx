@@ -101,7 +101,7 @@ export const Settings = () => {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-white dark:bg-slate-950">
+      <div className="w-full h-full flex items-center justify-center bg-white dark:bg-slate-950">
         <div className="text-gray-600 dark:text-gray-400">Cargando configuración...</div>
       </div>
     );
@@ -109,7 +109,7 @@ export const Settings = () => {
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-screen bg-white dark:bg-slate-950">
+      <div className="w-full h-full flex items-center justify-center bg-white dark:bg-slate-950">
         <div className="text-center">
           <div className="text-red-600 dark:text-red-400 font-semibold mb-2">Error al cargar configuración:</div>
           <div className="text-gray-600 dark:text-gray-400">{error.message}</div>
@@ -119,9 +119,9 @@ export const Settings = () => {
   }
 
   return (
-    <div className="h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 flex flex-col" data-testid="settings-page">
+    <div className="w-full h-full min-h-0 bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 flex flex-col" data-testid="settings-page">
       {/* Header with gradient */}
-      <div className="relative border-b border-gray-200 dark:border-gray-800 px-4 md:px-6 lg:px-8 py-6 bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
+      <div className="relative border-b border-gray-200 dark:border-gray-800 px-4 md:px-6 lg:px-8 py-6 bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm flex-shrink-0">
         <div className="flex items-center space-x-3">
           <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg">
             <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -141,7 +141,7 @@ export const Settings = () => {
       </div>
 
       {/* Tabs - Modern style */}
-      <div className="border-b border-gray-200 dark:border-gray-800 bg-white/30 dark:bg-slate-950/30 backdrop-blur-sm px-4 md:px-6 lg:px-8">
+      <div className="border-b border-gray-200 dark:border-gray-800 bg-white/30 dark:bg-slate-950/30 backdrop-blur-sm px-4 md:px-6 lg:px-8 flex-shrink-0">
         <nav className="flex space-x-1">
           {TABS.map((tab) => (
             <button

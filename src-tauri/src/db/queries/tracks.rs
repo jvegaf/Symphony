@@ -277,7 +277,8 @@ pub fn consolidate_library(conn: &Connection, library_paths: &[String]) -> Resul
     }
 
     // 5. Buscar archivos nuevos en las carpetas de biblioteca
-    let extractor = MetadataExtractor::new();
+    // NOTA: No reutilizamos MetadataExtractor porque puede causar memory corruption
+    // cuando se procesan muchos archivos en secuencia (lofty/id3 state accumulation)
     let mut new_tracks_added = 0;
 
     // Obtener todos los paths ya en la BD
@@ -286,7 +287,9 @@ pub fn consolidate_library(conn: &Connection, library_paths: &[String]) -> Resul
         .query_map([], |row| row.get(0))?
         .collect::<Result<HashSet<_>, _>>()?;
 
-    // Escanear carpetas buscando archivos nuevos
+    // Recolectar primero todos los archivos nuevos a procesar
+    let mut new_files: Vec<std::path::PathBuf> = Vec::new();
+
     for library_path in library_paths {
         let path = Path::new(library_path);
         if !path.exists() || !path.is_dir() {
@@ -324,53 +327,65 @@ pub fn consolidate_library(conn: &Connection, library_paths: &[String]) -> Resul
                 continue;
             }
 
-            // Extraer metadatos e insertar
-            match extractor.extract_metadata(file_path) {
-                Ok(metadata) => {
-                    let track_id = uuid::Uuid::new_v4().to_string();
-                    let now = chrono::Utc::now().to_rfc3339();
+            new_files.push(file_path.to_path_buf());
+        }
+    }
 
-                    // Obtener file_size manualmente
-                    let file_size = std::fs::metadata(file_path)
-                        .map(|m| m.len() as i64)
-                        .unwrap_or(0);
+    // Procesar archivos nuevos uno por uno con scope aislado
+    for file_path in new_files {
+        let path_str = file_path.to_string_lossy().to_string();
+        
+        // Crear extractor nuevo para cada archivo (evita memory corruption)
+        let result = {
+            let extractor = MetadataExtractor::new();
+            extractor.extract_metadata(&file_path)
+        };
 
-                    match conn.execute(
-                        "INSERT INTO tracks (
-                            id, path, title, artist, album, genre, year, duration, bitrate,
-                            sample_rate, file_size, bpm, key, rating, play_count, date_added, date_modified
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                        params![
-                            track_id,
-                            path_str,
-                            metadata.title.unwrap_or_else(|| "Unknown".to_string()),
-                            metadata.artist.unwrap_or_else(|| "Unknown Artist".to_string()),
-                            metadata.album,
-                            metadata.genre,
-                            metadata.year,
-                            metadata.duration,
-                            metadata.bitrate,
-                            metadata.sample_rate,
-                            file_size,
-                            metadata.bpm,
-                            metadata.key,
-                            0, // rating
-                            0, // play_count
-                            now.clone(),
-                            now,
-                        ],
-                    ) {
-                        Ok(_) => {
-                            new_tracks_added += 1;
-                        }
-                        Err(e) => {
-                            log::warn!("Error al insertar track nuevo {}: {}", path_str, e);
-                        }
+        match result {
+            Ok(metadata) => {
+                let track_id = uuid::Uuid::new_v4().to_string();
+                let now = chrono::Utc::now().to_rfc3339();
+
+                // Obtener file_size manualmente
+                let file_size = std::fs::metadata(&file_path)
+                    .map(|m| m.len() as i64)
+                    .unwrap_or(0);
+
+                match conn.execute(
+                    "INSERT INTO tracks (
+                        id, path, title, artist, album, genre, year, duration, bitrate,
+                        sample_rate, file_size, bpm, key, rating, play_count, date_added, date_modified
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                    params![
+                        track_id,
+                        path_str,
+                        metadata.title.unwrap_or_else(|| "Unknown".to_string()),
+                        metadata.artist.unwrap_or_else(|| "Unknown Artist".to_string()),
+                        metadata.album,
+                        metadata.genre,
+                        metadata.year,
+                        metadata.duration,
+                        metadata.bitrate,
+                        metadata.sample_rate,
+                        file_size,
+                        metadata.bpm,
+                        metadata.key,
+                        0, // rating
+                        0, // play_count
+                        now.clone(),
+                        now,
+                    ],
+                ) {
+                    Ok(_) => {
+                        new_tracks_added += 1;
+                    }
+                    Err(e) => {
+                        log::warn!("Error al insertar track nuevo {}: {}", path_str, e);
                     }
                 }
-                Err(e) => {
-                    log::warn!("Error al extraer metadatos de {}: {}", path_str, e);
-                }
+            }
+            Err(e) => {
+                log::warn!("Error al extraer metadatos de {}: {}", path_str, e);
             }
         }
     }

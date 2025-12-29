@@ -5,6 +5,24 @@ Todos los cambios notables de Symphony se documentan aquí.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/),
 y este proyecto sigue [Semantic Versioning](https://semver.org/lang/es/).
 
+## [0.14.0] - 2025-12-29
+
+### Agregado
+- **Rediseño visual de Settings:**
+  - UI moderna con gradientes, glassmorphism y tarjetas con sombras
+  - Header con icono y título estilizados
+  - Tabs con indicador animado de selección
+  - Cards con hover effects y transiciones suaves
+  - Toggle switches modernos para opciones booleanas
+  - Inputs y selects con estilos consistentes
+
+### Corregido
+- **Layout de Settings:** El contenedor ahora usa `h-full` en lugar de `h-screen`, respetando el contenedor padre flex y ocupando el ancho completo
+- **Memory corruption en consolidate_library:** Refactorizado para crear una nueva instancia de `MetadataExtractor` por cada archivo, evitando el error `free(): corrupted unsorted chunks` que ocurría al procesar muchos archivos
+
+### Técnico
+- Optimización del procesamiento de archivos en consolidate_library: recolecta primero todos los archivos nuevos y luego procesa cada uno con scope aislado
+
 ## [0.13.0] - 2025-01-28
 
 ### Agregado
