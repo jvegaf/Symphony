@@ -121,7 +121,7 @@ export const Settings = () => {
   return (
     <div className="h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-950 dark:to-slate-900 flex flex-col" data-testid="settings-page">
       {/* Header with gradient */}
-      <div className="relative border-b border-gray-200 dark:border-gray-800 px-8 py-6 bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
+      <div className="relative border-b border-gray-200 dark:border-gray-800 px-4 md:px-6 lg:px-8 py-6 bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm">
         <div className="flex items-center space-x-3">
           <div className="p-3 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg">
             <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -141,7 +141,7 @@ export const Settings = () => {
       </div>
 
       {/* Tabs - Modern style */}
-      <div className="border-b border-gray-200 dark:border-gray-800 bg-white/30 dark:bg-slate-950/30 backdrop-blur-sm px-8">
+      <div className="border-b border-gray-200 dark:border-gray-800 bg-white/30 dark:bg-slate-950/30 backdrop-blur-sm px-4 md:px-6 lg:px-8">
         <nav className="flex space-x-1">
           {TABS.map((tab) => (
             <button
@@ -171,8 +171,8 @@ export const Settings = () => {
       </div>
 
       {/* Content with better spacing */}
-      <div className="flex-1 overflow-y-auto p-8">
-        <div className="w-full space-y-6">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
+        <div className="max-w-7xl mx-auto space-y-6">
           {activeTab === 'ui' && (
             <UISettingsTab settings={localSettings} onChange={setLocalSettings} />
           )}
