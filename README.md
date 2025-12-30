@@ -3,8 +3,10 @@
 Aplicación de escritorio profesional para gestionar bibliotecas musicales con importación, reproducción, análisis de audio y herramientas de organización avanzadas.
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![Version](https://img.shields.io/badge/version-0.13.0-blue)]()
+[![Version](https://img.shields.io/badge/version-0.15.0-blue)]()
 [![License](https://img.shields.io/badge/license-MIT-green)]()
+[![Tests](https://img.shields.io/badge/tests-618%20passing-brightgreen)]()
+[![Coverage](https://img.shields.io/badge/coverage-80%25+-brightgreen)]()
 
 ## ✨ Características
 
@@ -17,6 +19,33 @@ Aplicación de escritorio profesional para gestionar bibliotecas musicales con i
 - 🔄 **Conversión de Audio:** Opcional a MP3 durante importación
 - 🌙 **Modo Oscuro:** Interfaz optimizada para uso prolongado
 - 🎧 **Integración con Beatport:** Selección manual de matches con indicadores visuales precisos
+
+## 🆕 Novedades v0.15.0
+
+### 🏗️ Mejoras Arquitectónicas
+
+- **Logger con Dependency Inversion Principle:**
+  - Sistema de logging desacoplado con interfaces abstractas
+  - 4 niveles de severidad: DEBUG, INFO, WARN, ERROR
+  - Factories para diferentes implementaciones (Console, Null, Custom)
+  - Gestión global para configurar logger en toda la aplicación
+  - 19 tests de cobertura completa
+
+- **Documentación Viva de Convenciones:**
+  - Suite de 10 tests documentando reglas de naming ([conventions.test.ts](./src/types/conventions.test.ts))
+  - Valida: camelCase, snake_case, hooks (useXxx), factories (createXxx), predicados (isXxx)
+  - Documenta constantes (UPPER_SNAKE_CASE), tipos (PascalCase), archivos de test (.test.ts(x))
+  - Excepciones documentadas (date_created, date_modified para legacy DB)
+
+- **Consolidación de Tipos TypeScript:**
+  - Eliminados 5 tipos duplicados entre hooks y types/
+  - Todos los Request types centralizados en `types/playlist.ts`
+  - Migración completa de playlist IDs: `number` → `string` (UUID v4)
+  - Consistencia entre frontend (TypeScript) y backend (Rust)
+  - 17 errores de tipos pre-existentes corregidos
+
+- **162 nuevos tests agregados** (total: **618/618 passing**)
+- **0 errores de TypeScript** después del refactor
 
 ## 🆕 Novedades v0.13.0
 
@@ -108,9 +137,10 @@ Próximamente en releases oficiales.
 
 ## 🧪 Testing
 
-- **Tests Totales:** 567 (420 frontend + 147 backend) — 100% passing ✅
+- **Tests Totales:** 618 (frontend + backend) — 100% passing ✅
 - **Cobertura:** 80%+ en todos los módulos
-- **Build:** Exitosa (331.31 kB)
+- **Build:** Exitosa
+- **TypeScript:** 0 errores (strict mode)
 - No hay bugs críticos abiertos en el sistema de waveform
 
 ## ⚡ Waveform - Mejoras de rendimiento (v0.9.0)
@@ -139,6 +169,45 @@ npm run tauri dev
 ```
 
 Ver detalles de implementación: [docs/waveform-implementation.md](./docs/waveform-implementation.md)
+
+## 🏛️ Arquitectura
+
+Symphony sigue principios de **Clean Architecture** con énfasis en:
+
+### Dependency Inversion Principle (DIP)
+- **Logger:** Abstracción con `Logger` interface, permite intercambiar implementaciones sin afectar código cliente
+- **Factories:** `createConsoleLogger()`, `createNullLogger()`, `createLogger()` para instanciar según contexto
+- **Global Management:** `setGlobalLogger()` para configurar implementación en toda la aplicación
+
+### Interface Segregation Principle (ISP)
+- **Tipos específicos:** Request types separados (`CreatePlaylistRequest`, `UpdatePlaylistRequest`, etc.)
+- **Interfaces pequeñas:** Cada componente depende solo de métodos que realmente necesita
+
+### Naming Conventions
+Documentadas con tests vivos en [src/types/conventions.test.ts](./src/types/conventions.test.ts):
+- **Componentes React:** PascalCase (ej: `TrackTable`, `AudioPlayer`)
+- **Funciones/variables:** camelCase (ej: `formatDuration`, `trackId`)
+- **Custom Hooks:** useXxx (ej: `useAudioPlayer`, `usePlaylistQueries`)
+- **Factories:** createXxx (ej: `createConsoleLogger`)
+- **Predicados:** isXxx (ej: `isValidTrack`)
+- **Constantes:** UPPER_SNAKE_CASE (ej: `MAX_VOLUME`)
+- **Tipos:** PascalCase (ej: `Track`, `Playlist`)
+- **Tests:** .test.ts(x) (ej: `track.test.ts`)
+
+**Excepciones documentadas:** `date_created`, `date_modified` (legacy database fields)
+
+### Type Safety
+- **TypeScript Strict Mode:** Sin `any`, tipos explícitos en toda la base de código
+- **UUID v4 IDs:** Migración completa de `number` a `string` para consistencia con Rust backend
+- **Type Consolidation:** Tipos Request centralizados en `types/` para evitar duplicación
+
+### Testing Strategy
+- **TDD Workflow:** Tests primero, luego implementación
+- **Cobertura:** ≥80% enforcement en CI
+- **618 tests totales** (162 agregados en v0.15.0)
+- **Living Documentation:** Tests documentan patrones y convenciones (ej: `conventions.test.ts`)
+
+Ver [ARCHITECTURE.md](./docs/ARCHITECTURE.md) para detalles completos.
 
 ## 🛠️ Desarrollo
 

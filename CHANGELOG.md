@@ -5,6 +5,47 @@ Todos los cambios notables de Symphony se documentan aquí.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/),
 y este proyecto sigue [Semantic Versioning](https://semver.org/lang/es/).
 
+## [0.15.0] - 2025-12-30
+
+### Agregado
+- **Logger con Dependency Inversion Principle:**
+  - Abstracción Logger con 4 niveles (DEBUG, INFO, WARN, ERROR)
+  - Factories: createConsoleLogger, createNullLogger, createLogger
+  - Gestión global de logger: setGlobalLogger, getGlobalLogger, resetGlobalLogger
+  - 19 tests de cobertura para interfaces y factories
+  - Documentación completa con JSDoc en español
+
+- **Documentación viva de convenciones de naming:**
+  - Suite de tests conventions.test.ts con 10 tests documentando reglas
+  - Valida convenciones: camelCase, snake_case, useXxx, createXxx, isXxx
+  - Documenta constantes (UPPER_SNAKE_CASE), tipos (PascalCase), tests (.test.ts(x))
+  - Excepciones documentadas: date_created, date_modified (legacy DB)
+
+### Cambiado
+- **Consolidación de tipos TypeScript:**
+  - Eliminados 5 tipos duplicados de hooks/playlists/usePlaylistMutations.ts
+  - Tipos Request (Create/Update/AddTrack/RemoveTrack/Reorder) centralizados en types/playlist.ts
+  - Campo description estandarizado a opcional `string | null | undefined`
+  - Hooks re-exportan tipos de types/ para backward compatibility
+
+- **Migración de IDs de Playlist:**
+  - Todos los IDs migrados de number a string (UUID v4)
+  - Actualizado modelo Track para usar string IDs en playlist_tracks
+  - Consistencia completa con backend Rust (usa UUID v4)
+
+### Corregido
+- **17 errores de tipos TypeScript pre-existentes:**
+  - Inconsistencias number vs string en playlist IDs
+  - Tipos en logger.test.ts, track.ts, track.test.ts, errorHandling.test.ts
+  - Mocks actualizados en PlaylistCard, PlaylistManager
+  - Queries y mutations de TanStack Query con tipos correctos
+
+### Técnico
+- **162 nuevos tests agregados** (total: 618/618 passing)
+- **0 errores de TypeScript** después de refactor completo
+- Todas las interfaces Request actualizadas con string IDs
+- Cobertura de tests documentando patrones arquitectónicos
+
 ## [0.14.0] - 2025-12-29
 
 ### Agregado
