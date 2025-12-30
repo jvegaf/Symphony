@@ -5,7 +5,7 @@ use tokio::sync::Mutex;
 
 use crate::db::models::Track;
 use crate::db::queries;
-use crate::library::metadata::TrackMetadata;
+use crate::library::metadata::{extract_artwork, write_metadata, TrackMetadata};
 use crate::library::{ImportResult, LibraryImporter, MetadataExtractor};
 
 /// Estado global del importador de biblioteca
@@ -243,8 +243,7 @@ pub async fn update_track_metadata(request: UpdateTrackMetadataRequest) -> Resul
     };
 
     // Escribir tags al archivo físico
-    extractor
-        .write_metadata(file_path, &metadata_to_write)
+    write_metadata(file_path, &metadata_to_write)
         .map_err(|e| format!("Failed to write tags to file: {}", e))?;
 
     log::info!(
@@ -343,8 +342,8 @@ pub async fn get_track_artwork(id: String) -> Result<Option<String>, String> {
     
     let file_path = Path::new(&track.path);
     
-    // Extraer artwork usando MetadataExtractor
-    MetadataExtractor::extract_artwork(file_path)
+    // Extraer artwork usando extract_artwork
+    extract_artwork(file_path)
         .map_err(|e| format!("Error extracting artwork: {}", e))
 }
 
