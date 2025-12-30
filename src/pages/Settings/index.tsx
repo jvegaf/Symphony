@@ -101,7 +101,7 @@ export const Settings = () => {
 
       <div className="flex-1 flex overflow-hidden">
         {/* Sidebar - Tabs Navigation */}
-        <div className="w-64 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-r border-gray-200 dark:border-gray-800 p-4">
+        <div className="w-64 flex-shrink-0 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm border-r border-gray-200 dark:border-gray-800 p-4">
           <nav className="space-y-2">
             {tabs.map((tab) => (
               <button
@@ -122,9 +122,8 @@ export const Settings = () => {
         </div>
 
         {/* Content Area */}
-        <div className="flex-1 overflow-y-auto p-6">
-          <div className="w-full h-full">
-            {activeTab === 'ui' && (
+        <div className="flex-1 overflow-y-auto p-4">
+          {activeTab === 'ui' && (
               <UISettingsTab settings={localSettings} onChange={setLocalSettings} />
             )}
             {activeTab === 'audio' && (
@@ -181,7 +180,6 @@ export const Settings = () => {
                 )}
               </button>
             </div>
-          </div>
         </div>
       </div>
 
