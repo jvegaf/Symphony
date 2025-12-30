@@ -1,5 +1,5 @@
 import { Check } from 'lucide-react';
-import { StarRating } from '../../../StarRating';
+import { StarRating } from '../../../ui/StarRating';
 import { formatDuration, formatDate } from '../utils/formatters';
 import type { Track } from '../../../../types/library';
 
