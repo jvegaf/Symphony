@@ -83,7 +83,7 @@ export const Settings = () => {
   ];
 
   return (
-    <div className="h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-950 dark:to-slate-900">
+    <div className="h-full w-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100 dark:from-slate-950 dark:to-slate-900">
       {/* Header */}
       <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800 px-8 py-6">
         <div className="flex items-center space-x-3">
@@ -131,8 +131,8 @@ export const Settings = () => {
               <AudioSettingsTab settings={localSettings} onChange={setLocalSettings} />
             )}
             {activeTab === 'library' && (
-              <LibrarySettingsTab 
-                settings={localSettings} 
+              <LibrarySettingsTab
+                settings={localSettings}
                 onChange={setLocalSettings}
                 onShowToast={showToast}
               />

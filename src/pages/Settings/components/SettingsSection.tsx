@@ -28,7 +28,7 @@ export const SettingsSection = ({
   className = '',
 }: SettingsSectionProps) => {
   return (
-    <div className={`bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm hover:shadow-md transition-shadow ${className}`}>
+    <div className={`w-full bg-white dark:bg-slate-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm hover:shadow-md transition-shadow ${className}`}>
       {/* Header with gradient */}
       <div className={`bg-gradient-to-r from-${gradientFrom}-500/10 to-${gradientTo}-500/10 dark:from-${gradientFrom}-500/20 dark:to-${gradientTo}-500/20 px-6 py-4 border-b border-gray-200 dark:border-gray-800`}>
         <div className="flex items-center space-x-3">
