@@ -33,6 +33,19 @@ y este proyecto sigue [Semantic Versioning](https://semver.org/lang/es/).
   - Actualizado modelo Track para usar string IDs en playlist_tracks
   - Consistencia completa con backend Rust (usa UUID v4)
 
+### Técnico
+- **Refactorización de código Rust:**
+  - Eliminados 11 warnings de compilación en 9 archivos
+  - Imports no usados removidos con atributos `#[cfg(test)]` apropiados
+  - Variables no usadas eliminadas o renombradas con prefijo `_`
+  - Mutabilidad innecesaria corregida
+  - Constantes de test marcadas con `#[allow(dead_code)]`
+  - Compilación limpia sin warnings: 0 warnings
+- **162 nuevos tests agregados** (total: 618/618 passing)
+- **0 errores de TypeScript** después de refactor completo
+- Todas las interfaces Request actualizadas con string IDs
+- Cobertura de tests documentando patrones arquitectónicos
+
 ### Corregido
 - **17 errores de tipos TypeScript pre-existentes:**
   - Inconsistencias number vs string en playlist IDs
