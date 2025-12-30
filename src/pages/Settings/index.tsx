@@ -123,7 +123,8 @@ export const Settings = () => {
 
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-4">
-          {activeTab === 'ui' && (
+          <div className="max-w-full">
+            {activeTab === 'ui' && (
               <UISettingsTab settings={localSettings} onChange={setLocalSettings} />
             )}
             {activeTab === 'audio' && (
@@ -180,6 +181,7 @@ export const Settings = () => {
                 )}
               </button>
             </div>
+          </div>
         </div>
       </div>
 
