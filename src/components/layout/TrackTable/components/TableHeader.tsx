@@ -1,4 +1,4 @@
-import { ArrowUp, ArrowDown } from 'lucide-react';
+import { ArrowUp, ArrowDown, Check } from 'lucide-react';
 import type { SortColumn, SortDirection } from '../hooks/useTrackSorting';
 
 export interface TableHeaderProps {
@@ -29,7 +29,8 @@ export const TableHeader = ({ sortColumn, sortDirection, onSort }: TableHeaderPr
           onClick={() => onSort('fixed')}
         >
           <span className="inline-flex items-center">
-            Fixed {getSortIcon('fixed')}
+            <Check className="w-4 h-4" />
+            {getSortIcon('fixed')}
           </span>
         </th>
         <th
