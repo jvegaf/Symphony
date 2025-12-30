@@ -45,6 +45,16 @@ export const Settings = () => {
     },
   });
 
+  /**
+   * Muestra un toast con el mensaje especificado
+   * Usado por tabs que necesitan mostrar notificaciones (ej: Library maintenance actions)
+   */
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    setToastType(message.startsWith('✅') ? 'success' : 'error');
+    setToastVisible(true);
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -121,7 +131,11 @@ export const Settings = () => {
               <AudioSettingsTab settings={localSettings} onChange={setLocalSettings} />
             )}
             {activeTab === 'library' && (
-              <LibrarySettingsTab settings={localSettings} onChange={setLocalSettings} />
+              <LibrarySettingsTab 
+                settings={localSettings} 
+                onChange={setLocalSettings}
+                onShowToast={showToast}
+              />
             )}
             {activeTab === 'conversion' && (
               <ConversionSettingsTab settings={localSettings} onChange={setLocalSettings} />
