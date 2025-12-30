@@ -7,7 +7,7 @@ import userEvent from '@testing-library/user-event';
 import * as useSettingsHook from '../hooks/useSettings';
 import { DEFAULT_SETTINGS } from '../types/settings';
 
-import { Settings } from './Settings';
+import { Settings } from './Settings/index';
 
 // Mock @tauri-apps/api/core
 const mockInvoke = vi.fn();
@@ -64,10 +64,10 @@ describe('Settings', () => {
 
     it('debería renderizar las 4 pestañas', () => {
       render(<Settings />, { wrapper: createWrapper() });
-      expect(screen.getByText('Interfaz')).toBeInTheDocument();
-      expect(screen.getByText('Audio')).toBeInTheDocument();
-      expect(screen.getByText('Biblioteca')).toBeInTheDocument();
-      expect(screen.getByText('Conversión')).toBeInTheDocument();
+      expect(screen.getByText(/🎨\s*Interfaz/)).toBeInTheDocument();
+      expect(screen.getByText(/🔊\s*Audio/)).toBeInTheDocument();
+      expect(screen.getByText(/📚\s*Biblioteca/)).toBeInTheDocument();
+      expect(screen.getByText(/💿\s*Conversión/)).toBeInTheDocument();
     });
 
     it('debería mostrar la pestaña de Interfaz por defecto', () => {
@@ -86,7 +86,7 @@ describe('Settings', () => {
     it('debería cambiar a pestaña Audio al hacer click', async () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      const audioTab = screen.getByText('Audio');
+      const audioTab = screen.getByText(/🔊\s*Audio/);
       await userEvent.click(audioTab);
 
       expect(screen.getByText('Dispositivo de Audio')).toBeInTheDocument();
@@ -95,7 +95,7 @@ describe('Settings', () => {
     it('debería cambiar a pestaña Biblioteca al hacer click', async () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      const libraryTab = screen.getByText('Biblioteca');
+      const libraryTab = screen.getByText(/📚\s*Biblioteca/);
       await userEvent.click(libraryTab);
 
       expect(screen.getByText('Escaneo Automático')).toBeInTheDocument();
@@ -104,7 +104,7 @@ describe('Settings', () => {
     it('debería cambiar a pestaña Conversión al hacer click', async () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      const conversionTab = screen.getByText('Conversión');
+      const conversionTab = screen.getByText(/💿\s*Conversión/);
       await userEvent.click(conversionTab);
 
       expect(screen.getByText('Conversión MP3')).toBeInTheDocument();
@@ -117,9 +117,10 @@ describe('Settings', () => {
       const audioTabButton = screen.getByTestId('settings-tab-audio');
       await user.click(audioTabButton);
 
-      // La pestaña activa tiene las clases text-blue-600 dark:text-blue-400
+      // La pestaña activa tiene gradiente y text-white
       await waitFor(() => {
-        expect(audioTabButton).toHaveClass('text-blue-600');
+        expect(audioTabButton).toHaveClass('bg-gradient-to-r');
+        expect(audioTabButton).toHaveClass('text-white');
       });
     });
   });
@@ -163,7 +164,7 @@ describe('Settings', () => {
     it('debería mostrar input de dispositivo de salida', async () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      const audioTab = screen.getByText('Audio');
+      const audioTab = screen.getByText(/🔊\s*Audio/);
       await userEvent.click(audioTab);
 
       expect(screen.getByLabelText('Dispositivo de salida')).toBeInTheDocument();
@@ -172,7 +173,7 @@ describe('Settings', () => {
     it('debería mostrar selector de tasa de muestreo', async () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      const audioTab = screen.getByText('Audio');
+      const audioTab = screen.getByText(/🔊\s*Audio/);
       await userEvent.click(audioTab);
 
       expect(screen.getByLabelText('Tasa de muestreo')).toBeInTheDocument();
@@ -181,7 +182,7 @@ describe('Settings', () => {
     it('debería mostrar slider de tamaño de buffer', async () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      const audioTab = screen.getByText('Audio');
+      const audioTab = screen.getByText(/🔊\s*Audio/);
       await userEvent.click(audioTab);
 
       expect(screen.getByLabelText('Tamaño de buffer')).toBeInTheDocument();
@@ -190,7 +191,7 @@ describe('Settings', () => {
     it('debería mostrar el valor del buffer en el label', async () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      const audioTab = screen.getByText('Audio');
+      const audioTab = screen.getByText(/🔊\s*Audio/);
       await userEvent.click(audioTab);
 
       expect(screen.getByText(/2048 samples/)).toBeInTheDocument();
@@ -200,7 +201,7 @@ describe('Settings', () => {
       const user = userEvent.setup();
       render(<Settings />, { wrapper: createWrapper() });
 
-      const audioTab = screen.getByText('Audio');
+      const audioTab = screen.getByText(/🔊\s*Audio/);
       await user.click(audioTab);
 
       const sampleRateSelect = screen.getByLabelText('Tasa de muestreo');
@@ -216,7 +217,7 @@ describe('Settings', () => {
     it('debería mostrar checkbox de escaneo automático', async () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      const libraryTab = screen.getByText('Biblioteca');
+      const libraryTab = screen.getByText(/📚\s*Biblioteca/);
       await userEvent.click(libraryTab);
 
       expect(screen.getByLabelText('Escanear al iniciar')).toBeInTheDocument();
@@ -225,7 +226,7 @@ describe('Settings', () => {
     it('debería mostrar input de intervalo de escaneo', async () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      const libraryTab = screen.getByText('Biblioteca');
+      const libraryTab = screen.getByText(/📚\s*Biblioteca/);
       await userEvent.click(libraryTab);
 
       expect(screen.getByLabelText('Intervalo de escaneo')).toBeInTheDocument();
@@ -234,7 +235,7 @@ describe('Settings', () => {
     it('debería mostrar input de carpeta de importación', async () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      const libraryTab = screen.getByText('Biblioteca');
+      const libraryTab = screen.getByText(/📚\s*Biblioteca/);
       await userEvent.click(libraryTab);
 
       expect(screen.getByLabelText('Ruta predeterminada')).toBeInTheDocument();
@@ -244,7 +245,7 @@ describe('Settings', () => {
       const user = userEvent.setup();
       render(<Settings />, { wrapper: createWrapper() });
 
-      const libraryTab = screen.getByText('Biblioteca');
+      const libraryTab = screen.getByText(/📚\s*Biblioteca/);
       await user.click(libraryTab);
 
       const autoScanCheckbox = screen.getByLabelText('Escanear al iniciar') as HTMLInputElement;
@@ -258,7 +259,7 @@ describe('Settings', () => {
     it('debería mostrar sección de mantenimiento con botón limpiar caché', async () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      const libraryTab = screen.getByText('Biblioteca');
+      const libraryTab = screen.getByText(/📚\s*Biblioteca/);
       await userEvent.click(libraryTab);
 
       expect(screen.getByText('Mantenimiento')).toBeInTheDocument();
@@ -270,7 +271,7 @@ describe('Settings', () => {
       const user = userEvent.setup();
       render(<Settings />, { wrapper: createWrapper() });
 
-      const libraryTab = screen.getByText('Biblioteca');
+      const libraryTab = screen.getByText(/📚\s*Biblioteca/);
       await user.click(libraryTab);
 
       const clearButton = screen.getByRole('button', { name: 'Limpiar caché' });
@@ -286,7 +287,7 @@ describe('Settings', () => {
       const user = userEvent.setup();
       render(<Settings />, { wrapper: createWrapper() });
 
-      const libraryTab = screen.getByText('Biblioteca');
+      const libraryTab = screen.getByText(/📚\s*Biblioteca/);
       await user.click(libraryTab);
 
       const clearButton = screen.getByRole('button', { name: 'Limpiar caché' });
@@ -305,7 +306,7 @@ describe('Settings', () => {
     it('debería mostrar checkbox de habilitación de conversión', async () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      const conversionTab = screen.getByText('Conversión');
+      const conversionTab = screen.getByText(/💿\s*Conversión/);
       await userEvent.click(conversionTab);
 
       expect(screen.getByLabelText('Habilitar conversión a MP3')).toBeInTheDocument();
@@ -314,7 +315,7 @@ describe('Settings', () => {
     it('debería mostrar selector de bitrate', async () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      const conversionTab = screen.getByText('Conversión');
+      const conversionTab = screen.getByText(/💿\s*Conversión/);
       await userEvent.click(conversionTab);
 
       expect(screen.getByLabelText('Bitrate MP3')).toBeInTheDocument();
@@ -323,7 +324,7 @@ describe('Settings', () => {
     it('debería mostrar input de carpeta de salida', async () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      const conversionTab = screen.getByText('Conversión');
+      const conversionTab = screen.getByText(/💿\s*Conversión/);
       await userEvent.click(conversionTab);
 
       expect(screen.getByLabelText('Carpeta de salida')).toBeInTheDocument();
@@ -332,7 +333,7 @@ describe('Settings', () => {
     it('debería mostrar checkbox de preservar estructura', async () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      const conversionTab = screen.getByText('Conversión');
+      const conversionTab = screen.getByText(/💿\s*Conversión/);
       await userEvent.click(conversionTab);
 
       expect(screen.getByLabelText('Preservar estructura de carpetas')).toBeInTheDocument();
@@ -341,7 +342,7 @@ describe('Settings', () => {
     it('debería deshabilitar controles cuando conversión está deshabilitada', async () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      const conversionTab = screen.getByText('Conversión');
+      const conversionTab = screen.getByText(/💿\s*Conversión/);
       await userEvent.click(conversionTab);
 
       const bitrateSelect = screen.getByLabelText('Bitrate MP3');
@@ -356,7 +357,7 @@ describe('Settings', () => {
       const user = userEvent.setup();
       render(<Settings />, { wrapper: createWrapper() });
 
-      const conversionTab = screen.getByText('Conversión');
+      const conversionTab = screen.getByText(/💿\s*Conversión/);
       await user.click(conversionTab);
 
       const enableCheckbox = screen.getByLabelText('Habilitar conversión a MP3');
@@ -490,8 +491,8 @@ describe('Settings', () => {
 
       render(<Settings />, { wrapper: createWrapper() });
 
-      expect(screen.getByText('Error al cargar configuración:')).toBeInTheDocument();
-      expect(screen.getByText('Failed to load settings')).toBeInTheDocument();
+      expect(screen.getByText(/Error al cargar configuración:/)).toBeInTheDocument();
+      expect(screen.getByText(/Failed to load settings/)).toBeInTheDocument();
     });
 
     it('no debería mostrar el formulario durante carga', () => {
@@ -558,7 +559,7 @@ describe('Settings', () => {
     it('debería mostrar placeholder en carpeta de importación', async () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      const libraryTab = screen.getByText('Biblioteca');
+      const libraryTab = screen.getByText(/📚\s*Biblioteca/);
       await userEvent.click(libraryTab);
 
       const importFolderInput = screen.getByLabelText('Ruta predeterminada') as HTMLInputElement;
@@ -568,7 +569,7 @@ describe('Settings', () => {
     it('debería mostrar placeholder en carpeta de salida de conversión', async () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      const conversionTab = screen.getByText('Conversión');
+      const conversionTab = screen.getByText(/💿\s*Conversión/);
       await userEvent.click(conversionTab);
 
       const outputFolderInput = screen.getByLabelText('Carpeta de salida') as HTMLInputElement;
@@ -586,11 +587,11 @@ describe('Settings', () => {
       await user.selectOptions(themeSelect, 'dark');
 
       // Cambiar a otra pestaña
-      const audioTab = screen.getByText('Audio');
+      const audioTab = screen.getByText(/🔊\s*Audio/);
       await user.click(audioTab);
 
       // Volver a UI
-      const uiTab = screen.getByText('Interfaz');
+      const uiTab = screen.getByText(/🎨\s*Interfaz/);
       await user.click(uiTab);
 
       // El cambio debe persistir

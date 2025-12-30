@@ -18,7 +18,7 @@ import { useBeatport } from "./hooks/useBeatport";
 import { useGetAllTracks, useImportLibrary, useBatchFilenameToTags } from "./hooks/library";
 import { usePlaybackQueue } from "./hooks/usePlaybackQueue";
 import { usePlayerShortcuts } from "./hooks/usePlayerShortcuts";
-import { Settings } from "./pages/Settings";
+import { Settings } from "./pages/Settings/index";
 import type { BatchFixResult, SearchCandidatesResult, TrackSelection } from "./types/beatport";
 import type { ImportProgress, Track } from "./types/library";
 import { logger } from "./utils/logger";
