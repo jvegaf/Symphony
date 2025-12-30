@@ -5,7 +5,7 @@ use id3::TagLike; // Needed for remove() and add_frame() methods
 use lofty::config::{ParseOptions, WriteOptions};
 use lofty::file::{AudioFile, TaggedFile, TaggedFileExt};
 use lofty::probe::Probe;
-use lofty::tag::{Accessor, ItemKey, Tag, TagType};
+use lofty::tag::{Accessor, ItemKey, Tag};
 use std::path::Path;
 
 /// Escribe metadatos a un archivo de audio

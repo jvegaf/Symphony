@@ -8,11 +8,12 @@ use std::sync::atomic::{AtomicU32, Ordering};
 use std::sync::Arc;
 
 use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
-use cpal::{Stream, StreamConfig, SupportedStreamConfig};
+use cpal::{Stream, StreamConfig};
 use rb::{Consumer, Producer, RbConsumer, SpscRb, RB};
 
 use super::super::constants::{PAUSE_VALUE, PLAY_VALUE, RING_BUFFER_SIZE};
 use super::super::error::{AudioError, AudioResult};
+#[cfg(test)]
 use super::super::DEFAULT_VOLUME;
 use super::device::{find_device_by_name, get_best_config};
 

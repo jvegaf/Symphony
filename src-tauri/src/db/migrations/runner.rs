@@ -10,6 +10,7 @@ use super::schema;
 
 /// Versión actual del esquema
 /// AIDEV-NOTE: Versión 5 añade columna beatport_id para tracking de pistas fixeadas
+#[allow(dead_code)]
 const CURRENT_VERSION: i32 = 5;
 
 /// Ejecuta todas las migraciones pendientes

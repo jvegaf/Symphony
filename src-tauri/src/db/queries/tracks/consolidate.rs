@@ -106,7 +106,7 @@ pub fn consolidate_library(
     for file_path in new_files {
         // Crear MetadataExtractor en scope aislado para evitar memory corruption
         let metadata_result = {
-            let mut extractor = MetadataExtractor::new();
+            let extractor = MetadataExtractor::new();
             extractor.extract_metadata(&file_path)
         };
 

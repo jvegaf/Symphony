@@ -10,14 +10,13 @@ use tokio::sync::Mutex;
 
 use super::super::error::BeatportError;
 use super::super::models::{BeatportOAuth, BeatportSearchResult, BeatportTrack};
-use super::auth;
 
 const SEARCH_URL: &str = "https://www.beatport.com/search/tracks";
 
 /// Busca tracks en Beatport mediante scraping HTML
 pub async fn search(
     http: &Client,
-    oauth: &Arc<Mutex<Option<BeatportOAuth>>>,
+    _oauth: &Arc<Mutex<Option<BeatportOAuth>>>,
     title: &str,
     artist: &str,
 ) -> Result<BeatportSearchResult, BeatportError> {

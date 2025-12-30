@@ -11,6 +11,7 @@ use std::fs;
 use std::path::PathBuf;
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
+#[cfg(test)]
 use std::sync::mpsc;
 use tauri::{AppHandle, Manager, State};
 

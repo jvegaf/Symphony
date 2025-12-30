@@ -6,7 +6,7 @@ use tokio::sync::Mutex;
 use crate::db::models::Track;
 use crate::db::queries;
 use crate::library::metadata::{extract_artwork, write_metadata, TrackMetadata};
-use crate::library::{ImportResult, LibraryImporter, MetadataExtractor};
+use crate::library::{ImportResult, LibraryImporter};
 
 /// Estado global del importador de biblioteca
 pub struct LibraryState {
@@ -181,7 +181,6 @@ pub async fn update_track_metadata(request: UpdateTrackMetadataRequest) -> Resul
     .map_err(|e| e.to_string())?;
 
     // Paso 3: Escribir tags físicamente al archivo (nuevo comportamiento)
-    let extractor = MetadataExtractor::new();
     let file_path = Path::new(&track.path);
 
     // Crear TrackMetadata con los valores actualizados
