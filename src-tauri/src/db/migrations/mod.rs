@@ -16,11 +16,13 @@
  * 
  * ## Uso
  * 
- * ```rust
- * use crate::db::migrations::run_migrations;
+ * ```no_run
+ * use symphony_lib::db::migrations::run_migrations;
+ * use symphony_lib::db::get_connection;
  * 
- * let conn = get_connection()?;
- * run_migrations(&conn)?;
+ * let db = get_connection()?;
+ * run_migrations(&db.conn)?;
+ * # Ok::<(), Box<dyn std::error::Error>>(())
  * ```
  */
 
