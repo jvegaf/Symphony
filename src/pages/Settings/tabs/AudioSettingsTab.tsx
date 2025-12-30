@@ -12,7 +12,7 @@ export interface AudioSettingsTabProps {
  */
 export const AudioSettingsTab = ({ settings, onChange }: AudioSettingsTabProps) => {
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-6">
       {/* Audio Device Section */}
       <SettingsSection
         title="Dispositivo de Audio"

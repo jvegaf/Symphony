@@ -12,7 +12,7 @@ export interface UISettingsTabProps {
  */
 export const UISettingsTab = ({ settings, onChange }: UISettingsTabProps) => {
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-6">
       {/* Theme Section */}
       <SettingsSection
         title="Apariencia"

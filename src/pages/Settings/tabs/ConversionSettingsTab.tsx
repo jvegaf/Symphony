@@ -14,7 +14,7 @@ export const ConversionSettingsTab = ({ settings, onChange }: ConversionSettings
   const isEnabled = settings.conversion.enabled;
 
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-6">
       {/* General Settings */}
       <SettingsSection
         title="Conversión MP3"

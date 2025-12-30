@@ -13,7 +13,7 @@ export interface LibrarySettingsTabProps {
  */
 export const LibrarySettingsTab = ({ settings, onChange, onShowToast }: LibrarySettingsTabProps) => {
   return (
-    <div className="space-y-6">
+    <div className="w-full space-y-6">
       {/* Auto Scan Section */}
       <SettingsSection
         title="Escaneo Automático"
