@@ -123,7 +123,7 @@ export const Settings = () => {
 
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto p-8">
-          <div className="max-w-4xl mx-auto">
+          <div className="w-full">
             {activeTab === 'ui' && (
               <UISettingsTab settings={localSettings} onChange={setLocalSettings} />
             )}
