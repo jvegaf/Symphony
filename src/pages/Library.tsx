@@ -3,7 +3,7 @@ import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
 import { ImportDialog } from "../components/ImportDialog";
 import { TrackList } from "../components/TrackList";
-import { useGetAllTracks, useLibraryStats } from "../hooks/useLibrary";
+import { useGetAllTracks, useLibraryStats } from "../hooks/library";
 import { useAudioPlayer } from "../hooks/useAudioPlayer";
 import { logger } from "../utils/logger";
 import type { Track } from "../types/library";

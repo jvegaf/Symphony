@@ -1,7 +1,7 @@
 import type React from "react";
 import { useMemo, useState } from "react";
 import type { Track } from "../types/library";
-import { useSearchTracks, useUpdateTrackRating } from "../hooks/useLibrary";
+import { useSearchTracks, useUpdateTrackRating } from "../hooks/library";
 import { StarRating } from "./ui/StarRating";
 
 export interface TrackListProps {

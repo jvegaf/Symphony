@@ -15,7 +15,7 @@ import { BeatportResultsModal } from "./components/ui/BeatportResultsModal";
 import { BeatportSelectionModal } from "./components/ui/BeatportSelectionModal";
 import { useAudioPlayer } from "./hooks/useAudioPlayer";
 import { useBeatport } from "./hooks/useBeatport";
-import { useGetAllTracks, useImportLibrary, useBatchFilenameToTags } from "./hooks/useLibrary";
+import { useGetAllTracks, useImportLibrary, useBatchFilenameToTags } from "./hooks/library";
 import { usePlaybackQueue } from "./hooks/usePlaybackQueue";
 import { usePlayerShortcuts } from "./hooks/usePlayerShortcuts";
 import { Settings } from "./pages/Settings";

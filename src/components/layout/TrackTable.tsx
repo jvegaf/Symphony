@@ -18,7 +18,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import type { Track } from "../../types/library";
 import { StarRating } from "../ui/StarRating";
-import { useUpdateTrackRating, useDeleteTrack } from "../../hooks/useLibrary";
+import { useUpdateTrackRating, useDeleteTrack } from "../../hooks/library";
 import { Menu, MenuItem } from "@tauri-apps/api/menu";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { confirm } from "@tauri-apps/plugin-dialog";

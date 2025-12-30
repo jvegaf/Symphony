@@ -1,3 +1,24 @@
+/**
+ * ⚠️ DEPRECATED: Este archivo ha sido reemplazado por una estructura modular
+ * 
+ * Este archivo se mantiene temporalmente para compatibilidad backwards,
+ * pero será eliminado en una futura versión.
+ * 
+ * MIGRACIÓN:
+ * - useGetPlaylists, useGetPlaylist, useGetPlaylistTracks → import from "../hooks/playlists"
+ * - useCreatePlaylist, useUpdatePlaylist, useDeletePlaylist → import from "../hooks/playlists"
+ * - useAddTrackToPlaylist, useRemoveTrackFromPlaylist, useReorderPlaylistTracks → import from "../hooks/playlists"
+ * 
+ * Ejemplo:
+ * ```typescript
+ * // Antes:
+ * import { useGetPlaylists, useCreatePlaylist } from "../hooks/usePlaylists";
+ * 
+ * // Ahora:
+ * import { useGetPlaylists, useCreatePlaylist } from "../hooks/playlists";
+ * ```
+ */
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { invoke } from "@tauri-apps/api/core";
 import type {

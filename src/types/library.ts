@@ -3,34 +3,24 @@
  * Sincronizados con los tipos Rust del backend
  */
 
-/**
- * Modelo de pista musical
- * AIDEV-NOTE: v5 añade beatportId para tracking de pistas fixeadas con Beatport
- */
-export interface Track {
-  id?: string;
-  path: string;
-  title: string;
-  artist: string;
-  album?: string;
-  genre?: string;
-  year?: number;
-  duration: number;
-  bitrate: number;
-  sampleRate: number;
-  fileSize: number;
-  bpm?: number;
-  key?: string;
-  rating?: number;
-  playCount: number;
-  lastPlayed?: string;
-  dateAdded: string;
-  dateModified: string;
-  label?: string;
-  isrc?: string;
-  /** ID del track en Beatport (solo si fue fixeado con Beatport) */
-  beatportId?: number;
-}
+// Re-exportar tipos de Track desde el módulo segregado
+export type {
+  Track,
+  TrackIdentity,
+  TrackDisplay,
+  TrackPlayback,
+  TrackMetadata,
+  TrackBeatport,
+} from "./track";
+
+export {
+  isTrackDisplay,
+  isTrackPlayback,
+  isTrackMetadata,
+  createTrackDisplay,
+  createTrackPlayback,
+  createTrackBeatport,
+} from "./track";
 
 /**
  * Fase del proceso de importación

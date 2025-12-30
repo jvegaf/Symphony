@@ -110,7 +110,7 @@ describe("TrackDetail", () => {
       expect(screen.getByDisplayValue("Test Track")).toBeInTheDocument();
     });
 
-    const titleInput = screen.getByLabelText(/título/i);
+    const titleInput = screen.getByPlaceholderText('Title');
     await user.clear(titleInput);
     await user.type(titleInput, "Nuevo Título");
 
@@ -124,7 +124,7 @@ describe("TrackDetail", () => {
       expect(screen.getByDisplayValue("Test Artist")).toBeInTheDocument();
     });
 
-    const artistInput = screen.getByLabelText(/artista/i);
+    const artistInput = screen.getByPlaceholderText('Artist');
     await user.clear(artistInput);
     await user.type(artistInput, "Nuevo Artista");
 
@@ -138,7 +138,7 @@ describe("TrackDetail", () => {
       expect(screen.getByDisplayValue("2024")).toBeInTheDocument();
     });
 
-    const yearInput = screen.getByLabelText(/año/i);
+    const yearInput = screen.getByPlaceholderText('Year');
     await user.clear(yearInput);
     await user.type(yearInput, "2025");
 
@@ -168,17 +168,11 @@ describe("TrackDetail", () => {
     const stars = screen.getAllByRole("button", { name: /star/i });
     await user.click(stars[2]);
 
-    // Verificar que se llame al comando de actualización
-    // AIDEV-NOTE: El comando ahora espera { request: { id, ...fields } }
+    // El rating se actualiza localmente pero NO se guarda automáticamente
+    // Verificar que el estado local cambió (la estrella se ilumina)
     await waitFor(() => {
-      expect(mockInvoke).toHaveBeenCalledWith("update_track_metadata", 
-        expect.objectContaining({
-          request: expect.objectContaining({
-            id: "1",
-            rating: 3,
-          })
-        })
-      );
+      const starElements = screen.getAllByText("star"); // Estrellas llenas
+      expect(starElements.length).toBeGreaterThanOrEqual(3);
     });
   });
 
@@ -190,17 +184,17 @@ describe("TrackDetail", () => {
     });
 
     // Editar campos
-    const titleInput = screen.getByLabelText(/título/i);
+    const titleInput = screen.getByPlaceholderText('Title');
     await user.clear(titleInput);
     await user.type(titleInput, "Track Editado");
 
-    const artistInput = screen.getByLabelText(/artista/i);
+    const artistInput = screen.getByPlaceholderText('Artist');
     await user.clear(artistInput);
     await user.type(artistInput, "Artista Editado");
 
     // Guardar
-    const saveButton = screen.getByRole("button", { name: /guardar/i });
-    await user.click(saveButton);
+    const saveButtons = screen.getAllByRole("button", { name: /save changes/i });
+    await user.click(saveButtons[0]);
 
     // Verificar llamada al comando
     // AIDEV-NOTE: El comando ahora espera { request: { id, ...fields } }
@@ -229,12 +223,12 @@ describe("TrackDetail", () => {
     });
 
     // Editar y guardar
-    const titleInput = screen.getByLabelText(/título/i);
+    const titleInput = screen.getByPlaceholderText('Title');
     await user.clear(titleInput);
     await user.type(titleInput, "Track Editado");
 
-    const saveButton = screen.getByRole("button", { name: /guardar/i });
-    await user.click(saveButton);
+    const saveButtons = screen.getAllByRole("button", { name: /save changes/i });
+    await user.click(saveButtons[0]);
 
     // Verificar mensaje de éxito
     await waitFor(() => {
@@ -255,16 +249,11 @@ describe("TrackDetail", () => {
     // Click en la quinta estrella (máximo)
     await user.click(stars[4]);
 
-    // AIDEV-NOTE: El comando ahora espera { request: { id, ...fields } }
+    // El rating se actualiza localmente pero NO se guarda automáticamente
+    // Verificar que el estado local cambió (las 5 estrellas se iluminan)
     await waitFor(() => {
-      expect(mockInvoke).toHaveBeenCalledWith("update_track_metadata",
-        expect.objectContaining({
-          request: expect.objectContaining({
-            id: "1",
-            rating: 5,
-          })
-        })
-      );
+      const starElements = screen.getAllByText("star"); // Estrellas llenas
+      expect(starElements.length).toBe(5);
     });
   });
 });

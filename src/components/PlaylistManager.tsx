@@ -1,41 +1,26 @@
 import React, { useState } from "react";
-import { useGetPlaylists, useCreatePlaylist, useDeletePlaylist } from "../hooks/usePlaylists";
+import { useGetPlaylists, useDeletePlaylist } from "../hooks/playlists";
 import { Button } from "./ui/Button";
-import { Card } from "./ui/Card";
-import { Input } from "./ui/Input";
+import { ConfirmDialog } from "./ui/ConfirmDialog";
+import { PlaylistCard, CreatePlaylistDialog } from "./playlist";
+import type { Playlist } from "../types/playlist";
 
 /**
  * PlaylistManager - Componente para gestionar playlists
  * Permite crear, eliminar y visualizar playlists
+ * 
+ * Refactorizado para usar componentes extraídos:
+ * - ConfirmDialog: Modal genérico de confirmación
+ * - CreatePlaylistDialog: Modal de creación de playlist
+ * - PlaylistCard: Tarjeta individual de playlist
  */
 const PlaylistManager: React.FC = () => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
-  const [newPlaylistName, setNewPlaylistName] = useState("");
-  const [newPlaylistDescription, setNewPlaylistDescription] = useState("");
 
   const { data: playlists, isLoading, isError } = useGetPlaylists();
-  const createPlaylist = useCreatePlaylist();
   const deletePlaylist = useDeletePlaylist();
-
-  const handleCreate = () => {
-    if (!newPlaylistName.trim()) return;
-
-    createPlaylist.mutate(
-      {
-        name: newPlaylistName,
-        description: newPlaylistDescription || undefined,
-      },
-      {
-        onSuccess: () => {
-          setShowCreateDialog(false);
-          setNewPlaylistName("");
-          setNewPlaylistDescription("");
-        },
-      }
-    );
-  };
 
   const handleDelete = () => {
     if (selectedPlaylistId === null) return;
@@ -51,6 +36,10 @@ const PlaylistManager: React.FC = () => {
   const openDeleteDialog = (id: string) => {
     setSelectedPlaylistId(id);
     setShowDeleteDialog(true);
+  };
+
+  const handleOpenPlaylist = (_playlist: Playlist) => {
+    // TODO: Implementar navegación a vista de playlist
   };
 
   if (isLoading) {
@@ -86,89 +75,35 @@ const PlaylistManager: React.FC = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {playlists?.map((playlist) => (
-          <Card key={playlist.id} className="p-4">
-            <h3 className="text-lg font-semibold mb-2">{playlist.name}</h3>
-            {playlist.description && (
-              <p className="text-sm text-gray-600 dark:text-gray-400 mb-4">
-                {playlist.description}
-              </p>
-            )}
-            <div className="flex items-center justify-between">
-              <Button variant="secondary">
-                Abrir
-              </Button>
-              <Button
-                variant="primary"
-                onClick={() => openDeleteDialog(playlist.id)}
-                className="bg-red-600 hover:bg-red-700"
-              >
-                Eliminar
-              </Button>
-            </div>
-          </Card>
+          <PlaylistCard
+            key={playlist.id}
+            playlist={playlist}
+            onOpen={handleOpenPlaylist}
+            onDelete={openDeleteDialog}
+          />
         ))}
       </div>
 
       {/* Diálogo de Creación */}
-      {showCreateDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md p-6">
-            <h3 className="text-xl font-bold mb-4">Crear Playlist</h3>
-            <div className="space-y-4">
-              <Input
-                placeholder="Nombre de la playlist"
-                value={newPlaylistName}
-                onChange={(e) => setNewPlaylistName(e.target.value)}
-                autoFocus
-              />
-              <Input
-                placeholder="Descripción (opcional)"
-                value={newPlaylistDescription}
-                onChange={(e) => setNewPlaylistDescription(e.target.value)}
-              />
-              <div className="flex justify-end space-x-2">
-                <Button
-                  variant="secondary"
-                  onClick={() => {
-                    setShowCreateDialog(false);
-                    setNewPlaylistName("");
-                    setNewPlaylistDescription("");
-                  }}
-                >
-                  Cancelar
-                </Button>
-                <Button onClick={handleCreate} disabled={!newPlaylistName.trim()}>
-                  Crear
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
+      <CreatePlaylistDialog
+        isOpen={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+      />
 
       {/* Diálogo de Eliminación */}
-      {showDeleteDialog && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <Card className="w-full max-w-md p-6">
-            <h3 className="text-xl font-bold mb-4">Confirmar Eliminación</h3>
-            <p className="mb-6">¿Estás seguro de eliminar esta playlist?</p>
-            <div className="flex justify-end space-x-2">
-              <Button
-                variant="secondary"
-                onClick={() => {
-                  setShowDeleteDialog(false);
-                  setSelectedPlaylistId(null);
-                }}
-              >
-                Cancelar
-              </Button>
-              <Button variant="primary" onClick={handleDelete} className="bg-red-600 hover:bg-red-700">
-                Confirmar
-              </Button>
-            </div>
-          </Card>
-        </div>
-      )}
+      <ConfirmDialog
+        isOpen={showDeleteDialog}
+        title="Confirmar Eliminación"
+        message="¿Estás seguro de eliminar esta playlist?"
+        onConfirm={handleDelete}
+        onCancel={() => {
+          setShowDeleteDialog(false);
+          setSelectedPlaylistId(null);
+        }}
+        confirmText="Confirmar"
+        variant="destructive"
+        isLoading={deletePlaylist.isPending}
+      />
     </div>
   );
 };

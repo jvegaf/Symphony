@@ -59,7 +59,7 @@ describe('Settings', () => {
   describe('Renderizado inicial', () => {
     it('debería renderizar el título de la página', () => {
       render(<Settings />, { wrapper: createWrapper() });
-      expect(screen.getByText('⚙️ Configuración')).toBeInTheDocument();
+      expect(screen.getByText('Configuración')).toBeInTheDocument();
     });
 
     it('debería renderizar las 4 pestañas', () => {
@@ -72,13 +72,13 @@ describe('Settings', () => {
 
     it('debería mostrar la pestaña de Interfaz por defecto', () => {
       render(<Settings />, { wrapper: createWrapper() });
-      expect(screen.getByText('Configuración de Interfaz')).toBeInTheDocument();
+      expect(screen.getByText('Apariencia')).toBeInTheDocument();
     });
 
     it('debería renderizar botones Guardar y Resetear', () => {
       render(<Settings />, { wrapper: createWrapper() });
-      expect(screen.getByText('💾 Guardar cambios')).toBeInTheDocument();
-      expect(screen.getByText('🔄 Resetear a valores por defecto')).toBeInTheDocument();
+      expect(screen.getByTestId('settings-save-button')).toBeInTheDocument();
+      expect(screen.getByTestId('settings-reset-button')).toBeInTheDocument();
     });
   });
 
@@ -89,7 +89,7 @@ describe('Settings', () => {
       const audioTab = screen.getByText('Audio');
       await userEvent.click(audioTab);
 
-      expect(screen.getByText('Configuración de Audio')).toBeInTheDocument();
+      expect(screen.getByText('Dispositivo de Audio')).toBeInTheDocument();
     });
 
     it('debería cambiar a pestaña Biblioteca al hacer click', async () => {
@@ -98,7 +98,7 @@ describe('Settings', () => {
       const libraryTab = screen.getByText('Biblioteca');
       await userEvent.click(libraryTab);
 
-      expect(screen.getByText('Configuración de Biblioteca')).toBeInTheDocument();
+      expect(screen.getByText('Escaneo Automático')).toBeInTheDocument();
     });
 
     it('debería cambiar a pestaña Conversión al hacer click', async () => {
@@ -107,19 +107,19 @@ describe('Settings', () => {
       const conversionTab = screen.getByText('Conversión');
       await userEvent.click(conversionTab);
 
-      expect(screen.getByText('Configuración de Conversión MP3')).toBeInTheDocument();
+      expect(screen.getByText('Conversión MP3')).toBeInTheDocument();
     });
 
     it('debería resaltar la pestaña activa', async () => {
       const user = userEvent.setup();
       render(<Settings />, { wrapper: createWrapper() });
 
-      const audioTab = screen.getByText('Audio');
-      await user.click(audioTab);
+      const audioTabButton = screen.getByTestId('settings-tab-audio');
+      await user.click(audioTabButton);
 
-      // La pestaña activa tiene la clase border-blue-500 en el botón mismo
+      // La pestaña activa tiene las clases text-blue-600 dark:text-blue-400
       await waitFor(() => {
-        expect(audioTab).toHaveClass('border-blue-500');
+        expect(audioTabButton).toHaveClass('text-blue-600');
       });
     });
   });
@@ -132,12 +132,12 @@ describe('Settings', () => {
 
     it('debería mostrar selector de idioma', () => {
       render(<Settings />, { wrapper: createWrapper() });
-      expect(screen.getByLabelText('Idioma')).toBeInTheDocument();
+      expect(screen.getByLabelText('Idioma de la interfaz')).toBeInTheDocument();
     });
 
     it('debería mostrar input de resolución de waveform', () => {
       render(<Settings />, { wrapper: createWrapper() });
-      expect(screen.getByLabelText(/Resolución de forma de onda/)).toBeInTheDocument();
+      expect(screen.getByLabelText('Resolución')).toBeInTheDocument();
     });
 
     it('debería tener valores por defecto correctos', () => {
@@ -184,7 +184,7 @@ describe('Settings', () => {
       const audioTab = screen.getByText('Audio');
       await userEvent.click(audioTab);
 
-      expect(screen.getByLabelText(/Tamaño de buffer:/)).toBeInTheDocument();
+      expect(screen.getByLabelText('Tamaño de buffer')).toBeInTheDocument();
     });
 
     it('debería mostrar el valor del buffer en el label', async () => {
@@ -219,7 +219,7 @@ describe('Settings', () => {
       const libraryTab = screen.getByText('Biblioteca');
       await userEvent.click(libraryTab);
 
-      expect(screen.getByLabelText(/Escanear biblioteca automáticamente/)).toBeInTheDocument();
+      expect(screen.getByLabelText('Escanear al iniciar')).toBeInTheDocument();
     });
 
     it('debería mostrar input de intervalo de escaneo', async () => {
@@ -228,7 +228,7 @@ describe('Settings', () => {
       const libraryTab = screen.getByText('Biblioteca');
       await userEvent.click(libraryTab);
 
-      expect(screen.getByLabelText(/Intervalo de escaneo automático/)).toBeInTheDocument();
+      expect(screen.getByLabelText('Intervalo de escaneo')).toBeInTheDocument();
     });
 
     it('debería mostrar input de carpeta de importación', async () => {
@@ -237,7 +237,7 @@ describe('Settings', () => {
       const libraryTab = screen.getByText('Biblioteca');
       await userEvent.click(libraryTab);
 
-      expect(screen.getByLabelText('Carpeta de importación por defecto')).toBeInTheDocument();
+      expect(screen.getByLabelText('Ruta predeterminada')).toBeInTheDocument();
     });
 
     it('debería permitir activar escaneo automático', async () => {
@@ -247,7 +247,7 @@ describe('Settings', () => {
       const libraryTab = screen.getByText('Biblioteca');
       await user.click(libraryTab);
 
-      const autoScanCheckbox = screen.getByLabelText(/Escanear biblioteca automáticamente/) as HTMLInputElement;
+      const autoScanCheckbox = screen.getByLabelText('Escanear al iniciar') as HTMLInputElement;
       await user.click(autoScanCheckbox);
 
       await waitFor(() => {
@@ -376,7 +376,7 @@ describe('Settings', () => {
     it('debería llamar updateSettings al hacer click en Guardar', async () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      const saveButton = screen.getByText('💾 Guardar cambios');
+      const saveButton = screen.getByTestId('settings-save-button');
       await userEvent.click(saveButton);
 
       // Should be called with array of settings (flat format)
@@ -392,7 +392,7 @@ describe('Settings', () => {
       const themeSelect = screen.getByLabelText('Tema de la aplicación');
       await user.selectOptions(themeSelect, 'dark');
 
-      const saveButton = screen.getByText('💾 Guardar cambios');
+      const saveButton = screen.getByTestId('settings-save-button');
       await user.click(saveButton);
 
       await waitFor(() => {
@@ -412,10 +412,10 @@ describe('Settings', () => {
       await user.selectOptions(themeSelect, 'light');
 
       // Cambiar idioma
-      const languageSelect = screen.getByLabelText('Idioma');
+      const languageSelect = screen.getByLabelText('Idioma de la interfaz');
       await user.selectOptions(languageSelect, 'en');
 
-      const saveButton = screen.getByText('💾 Guardar cambios');
+      const saveButton = screen.getByTestId('settings-save-button');
       await user.click(saveButton);
 
       await waitFor(() => {
@@ -437,7 +437,7 @@ describe('Settings', () => {
       
       render(<Settings />, { wrapper: createWrapper() });
 
-      const resetButton = screen.getByText('🔄 Resetear a valores por defecto');
+      const resetButton = screen.getByTestId('settings-reset-button');
       await user.click(resetButton);
 
       await waitFor(() => {
@@ -464,7 +464,7 @@ describe('Settings', () => {
       });
 
       // Resetear
-      const resetButton = screen.getByText('🔄 Resetear a valores por defecto');
+      const resetButton = screen.getByTestId('settings-reset-button');
       await user.click(resetButton);
 
       // Debe llamar a resetSettings que restaurará los valores
@@ -519,14 +519,14 @@ describe('Settings', () => {
       const themeInput = screen.getByLabelText('Tema de la aplicación');
       expect(themeInput).toBeInTheDocument();
 
-      const languageInput = screen.getByLabelText('Idioma');
+      const languageInput = screen.getByLabelText('Idioma de la interfaz');
       expect(languageInput).toBeInTheDocument();
     });
 
     it('los botones deberían ser accesibles por teclado', async () => {
       render(<Settings />, { wrapper: createWrapper() });
 
-      const saveButton = screen.getByText('💾 Guardar cambios');
+      const saveButton = screen.getByTestId('settings-save-button');
       saveButton.focus();
 
       expect(document.activeElement).toBe(saveButton);
@@ -546,7 +546,7 @@ describe('Settings', () => {
       render(<Settings />, { wrapper: createWrapper() });
 
       // Es un input type="range", verificar que existe y tiene los atributos correctos
-      const waveformInput = screen.getByLabelText(/Resolución de forma de onda/) as HTMLInputElement;
+      const waveformInput = screen.getByLabelText('Resolución') as HTMLInputElement;
       
       expect(waveformInput.type).toBe('range');
       expect(waveformInput.min).toBe('256');
@@ -561,8 +561,8 @@ describe('Settings', () => {
       const libraryTab = screen.getByText('Biblioteca');
       await userEvent.click(libraryTab);
 
-      const importFolderInput = screen.getByLabelText('Carpeta de importación por defecto') as HTMLInputElement;
-      expect(importFolderInput.placeholder).toBe('/ruta/a/tu/música');
+      const importFolderInput = screen.getByLabelText('Ruta predeterminada') as HTMLInputElement;
+      expect(importFolderInput.placeholder).toBe('/home/user/Música');
     });
 
     it('debería mostrar placeholder en carpeta de salida de conversión', async () => {
@@ -572,7 +572,7 @@ describe('Settings', () => {
       await userEvent.click(conversionTab);
 
       const outputFolderInput = screen.getByLabelText('Carpeta de salida') as HTMLInputElement;
-      expect(outputFolderInput.placeholder).toBe('/ruta/a/salida/mp3');
+      expect(outputFolderInput.placeholder).toBe('/home/user/Música/MP3');
     });
   });
 

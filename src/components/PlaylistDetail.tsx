@@ -22,7 +22,7 @@ import {
   useReorderPlaylistTracks,
   useAddTrackToPlaylist,
   useRemoveTrackFromPlaylist,
-} from "../hooks/usePlaylists";
+} from "../hooks/playlists";
 import { Track } from "../types/library";
 import { Button } from "./ui/Button";
 import { Card } from "./ui/Card";

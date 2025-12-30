@@ -1,3 +1,19 @@
+/**
+ * ⚠️ DEPRECATED: Este archivo ha sido reemplazado por una estructura modular
+ * 
+ * Por favor importa desde:
+ * - `import { useGetAllTracks, useSearchTracks, useGetTrack, useLibraryStats } from '@/hooks/library'` (queries)
+ * - `import { useUpdateTrackRating, useUpdateTrackMetadata, useDeleteTrack } from '@/hooks/library'` (mutations)
+ * - `import { useBatchFilenameToTags } from '@/hooks/library'` (batch operations)
+ * - `import { useImportLibrary } from '@/hooks/library'` (import)
+ * 
+ * Este archivo se mantendrá temporalmente para compatibilidad backwards pero será
+ * eliminado en una futura versión.
+ * 
+ * Razón de la refactorización: Seguir Single Responsibility Principle (SOLID)
+ * Fecha: 2025-01-XX
+ */
+
 import type { UnlistenFn } from "@tauri-apps/api/event";
 import { listen } from "@tauri-apps/api/event";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";

@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { TrackList } from "./TrackList";
 import { Track } from "../types/library";
-import * as useLibraryHook from "../hooks/useLibrary";
+import * as useLibraryHook from "../hooks/library";
 
 // Mock react-window
 vi.mock("react-window", () => ({

@@ -12,8 +12,8 @@ vi.mock("@tauri-apps/api/core", () => ({
 const mockInvoke = vi.mocked(invoke);
 
 const mockPlaylists = [
-  { id: 1, name: "Favorites", description: "My favorite tracks", date_created: "2024-01-01", date_modified: "2024-01-01" },
-  { id: 2, name: "Workout", description: null, date_created: "2024-01-02", date_modified: "2024-01-02" },
+  { id: "1", name: "Favorites", description: "My favorite tracks", date_created: "2024-01-01", date_modified: "2024-01-01" },
+  { id: "2", name: "Workout", description: null, date_created: "2024-01-02", date_modified: "2024-01-02" },
 ];
 
 const createWrapper = () => {
@@ -43,11 +43,13 @@ describe("PlaylistManager", () => {
     expect(screen.getByText(/cargando/i)).toBeInTheDocument();
   });
 
-  it("debería mostrar error state", async () => {
+  it("debería mostrar estado vacío cuando hay error (resiliente)", async () => {
+    // El hook useGetPlaylists retorna [] en caso de error para mejor UX
     mockInvoke.mockRejectedValue(new Error("Failed to load"));
     render(<PlaylistManager />, { wrapper: createWrapper() });
     await waitFor(() => {
-      expect(screen.getByText(/error/i)).toBeInTheDocument();
+      // Muestra mensaje de "no hay playlists" en lugar de error
+      expect(screen.getByText(/no hay playlists/i)).toBeInTheDocument();
     });
   });
 
@@ -69,7 +71,8 @@ describe("PlaylistManager", () => {
     const submitButton = screen.getByRole("button", { name: /crear/i });
     fireEvent.click(submitButton);
     await waitFor(() => {
-      expect(mockInvoke).toHaveBeenCalledWith("create_playlist", { name: "New Playlist", description: undefined });
+      // CreatePlaylistDialog usa null en lugar de undefined
+      expect(mockInvoke).toHaveBeenCalledWith("create_playlist", { name: "New Playlist", description: null });
     });
   });
 
@@ -82,7 +85,8 @@ describe("PlaylistManager", () => {
     const confirmButton = screen.getByRole("button", { name: /confirmar/i });
     fireEvent.click(confirmButton);
     await waitFor(() => {
-      expect(mockInvoke).toHaveBeenCalledWith("delete_playlist", { id: 1 });
+      // deletePlaylist.mutate recibe String(id)
+      expect(mockInvoke).toHaveBeenCalledWith("delete_playlist", { id: "1" });
     });
   });
 

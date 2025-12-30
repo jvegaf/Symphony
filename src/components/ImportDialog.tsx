@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
-import { useImportLibrary } from "../hooks/useLibrary";
+import { useImportLibrary } from "../hooks/library";
 import type { ImportResult } from "../types/library";
 
 export interface ImportDialogProps {

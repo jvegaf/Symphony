@@ -20,7 +20,7 @@ export interface Playlist {
  */
 export interface CreatePlaylistRequest {
   name: string;
-  description?: string;
+  description?: string | null;
 }
 
 /**
@@ -29,7 +29,7 @@ export interface CreatePlaylistRequest {
 export interface UpdatePlaylistRequest {
   id: string;
   name: string;
-  description?: string;
+  description?: string | null;
 }
 
 /**
