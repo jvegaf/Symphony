@@ -85,9 +85,9 @@ export const TrackRow = ({
       {/* Rating */}
       <td className="px-3 py-2 whitespace-nowrap text-sm">
         <StarRating
-          rating={track.rating ?? 0}
+          value={track.rating ?? 0}
           onChange={(newRating) => onUpdateRating(track.id, newRating)}
-          size="small"
+          size="sm"
         />
       </td>
 
