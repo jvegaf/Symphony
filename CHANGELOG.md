@@ -5,6 +5,26 @@ Todos los cambios notables de Symphony se documentan aquí.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/),
 y este proyecto sigue [Semantic Versioning](https://semver.org/lang/es/).
 
+## [0.16.0] - 2025-01-30
+
+### Corregido
+- **BPM Fix Tags FUNCIONA:** Corregido bug crítico donde lofty escribía BPM pero no podía leerlo
+  - Fix Tags ahora usa `id3` crate para escribir TBPM en archivos MP3
+  - MetadataExtractor con fallback dual: lofty → id3 para máxima compatibilidad
+  - BPM se escribe correctamente en archivos físicos MP3 después de Beatport Fix Tags
+  - BPM se actualiza en base de datos después de Fix Tags
+  - ✅ Verificado con tests: escritura con id3, lectura con ambas librerías
+  - ✅ 166 tests backend pasando, 618 tests frontend pasando
+  - Tipo BPM: `Option<f64>` para soportar decimales (128.5, 174.23)
+
+### Técnico
+- Modificado `src-tauri/src/library/beatport/tagger/writer.rs`:
+  - Nueva función `write_bpm_mp3()` usa id3 crate para escribir frame TBPM
+  - `write_tags()` detecta MP3 y usa `write_bpm_mp3()` en lugar de lofty
+  - Otros formatos siguen usando lofty para BPM
+- Binario de test `test_write_bpm.rs` actualizado para usar id3
+- Documentación actualizada explicando por qué se usa id3 para BPM en MP3
+
 ## [0.15.0] - 2025-12-30
 
 ### Agregado

@@ -1,10 +1,14 @@
-/// Escritura de tags y artwork a archivos de audio usando lofty
+/// Escritura de tags y artwork a archivos de audio usando lofty e id3
 /// 
 /// Este módulo maneja la escritura física de metadatos a archivos de audio,
 /// detectando automáticamente el formato y aplicando los tags apropiados.
+///
+/// IMPORTANTE: Para BPM en archivos MP3, usamos id3 crate directamente porque
+/// lofty tiene un bug donde escribe BPM pero no puede leerlo después.
 
 use std::path::Path;
 
+use id3::{Content, Frame, Tag as Id3Tag, TagLike};
 use lofty::config::WriteOptions;
 use lofty::picture::{MimeType, Picture, PictureType};
 use lofty::prelude::{Accessor, ItemKey, TagExt, TaggedFileExt};
@@ -51,8 +55,20 @@ pub fn write_artwork_only(file_path: &Path, artwork_data: &[u8]) -> Result<(), B
     Ok(())
 }
 
-/// Escribe los tags al archivo de audio usando lofty
+/// Escribe los tags al archivo de audio usando lofty e id3
 pub fn write_tags(file_path: &Path, tags: &BeatportTags) -> Result<(), BeatportError> {
+    // Para MP3, manejamos BPM con id3 crate (lofty tiene bug)
+    let is_mp3 = file_path
+        .extension()
+        .and_then(|s| s.to_str())
+        .map(|s| s.to_lowercase() == "mp3")
+        .unwrap_or(false);
+
+    // Si es MP3 y hay BPM, escribirlo primero con id3
+    if is_mp3 && tags.bpm.is_some() {
+        write_bpm_mp3(file_path, tags.bpm.unwrap())?;
+    }
+
     // Abrir el archivo para lectura/escritura
     let mut tagged_file = lofty::read_from_path(file_path)?;
 
@@ -78,9 +94,11 @@ pub fn write_tags(file_path: &Path, tags: &BeatportTags) -> Result<(), BeatportE
         tag.set_artist(artist.clone());
     }
 
-    if let Some(bpm) = tags.bpm {
-        // Escribir BPM como string en el frame BPM
-        tag.insert_text(ItemKey::Bpm, bpm.round().to_string());
+    // BPM: para MP3 ya lo escribimos con id3, para otros formatos usar lofty
+    if !is_mp3 {
+        if let Some(bpm) = tags.bpm {
+            tag.insert_text(ItemKey::Bpm, bpm.round().to_string());
+        }
     }
 
     if let Some(ref key) = tags.key {
@@ -131,6 +149,29 @@ pub fn write_tags(file_path: &Path, tags: &BeatportTags) -> Result<(), BeatportE
 
     // Guardar el archivo
     tag.save_to_path(file_path, WriteOptions::default())?;
+
+    Ok(())
+}
+
+/// Escribe BPM a un archivo MP3 usando id3 crate
+/// 
+/// Esto es necesario porque lofty tiene un bug donde escribe BPM
+/// pero no puede leerlo después. id3 crate funciona correctamente.
+fn write_bpm_mp3(file_path: &Path, bpm: f64) -> Result<(), BeatportError> {
+    // Leer tag existente o crear uno nuevo
+    let mut tag = Id3Tag::read_from_path(file_path).unwrap_or_else(|_| Id3Tag::new());
+
+    // Crear frame TBPM
+    let bpm_str = bpm.round().to_string();
+    let frame = Frame::with_content("TBPM", Content::Text(bpm_str));
+
+    // Eliminar TBPM existente y agregar el nuevo
+    tag.remove("TBPM");
+    tag.add_frame(frame);
+
+    // Guardar
+    tag.write_to_path(file_path, id3::Version::Id3v24)
+        .map_err(|e| BeatportError::TagWriteError(format!("Error escribiendo BPM: {}", e)))?;
 
     Ok(())
 }

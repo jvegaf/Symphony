@@ -24,7 +24,7 @@ pub struct TrackMetadata {
     pub genre: Option<String>,
 
     /// BPM (beats por minuto) - extraído de tag TBPM/tmpo
-    pub bpm: Option<i32>,
+    pub bpm: Option<f64>,
 
     /// Tonalidad musical (Initial Key) - extraído de tag TKEY/key
     pub key: Option<String>,

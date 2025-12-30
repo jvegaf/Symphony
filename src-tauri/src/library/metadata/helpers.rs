@@ -1,4 +1,5 @@
 use lofty::tag::{Accessor, ItemKey, Tag};
+use id3::TagLike;
 use std::path::Path;
 
 /// Obtiene el título del tag o del filename como fallback
@@ -46,15 +47,37 @@ pub fn get_year(tag: &Tag) -> Option<i32> {
 
 /// Extrae BPM del tag TBPM (ID3v2) o tmpo (MP4)
 /// Replica el comportamiento de _get_bpm() en Python
-pub fn get_bpm(tag: &Tag) -> Option<i32> {
+///
+/// AIDEV-NOTE: Intenta primero con lofty, luego con id3 crate directo
+/// para máxima compatibilidad con diferentes escrituras de TBPM
+pub fn get_bpm(tag: &Tag) -> Option<f64> {
     // Buscar en items del tag por clave "BPM" o "TBPM"
     if let Some(bpm_str) = tag.get_string(&ItemKey::Bpm) {
-        if let Ok(bpm) = bpm_str.parse::<i32>() {
-            if bpm > 0 {
+        // Intentar parsear como f64 primero para soportar decimales (ej: 128.5)
+        if let Ok(bpm) = bpm_str.parse::<f64>() {
+            if bpm > 0.0 {
                 return Some(bpm);
             }
         }
     }
+    None
+}
+
+/// Extrae BPM directamente del archivo MP3 usando id3 crate
+/// Usado cuando lofty no puede leer el frame TBPM correctamente
+pub fn get_bpm_from_mp3_file(path: &Path) -> Option<f64> {
+    // Intentar leer tag ID3 del archivo
+    let tag = id3::Tag::read_from_path(path).ok()?;
+
+    // Buscar frame TBPM
+    if let Some(bpm_str) = tag.get("TBPM").and_then(|frame| frame.content().text()) {
+        if let Ok(bpm) = bpm_str.parse::<f64>() {
+            if bpm > 0.0 {
+                return Some(bpm);
+            }
+        }
+    }
+
     None
 }
 

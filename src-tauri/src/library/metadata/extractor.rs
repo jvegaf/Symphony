@@ -74,7 +74,7 @@ impl MetadataExtractor {
         let rating = get_rating_from_mp3_file(path);
 
         // Extraer metadatos de tags
-        let (title, artist, album, year, genre, bpm, key, comment) = if let Some(tag) = tag {
+        let (title, artist, album, year, genre, mut bpm, key, comment) = if let Some(tag) = tag {
             (
                 get_title(path, tag),
                 get_artist(tag),
@@ -98,6 +98,11 @@ impl MetadataExtractor {
                 None,
             )
         };
+
+        // Fallback: Si lofty no pudo extraer BPM y es MP3, intentar con id3 crate
+        if bpm.is_none() && format == "mp3" {
+            bpm = get_bpm_from_mp3_file(path);
+        }
 
         Ok(TrackMetadata {
             path: path.to_string_lossy().to_string(),

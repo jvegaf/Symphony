@@ -9,6 +9,9 @@ pub mod helpers;
 pub mod models;
 pub mod writer;
 
+#[cfg(test)]
+mod tests;
+
 // Re-exports públicos
 pub use artwork::{extract_artwork, picture_to_data_uri};
 pub use extractor::MetadataExtractor;

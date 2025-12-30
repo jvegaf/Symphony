@@ -205,7 +205,7 @@ impl LibraryImporter {
             bitrate: metadata.bitrate,
             sample_rate: 44100, // TODO: Extraer de AudioMetadata
             file_size,
-            bpm: metadata.bpm.map(|b| b as f64),
+            bpm: metadata.bpm,
             key: metadata.key.clone(),
             rating: metadata.rating, // ✅ USAR EL RATING DE LOS METADATOS
             play_count: 0,
@@ -316,7 +316,7 @@ mod tests {
             album: Some("Test Album".to_string()),
             year: Some(2024),
             genre: Some("Electronic".to_string()),
-            bpm: Some(128),
+            bpm: Some(128.0),
             key: Some("Am".to_string()),
             rating: Some(5),
             comment: Some("Test comment".to_string()),

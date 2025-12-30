@@ -215,8 +215,8 @@ pub async fn update_track_metadata(request: UpdateTrackMetadataRequest) -> Resul
         },
         bpm: match request.bpm {
             Some(b) if b <= 0.0 => None,  // BPM 0 o negativo = borrar
-            Some(b) => Some(b as i32),
-            None => track.bpm.map(|b| b as i32),
+            Some(b) => Some(b),
+            None => track.bpm,
         },
         key: match &request.key {
             Some(s) if s.is_empty() => None,

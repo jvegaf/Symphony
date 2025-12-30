@@ -9,7 +9,7 @@ export interface TrackRowProps {
   isSelected: boolean;
   isPlaying: boolean;
   isFocused: boolean;
-  onClick: (e: React.MouseEvent, index: number) => void;
+  onClick: (track: Track, index: number, e: React.MouseEvent) => void;
   onDoubleClick: (track: Track) => void;
   onContextMenu: (e: React.MouseEvent, track: Track) => void;
   onUpdateRating: (trackId: string, rating: number) => void;
@@ -39,12 +39,12 @@ export const TrackRow = ({
           isPlaying
             ? 'bg-blue-100 dark:bg-blue-950'
             : isSelected
-            ? 'bg-blue-50 dark:bg-blue-900/20'
+            ? 'bg-blue-100/70 dark:bg-blue-800/50'
             : 'hover:bg-gray-50 dark:hover:bg-gray-800/50'
         }
         ${isFocused ? 'ring-2 ring-blue-400 dark:ring-blue-600 ring-inset' : ''}
       `}
-      onClick={(e) => onClick(e, index)}
+      onClick={(e) => onClick(track, index, e)}
       onDoubleClick={() => onDoubleClick(track)}
       onContextMenu={(e) => onContextMenu(e, track)}
     >

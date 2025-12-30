@@ -38,21 +38,22 @@ export const useContextMenu = ({
 
     const menuItems: MenuItem[] = [];
 
-    // Opción "Details" solo si hay 1 track seleccionado
-    if (selectedTracks.length === 1 && onTrackDetails) {
+    // Opción "Details" - siempre usar el track clickeado
+    if (onTrackDetails) {
       const detailsItem = await MenuItem.new({
         id: 'details',
         text: 'Details',
         action: () => {
-          onTrackDetails(selectedTracks[0]);
+          // Usar el track del parámetro, no selectedTracks[0] que puede estar desactualizado
+          onTrackDetails(track);
         }
       });
       menuItems.push(detailsItem);
     }
 
-    // Opciones de búsqueda - solo si hay 1 track seleccionado
-    if (selectedTracks.length === 1) {
-      const currentTrack = selectedTracks[0];
+    // Opciones de búsqueda - usar el track clickeado
+    if (true) {
+      const currentTrack = track;
       const hasSearchableData = currentTrack.artist && currentTrack.title;
 
       if (hasSearchableData) {

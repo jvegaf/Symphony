@@ -480,7 +480,7 @@ pub async fn apply_selected_tags(
 fn update_track_in_db(
     track_id: &str,
     tags: &BeatportTags,
-    current_bpm: Option<f64>,
+    _current_bpm: Option<f64>,
     beatport_id: Option<i64>,
 ) -> Result<(), String> {
     let db = get_connection().map_err(|e| e.to_string())?;
@@ -501,12 +501,10 @@ fn update_track_in_db(
         params.push(Box::new(artist.clone()));
     }
 
-    // BPM: Solo si local no tiene y Beatport sí tiene
-    if current_bpm.is_none() {
-        if let Some(bpm) = tags.bpm {
-            updates.push("bpm = ?".to_string());
-            params.push(Box::new(bpm));
-        }
+    // BPM: Siempre actualizar si Beatport tiene valor (igual que Key)
+    if let Some(bpm) = tags.bpm {
+        updates.push("bpm = ?".to_string());
+        params.push(Box::new(bpm));
     }
 
     // Key: Siempre se actualiza si tiene valor

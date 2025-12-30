@@ -146,5 +146,7 @@ export const useTrackActions = ({
     handleTrackDetails,
     handleCloseDetails,
     handleBatchFilenameToTags,
+    // Función para navegación entre tracks en modal de detalles
+    setTrackDetailsId,
   };
 };

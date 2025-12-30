@@ -66,6 +66,7 @@ function App() {
     handleTrackDetails,
     handleCloseDetails,
     handleBatchFilenameToTags,
+    setTrackDetailsId,
   } = useTrackActions({
     play,
     playbackQueue,
