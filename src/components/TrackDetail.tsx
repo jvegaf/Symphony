@@ -2,10 +2,11 @@
  * Componente para ver y editar metadatos de un track individual
  *
  * AIDEV-NOTE: Rediseño basado en mockup detail.html
- * - Header con icono, filename y botones Save/Cancel
+ * - Header con icono, filename y botón Save (Cancel eliminado, se cierra con Escape)
  * - Layout 2 columnas: izquierda (artwork + botones), derecha (todos los campos)
  * - Inputs con estilo rounded-full y colores oscuros
  * - Soporte para navegación entre tracks (Previous/Next)
+ * - refetchOnMount: "always" para actualizar después de Fix Tags con Beatport
  */
 
 import React, { useState, useEffect } from "react";
@@ -56,6 +57,8 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({
   const [originalComment, setOriginalComment] = useState("");
 
   // Query para obtener el track
+  // AIDEV-NOTE: refetchOnMount: "always" asegura que los datos se actualicen
+  // después de Fix Tags con Beatport, incluso si hay datos en cache
   const {
     data: track,
     isLoading,
@@ -66,6 +69,7 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({
       const result = await invoke<Track>("get_track_by_id", { id: trackId });
       return result;
     },
+    refetchOnMount: "always",
   });
 
   // Hook para obtener artwork
@@ -228,23 +232,6 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({
     updateMutation.mutate();
   };
 
-  const handleCancel = () => {
-    if (hasChanges) {
-      setShowConfirmDialog(true);
-    } else {
-      // Restaurar valores originales
-      setTitle(originalTitle);
-      setArtist(originalArtist);
-      setAlbum(originalAlbum);
-      setYear(originalYear);
-      setGenre(originalGenre);
-      setBpm(originalBpm);
-      setKey(originalKey);
-      setComment(originalComment);
-      onClose?.();
-    }
-  };
-
   // Confirmar y guardar cambios antes de cerrar
   const handleConfirmSave = () => {
     setShowConfirmDialog(false);
@@ -331,9 +318,10 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({
           </div>
         )}
 
-        {/* Botones de acción */}
+        {/* Botón Save (Cancel eliminado) */}
         <div className="hidden md:flex gap-2 flex-shrink-0">
           <button
+            type="button"
             onClick={handleSave}
             disabled={!hasChanges || updateMutation.isPending}
             className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-primary text-[#181511] text-sm font-bold leading-normal tracking-[0.015em] disabled:opacity-50 disabled:cursor-not-allowed hover:bg-primary/90 transition-colors"
@@ -341,12 +329,6 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({
             <span className="truncate">
               {updateMutation.isPending ? "Saving..." : "Save Changes"}
             </span>
-          </button>
-          <button
-            onClick={handleCancel}
-            className="flex min-w-[84px] max-w-[480px] cursor-pointer items-center justify-center overflow-hidden rounded-full h-10 px-4 bg-[#3a3127] text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-[#4a4137] transition-colors"
-          >
-            <span className="truncate">Cancel</span>
           </button>
         </div>
       </header>
@@ -666,9 +648,10 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({
         </div>
       </main>
 
-      {/* Footer móvil */}
+      {/* Footer móvil - Solo botón Save */}
       <footer className="flex md:hidden gap-2 px-6 pb-4">
         <button
+          type="button"
           onClick={handleSave}
           disabled={!hasChanges || updateMutation.isPending}
           className="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-4 bg-primary text-[#181511] text-sm font-bold leading-normal tracking-[0.015em] disabled:opacity-50"
@@ -676,12 +659,6 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({
           <span className="truncate">
             {updateMutation.isPending ? "Saving..." : "Save Changes"}
           </span>
-        </button>
-        <button
-          onClick={handleCancel}
-          className="flex w-full cursor-pointer items-center justify-center overflow-hidden rounded-full h-12 px-4 bg-[#3a3127] text-white text-sm font-bold leading-normal tracking-[0.015em]"
-        >
-          <span className="truncate">Cancel</span>
         </button>
       </footer>
 
@@ -698,6 +675,7 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({
             </p>
             <div className="flex flex-col gap-2">
               <button
+                type="button"
                 onClick={handleConfirmSave}
                 disabled={updateMutation.isPending}
                 className="flex w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-full h-10 px-4 bg-primary text-[#181511] text-sm font-bold leading-normal tracking-[0.015em] hover:bg-primary/90 transition-colors disabled:opacity-50"
@@ -706,6 +684,7 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({
                 <span>{updateMutation.isPending ? "Guardando..." : "Guardar cambios"}</span>
               </button>
               <button
+                type="button"
                 onClick={handleDiscardChanges}
                 className="flex w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-full h-10 px-4 bg-red-600 text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-red-700 transition-colors"
               >
@@ -713,6 +692,7 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({
                 <span>Descartar cambios</span>
               </button>
               <button
+                type="button"
                 onClick={() => setShowConfirmDialog(false)}
                 className="flex w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-full h-10 px-4 bg-[#3a3127] text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-[#4a4137] transition-colors"
               >
