@@ -10,7 +10,7 @@ pub mod error;
 pub mod models;
 pub mod tagger;
 
-pub use client::BeatportClient;
+pub use client::{BeatportClient, concurrent::{ConcurrencyConfig, RateLimitState}};
 pub use error::BeatportError;
 pub use models::{
     BatchFixResult, BeatportCandidate, BeatportTags, FixTagsPhase, FixTagsProgress, 

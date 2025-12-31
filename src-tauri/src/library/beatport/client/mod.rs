@@ -10,6 +10,7 @@
 mod api;
 mod artwork;
 mod auth;
+pub mod concurrent;
 mod matching;
 mod search;
 

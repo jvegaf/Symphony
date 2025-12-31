@@ -10,7 +10,7 @@ pub mod update;
 pub use consolidate::{consolidate_library, ConsolidateLibraryResult};
 pub use create::insert_track;
 pub use delete::{delete_track, reset_library, ResetLibraryResult};
-pub use read::{get_all_tracks, get_track};
+pub use read::{get_all_tracks, get_track, get_tracks_batch};
 pub use search::search_tracks;
 pub use update::{update_track, update_track_metadata};
 
