@@ -2,7 +2,7 @@
  * Tests para PlayerSection con funcionalidad de análisis (Milestone 4)
  *
  * AIDEV-NOTE: Tests comprensivos para análisis integrado en el reproductor
- * Cubre botón de análisis, cue points funcionales y renderizado condicional
+ * Cubre botón de análisis y renderizado condicional
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
@@ -45,9 +45,6 @@ vi.mock("../analysis", () => ({
   BeatgridOverlay: ({ bpm }: { bpm: number }) => (
     <div data-testid="beatgrid-overlay">Beatgrid BPM: {bpm}</div>
   ),
-  CuePointEditor: ({ cuePoints }: { cuePoints: any[] }) => (
-    <div data-testid="cue-point-editor">Cue Points: {cuePoints.length}</div>
-  ),
 }));
 
 // Mock data
@@ -78,27 +75,6 @@ const mockBeatgrid = {
   analyzedAt: "2024-01-01T00:00:00Z",
 };
 
-const mockCuePoints = [
-  {
-    id: "cue-1",
-    trackId: "track-123",
-    position: 30.5,
-    label: "Drop",
-    type: "drop",
-    hotkey: 1,
-    createdAt: "2024-01-01T00:00:00Z",
-  },
-  {
-    id: "cue-2",
-    trackId: "track-123",
-    position: 120.0,
-    label: "Outro",
-    type: "outro",
-    hotkey: 2,
-    createdAt: "2024-01-01T01:00:00Z",
-  },
-];
-
 // Helper para wrapper con QueryClient
 const createWrapper = () => {
   const queryClient = new QueryClient({
@@ -121,8 +97,6 @@ describe("PlayerSection", () => {
   const mockStop = vi.fn();
   const mockSeek = vi.fn();
   const mockAnalyzeBeatgrid = vi.fn();
-  const mockCreateCuePoint = vi.fn();
-  const mockDeleteCuePoint = vi.fn();
 
   // Helper to create mock audio player return value
   const createMockAudioPlayer = (
@@ -162,26 +136,10 @@ describe("PlayerSection", () => {
       isSuccess: true,
     } as any);
 
-    vi.mocked(useAnalysisHook.useGetCuePoints).mockReturnValue({
-      data: [],
-      isLoading: false,
-      isSuccess: true,
-    } as any);
-
     vi.mocked(useAnalysisHook.useAnalyzeBeatgrid).mockReturnValue({
       mutateAsync: mockAnalyzeBeatgrid,
       isPending: false,
       isSuccess: false,
-    } as any);
-
-    vi.mocked(useAnalysisHook.useCreateCuePoint).mockReturnValue({
-      mutateAsync: mockCreateCuePoint,
-      isPending: false,
-    } as any);
-
-    vi.mocked(useAnalysisHook.useDeleteCuePoint).mockReturnValue({
-      mutate: mockDeleteCuePoint,
-      isPending: false,
     } as any);
   });
 
@@ -355,135 +313,12 @@ describe("PlayerSection", () => {
   });
 
   describe("Cue Points", () => {
-    beforeEach(() => {
-      vi.mocked(useAnalysisHook.useGetCuePoints).mockReturnValue({
-        data: mockCuePoints,
-        isLoading: false,
-        isSuccess: true,
-      } as any);
-    });
-
-    it("debería mostrar contador de cue points", () => {
+    it("debería no mostrar cue points (funcionalidad eliminada)", () => {
       render(<PlayerSection track={mockTrack} />, { wrapper: createWrapper() });
 
-      expect(screen.getByText("Cues (2)")).toBeInTheDocument();
-    });
-
-    it("debería renderizar CuePointEditor cuando hay cue points", () => {
-      // Mock getBoundingClientRect to return non-zero dimensions
-      const mockGetBoundingClientRect = vi.fn(() => ({
-        width: 800,
-        height: 64,
-        top: 0,
-        left: 0,
-        bottom: 64,
-        right: 800,
-        x: 0,
-        y: 0,
-        toJSON: vi.fn(),
-      }));
-      Element.prototype.getBoundingClientRect = mockGetBoundingClientRect;
-
-      render(<PlayerSection track={mockTrack} />, { wrapper: createWrapper() });
-
-      expect(screen.getByTestId("cue-point-editor")).toBeInTheDocument();
-      expect(screen.getByText("Cue Points: 2")).toBeInTheDocument();
-    });
-
-    it("debería mostrar botones de cue con estado correcto", () => {
-      render(<PlayerSection track={mockTrack} />, { wrapper: createWrapper() });
-
-      // Cue 1 existe (hotkey 1)
-      const cue1Button = screen.getByRole("button", { name: "1" });
-      expect(cue1Button).toHaveClass("bg-blue-500");
-      expect(cue1Button).toHaveAttribute(
-        "title",
-        expect.stringContaining("Cue 1: 0:30"),
-      );
-
-      // Cue 2 existe (hotkey 2)
-      const cue2Button = screen.getByRole("button", { name: "2" });
-      expect(cue2Button).toHaveClass("bg-blue-500");
-
-      // Cue 3 no existe
-      const cue3Button = screen
-        .getAllByRole("button")
-        .find(
-          (btn) => btn.querySelector(".material-icons")?.textContent === "add",
-        );
-      expect(cue3Button).toHaveClass("bg-gray-200");
-    });
-
-    it("debería crear cue point al hacer click en botón vacío", async () => {
-      const user = userEvent.setup();
-
-      // Mock no cue points initially
-      vi.mocked(useAnalysisHook.useGetCuePoints).mockReturnValue({
-        data: [],
-        isLoading: false,
-        isSuccess: true,
-      } as any);
-
-      mockCreateCuePoint.mockResolvedValue({ id: "new-cue" });
-
-      render(<PlayerSection track={mockTrack} />, { wrapper: createWrapper() });
-
-      const cue1Button = screen
-        .getAllByRole("button")
-        .find(
-          (btn) => btn.querySelector(".material-icons")?.textContent === "add",
-        );
-
-      if (cue1Button) {
-        await user.click(cue1Button);
-
-        expect(mockCreateCuePoint).toHaveBeenCalledWith({
-          trackId: "track-123",
-          position: 15.0, // current position
-          label: "Cue 1",
-          type: "cue",
-          hotkey: 1,
-        });
-      }
-    });
-
-    it("debería hacer seek al hacer click en cue point existente", async () => {
-      const user = userEvent.setup();
-      render(<PlayerSection track={mockTrack} />, { wrapper: createWrapper() });
-
-      const cue1Button = screen.getByRole("button", { name: "1" });
-      await user.click(cue1Button);
-
-      expect(mockSeek).toHaveBeenCalledWith(30.5); // position of first cue
-    });
-
-    it("debería eliminar cue point con click derecho", async () => {
-      const user = userEvent.setup();
-      render(<PlayerSection track={mockTrack} />, { wrapper: createWrapper() });
-
-      const cue1Button = screen.getByRole("button", { name: "1" });
-      await user.pointer({ keys: "[MouseRight]", target: cue1Button });
-
-      expect(mockDeleteCuePoint).toHaveBeenCalledWith({
-        id: "cue-1",
-        trackId: "track-123",
-      });
-    });
-
-    it("no debería crear/eliminar cue points sin track", () => {
-      render(<PlayerSection track={null} />, { wrapper: createWrapper() });
-
-      const cueButtons = screen
-        .getAllByRole("button")
-        .filter(
-          (btn) =>
-            btn.textContent?.includes("add") ||
-            btn.getAttribute("class")?.includes("bg-blue-500"),
-        );
-
-      cueButtons.forEach((button) => {
-        expect(button).toBeDisabled();
-      });
+      // Verificar que no hay botones de cue points
+      expect(screen.queryByText("Cues (2)")).not.toBeInTheDocument();
+      expect(screen.queryByTestId("cue-point-editor")).not.toBeInTheDocument();
     });
   });
 
@@ -506,15 +341,9 @@ describe("PlayerSection", () => {
     });
 
     it("no debería renderizar overlays sin dimensiones", () => {
-      // Mock empty beatgrid and cue points to avoid overlays
+      // Mock empty beatgrid to avoid overlays
       vi.mocked(useAnalysisHook.useGetBeatgrid).mockReturnValue({
         data: undefined,
-        isLoading: false,
-        isSuccess: true,
-      } as any);
-
-      vi.mocked(useAnalysisHook.useGetCuePoints).mockReturnValue({
-        data: [],
         isLoading: false,
         isSuccess: true,
       } as any);
@@ -522,7 +351,6 @@ describe("PlayerSection", () => {
       render(<PlayerSection track={mockTrack} />, { wrapper: createWrapper() });
 
       expect(screen.queryByTestId("beatgrid-overlay")).not.toBeInTheDocument();
-      expect(screen.queryByTestId("cue-point-editor")).not.toBeInTheDocument();
     });
   });
 
@@ -561,43 +389,6 @@ describe("PlayerSection", () => {
           expect.any(Error),
         );
       });
-
-      consoleError.mockRestore();
-    });
-
-    it("debería manejar errores en creación de cue point", async () => {
-      const user = userEvent.setup();
-      const consoleError = vi
-        .spyOn(console, "error")
-        .mockImplementation(() => {});
-
-      // Mock no cue points initially
-      vi.mocked(useAnalysisHook.useGetCuePoints).mockReturnValue({
-        data: [],
-        isLoading: false,
-        isSuccess: true,
-      } as any);
-
-      mockCreateCuePoint.mockRejectedValue(new Error("Creación falló"));
-
-      render(<PlayerSection track={mockTrack} />, { wrapper: createWrapper() });
-
-      const cue1Button = screen
-        .getAllByRole("button")
-        .find(
-          (btn) => btn.querySelector(".material-icons")?.textContent === "add",
-        );
-
-      if (cue1Button) {
-        await user.click(cue1Button);
-
-        await waitFor(() => {
-          expect(consoleError).toHaveBeenCalledWith(
-            "Error creando cue point:",
-            expect.any(Error),
-          );
-        });
-      }
 
       consoleError.mockRestore();
     });

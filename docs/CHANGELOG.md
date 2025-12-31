@@ -1,3 +1,21 @@
+# [0.17.0] - 2025-12-30
+
+### 🎛️ Player: tags reubicadas y cues eliminados
+- Las tags (BPM, Key, Year, Genre) ahora aparecen debajo de los controles principales del reproductor para mayor claridad visual.
+- Se eliminó la sección de cue points del player y todo el código relacionado, simplificando la interfaz y el flujo de usuario.
+- Tests actualizados: se eliminaron pruebas de cues y se añadieron tests para overlays y tags.
+- Validado: todos los tests frontend y backend pasan, cobertura ≥80%.
+
+### 🦀 Rust: limpieza de binarios de test
+- Se eliminaron imports no usados y se corrigieron imports de traits en los binarios de test Rust (`test_write_bpm.rs`, `test_beatport_writer.rs`, `test_bpm.rs`).
+- Todos los binarios de test compilan sin warnings y pasan los tests.
+
+### 🔼 Minor version bump
+- Versión incrementada a 0.17.0 siguiendo semver.
+- Documentación y README actualizados para reflejar los cambios recientes.
+
+---
+
 # Changelog
 
 Todos los cambios notables de Symphony se documentan aquí.

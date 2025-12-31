@@ -3,29 +3,23 @@
  *
  * AIDEV-NOTE: Integra los componentes de análisis (Milestone 4):
  * - BeatgridOverlay: muestra grid de beats sobre el waveform
- * - CuePointEditor: muestra y permite editar cue points
- * - LoopEditor: muestra y permite editar loops (futuro)
- * - Botones de cue points funcionales
  * - Control de volumen: slider inline en la sección de controles (play/pause/stop)
- * - Tags (BPM, Key, Year, Genre): movidos a la derecha de los cue points en la misma fila
+ * - Tags (BPM, Key, Year, Genre): ubicadas debajo de los controles de reproducción
  * - Auto-play: cuando termina un track, reproduce automáticamente el siguiente de la lista
  *   - Usa el evento audio:end_of_track del backend
  *   - Requiere props opcionales: tracks[] y onTrackChange callback
  */
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { Track } from "../../types/library";
 import { useAudioPlayer } from "../../hooks/useAudioPlayer";
 import { useArtwork } from "../../hooks/useArtwork";
 import {
   useGetBeatgrid,
   useAnalyzeBeatgrid,
-  useGetCuePoints,
-  useCreateCuePoint,
-  useDeleteCuePoint,
 } from "../../hooks/useAnalysis";
 import { WaveformCanvas } from "../WaveformCanvas";
-import { BeatgridOverlay, CuePointEditor } from "../analysis";
+import { BeatgridOverlay } from "../analysis";
 import { Toast } from "../Toast";
 
 interface PlayerSectionProps {
@@ -66,20 +60,12 @@ export const PlayerSection = ({ track, tracks = [], onTrackChange }: PlayerSecti
     height: 96,
   });
 
-  // Estado para cue point seleccionado (para futura implementación de edición)
-  const [selectedCuePointId, _setSelectedCuePointId] = useState<
-    string | undefined
-  >();
-
   // AIDEV-NOTE: Si no hay track, no hacer queries a la DB
   const trackId = track?.id ?? "";
 
   // Analysis hooks - solo cargar si hay track
   const { data: beatgrid } = useGetBeatgrid(trackId);
-  const { data: cuePoints = [] } = useGetCuePoints(trackId);
   const analyzeBeatgrid = useAnalyzeBeatgrid();
-  const createCuePoint = useCreateCuePoint();
-  const deleteCuePoint = useDeleteCuePoint();
 
   // Actualizar dimensiones del waveform
   useEffect(() => {
@@ -150,36 +136,8 @@ export const PlayerSection = ({ track, tracks = [], onTrackChange }: PlayerSecti
     }
   };
 
-  // Crear cue point en posición actual
-  const handleCreateCuePoint = useCallback(
-    async (hotkey?: number) => {
-      if (!trackId || position === undefined) return;
-
-      try {
-        await createCuePoint.mutateAsync({
-          trackId: trackId,
-          position: position,
-          label: hotkey ? `Cue ${hotkey}` : `Cue @ ${formatDuration(position)}`,
-          type: "cue",
-          hotkey: hotkey,
-        });
-      } catch (err) {
-        console.error("Error creando cue point:", err);
-      }
-    },
-    [trackId, position, createCuePoint],
-  );
-
-  // Click en cue point para hacer seek
-  const handleCuePointClick = useCallback(
-    (cuePoint: { position: number }) => {
-      seek(cuePoint.position);
-    },
-    [seek],
-  );
-
   // Analizar beatgrid
-  const handleAnalyzeBeatgrid = useCallback(async () => {
+  const handleAnalyzeBeatgrid = async () => {
     if (!trackId || !track) return;
 
     try {
@@ -190,11 +148,6 @@ export const PlayerSection = ({ track, tracks = [], onTrackChange }: PlayerSecti
     } catch (err) {
       console.error("Error analizando beatgrid:", err);
     }
-  }, [trackId, track, analyzeBeatgrid]);
-
-  // Obtener cue points por hotkey (1-4 para la UI)
-  const getCuePointByHotkey = (hotkey: number) => {
-    return cuePoints.find((cp) => cp.hotkey === hotkey);
   };
 
   // AIDEV-NOTE: Siempre renderizar el mismo layout (altura fija)
@@ -315,6 +268,38 @@ export const PlayerSection = ({ track, tracks = [], onTrackChange }: PlayerSecti
         </div>
       </div>
 
+      {/* Tags - Debajo de los controles */}
+      <div className="flex space-x-2 text-xs mt-3">
+        {/* Mostrar BPM del beatgrid analizado o del metadata */}
+        {(beatgrid?.bpm || track?.bpm) && (
+          <div
+            className={`rounded px-2 py-1 ${beatgrid?.bpm ? "bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200" : "bg-gray-200 dark:bg-gray-800"}`}
+          >
+            {beatgrid?.bpm?.toFixed(1) || track?.bpm}BPM
+            {beatgrid?.confidence && (
+              <span className="ml-1 text-xs opacity-75">
+                ({beatgrid.confidence.toFixed(0)}%)
+              </span>
+            )}
+          </div>
+        )}
+        {track?.key && (
+          <div className="bg-primary/20 text-primary border border-primary/50 rounded px-2 py-1">
+            {track.key}
+          </div>
+        )}
+        {track?.year && (
+          <div className="bg-gray-200 dark:bg-gray-800 text-primary rounded px-2 py-1 ">
+            {track.year}
+          </div>
+        )}
+        {track?.genre && (
+          <div className="bg-gray-200 dark:bg-gray-800 text-primary rounded px-2 py-1">
+            {track.genre}
+          </div>
+        )}
+      </div>
+
       {/* Waveform con overlays - CONTENEDOR RELATIVO */}
       {/* AIDEV-NOTE: El contenedor es relative para que los overlays se posicionen absolute */}
       <div
@@ -348,18 +333,6 @@ export const PlayerSection = ({ track, tracks = [], onTrackChange }: PlayerSecti
             className="pointer-events-none"
           />
         )}
-
-        {/* Cue Point Editor - solo si hay cue points */}
-        {cuePoints.length > 0 && waveformDimensions.width > 0 && (
-          <CuePointEditor
-            cuePoints={cuePoints}
-            duration={track?.duration ?? 0}
-            width={waveformDimensions.width}
-            height={waveformDimensions.height}
-            selectedCuePointId={selectedCuePointId}
-            onCuePointClick={handleCuePointClick}
-          />
-        )}
       </div>
 
       {/* Time - ALTURA FIJA */}
@@ -373,104 +346,6 @@ export const PlayerSection = ({ track, tracks = [], onTrackChange }: PlayerSecti
         <span className="font-mono" data-testid="player-duration">
           {formatDuration(duration > 0 ? duration : (track?.duration ?? 0))}
         </span>
-      </div>
-
-      {/* Cue Points - FUNCIONALES */}
-      <div className="mt-2 flex items-center justify-between">
-        <div className="flex space-x-2">
-          {/* Dropdown Cues */}
-          <button
-            type="button"
-            disabled={!track}
-            className="bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 px-3 py-1 rounded text-sm flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            Cues ({cuePoints.length})
-            <span className="material-icons text-base ml-1">
-              arrow_drop_down
-            </span>
-          </button>
-
-          {/* Cue Point Buttons 1-4 */}
-          {[1, 2, 3, 4].map((hotkey) => {
-            const cuePoint = getCuePointByHotkey(hotkey);
-            const hasCue = !!cuePoint;
-
-            return (
-              <button
-                key={hotkey}
-                type="button"
-                disabled={!track}
-                onClick={() => {
-                  if (hasCue && cuePoint) {
-                    // Si existe, hacer seek
-                    handleCuePointClick(cuePoint);
-                  } else {
-                    // Si no existe, crear en posición actual
-                    handleCreateCuePoint(hotkey);
-                  }
-                }}
-                onContextMenu={(e) => {
-                  e.preventDefault();
-                  if (hasCue && cuePoint && trackId) {
-                    // Click derecho para eliminar
-                    deleteCuePoint.mutate({
-                      id: cuePoint.id,
-                      trackId: trackId,
-                    });
-                  }
-                }}
-                title={
-                  hasCue && cuePoint
-                    ? `Cue ${hotkey}: ${formatDuration(cuePoint.position)} (click derecho para eliminar)`
-                    : `Click para crear Cue ${hotkey} en ${formatDuration(position)}`
-                }
-                className={`w-20 py-1 rounded text-sm disabled:opacity-50 disabled:cursor-not-allowed transition-colors ${
-                  hasCue
-                    ? "bg-blue-500 text-white hover:bg-blue-600"
-                    : "bg-gray-200 dark:bg-gray-800 text-gray-400 dark:text-gray-500 hover:bg-gray-300 dark:hover:bg-gray-700"
-                }`}
-              >
-                {hasCue ? (
-                  <span className="font-bold">{hotkey}</span>
-                ) : (
-                  <span className="material-icons text-base">add</span>
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Tags - AIDEV-NOTE: Movidos a la derecha de los cue points */}
-        <div className="flex space-x-2 text-xs">
-          {/* Mostrar BPM del beatgrid analizado o del metadata */}
-          {(beatgrid?.bpm || track?.bpm) && (
-            <div
-              className={`rounded px-2 py-1 ${beatgrid?.bpm ? "bg-green-200 dark:bg-green-800 text-green-800 dark:text-green-200" : "bg-gray-200 dark:bg-gray-800"}`}
-            >
-              {beatgrid?.bpm?.toFixed(1) || track?.bpm}BPM
-              {beatgrid?.confidence && (
-                <span className="ml-1 text-xs opacity-75">
-                  ({beatgrid.confidence.toFixed(0)}%)
-                </span>
-              )}
-            </div>
-          )}
-          {track?.key && (
-            <div className="bg-primary/20 text-primary border border-primary/50 rounded px-2 py-1">
-              {track.key}
-            </div>
-          )}
-          {track?.year && (
-            <div className="bg-gray-200 dark:bg-gray-800 text-primary rounded px-2 py-1 ">
-              {track.year}
-            </div>
-          )}
-          {track?.genre && (
-            <div className="bg-gray-200 dark:bg-gray-800 text-primary rounded px-2 py-1">
-              {track.genre}
-            </div>
-          )}
-        </div>
       </div>
     </div>
   );

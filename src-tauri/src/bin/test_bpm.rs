@@ -1,7 +1,6 @@
 use std::env;
 use std::path::Path;
 use id3::TagLike;
-use lofty::tag::Accessor;
 use lofty::file::TaggedFileExt;
 
 fn main() {

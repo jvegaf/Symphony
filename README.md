@@ -3,7 +3,7 @@
 Aplicación de escritorio profesional para gestionar bibliotecas musicales con importación, reproducción, análisis de audio y herramientas de organización avanzadas.
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
-[![Version](https://img.shields.io/badge/version-0.15.0-blue)]()
+![Version](https://img.shields.io/badge/version-0.17.0-blue)
 [![License](https://img.shields.io/badge/license-MIT-green)]()
 [![Tests](https://img.shields.io/badge/tests-618%20passing-brightgreen)]()
 [![Coverage](https://img.shields.io/badge/coverage-80%25+-brightgreen)]()
@@ -20,7 +20,28 @@ Aplicación de escritorio profesional para gestionar bibliotecas musicales con i
 - 🌙 **Modo Oscuro:** Interfaz optimizada para uso prolongado
 - 🎧 **Integración con Beatport:** Selección manual de matches con indicadores visuales precisos
 
-## 🆕 Novedades v0.15.0
+## 🆕 Novedades v0.17.0
+
+### 🎛️ Player: tags reubicadas y cues eliminados
+
+- Las tags (BPM, Key, Year, Genre) ahora aparecen debajo de los controles principales del reproductor para mayor claridad visual.
+- Se eliminó la sección de cue points del player y todo el código relacionado, simplificando la interfaz y el flujo de usuario.
+- Tests actualizados: se eliminaron pruebas de cues y se añadieron tests para overlays y tags.
+- Validado: todos los tests frontend y backend pasan, cobertura ≥80%.
+
+### 🦀 Rust: limpieza de binarios de test
+
+- Se eliminaron imports no usados y se corrigieron imports de traits en los binarios de test Rust (`test_write_bpm.rs`, `test_beatport_writer.rs`, `test_bpm.rs`).
+- Todos los binarios de test compilan sin warnings y pasan los tests.
+
+### 🔼 Minor version bump
+
+- Versión incrementada a 0.17.0 siguiendo semver.
+- Documentación y README actualizados para reflejar los cambios recientes.
+
+---
+
+## 🆕 Novedades v0.16.0
 
 ### 🏗️ Mejoras Arquitectónicas
 

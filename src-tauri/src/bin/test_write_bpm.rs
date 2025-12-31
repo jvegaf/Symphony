@@ -7,7 +7,7 @@ use std::env;
 use std::path::Path;
 
 use id3::{Content, Frame, Tag as Id3Tag, TagLike};
-use lofty::prelude::{Accessor, ItemKey, TaggedFileExt};
+use lofty::prelude::{ItemKey, TaggedFileExt};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -87,7 +87,7 @@ fn read_bpm_lofty(file_path: &Path) -> Result<Option<f64>, String> {
         .map_err(|e| format!("Error abriendo archivo: {}", e))?;
 
     if let Some(tag) = tagged_file.primary_tag() {
-        if let Some(bpm_item) = tag.get_string(&lofty::prelude::ItemKey::Bpm) {
+        if let Some(bpm_item) = tag.get_string(&ItemKey::Bpm) {
             if let Ok(bpm) = bpm_item.parse::<f64>() {
                 return Ok(Some(bpm));
             }
