@@ -18,7 +18,7 @@ export const Settings = () => {
     setLocalSettings,
     handleSave,
     handleReset,
-    isSaving,
+    isUpdating,
     isResetting,
     isLoading,
     error,
@@ -146,10 +146,10 @@ export const Settings = () => {
               <button
                 data-testid="settings-save-button"
                 onClick={handleSave}
-                disabled={isSaving || isResetting}
+                disabled={isUpdating || isResetting}
                 className="flex-1 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-lg hover:from-blue-600 hover:to-purple-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
-                {isSaving ? (
+                {isUpdating ? (
                   <span className="flex items-center justify-center space-x-2">
                     <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
@@ -165,7 +165,7 @@ export const Settings = () => {
               <button
                 data-testid="settings-reset-button"
                 onClick={handleReset}
-                disabled={isSaving || isResetting}
+                disabled={isUpdating || isResetting}
                 className="px-6 py-3 bg-gradient-to-r from-red-500 to-pink-600 text-white rounded-lg hover:from-red-600 hover:to-pink-700 transition-all shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed font-medium"
               >
                 {isResetting ? (
@@ -186,12 +186,13 @@ export const Settings = () => {
       </div>
 
       {/* Toast Notifications */}
-      <Toast
-        message={toastMessage}
-        type={toastType}
-        isVisible={toastVisible}
-        onClose={() => setToastVisible(false)}
-      />
+      {toastVisible && (
+        <Toast
+          message={toastMessage}
+          type={toastType}
+          onClose={() => setToastVisible(false)}
+        />
+      )}
     </div>
   );
 };
