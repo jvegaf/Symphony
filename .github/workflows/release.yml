@@ -78,11 +78,26 @@ jobs:
       - name: Prepare release artifacts (Linux)
         if: matrix.os == 'ubuntu-latest'
         run: |
+          # Check if bundle directory exists
+          if [ ! -d "src-tauri/target/release/bundle" ]; then
+            echo "Error: Bundle directory does not exist. Build may have failed."
+            echo "Listing target directory contents:"
+            ls -R src-tauri/target/release/ || echo "Target directory does not exist"
+            exit 1
+          fi
+          
           cd src-tauri/target/release/bundle
           mkdir -p /tmp/artifacts
+          
+          # List available bundle types
+          echo "Available bundle directories:"
+          ls -la
+          
           # Try both lowercase and uppercase directory names
           cp -v deb/*.deb /tmp/artifacts/ 2>/dev/null || echo "No .deb files found"
           cp -v appimage/*.AppImage /tmp/artifacts/ 2>/dev/null || cp -v AppImage/*.AppImage /tmp/artifacts/ 2>/dev/null || echo "No .AppImage files found"
+          cp -v rpm/*.rpm /tmp/artifacts/ 2>/dev/null || echo "No .rpm files found"
+          
           ls -lah /tmp/artifacts
           # Verify at least some files were copied
           if [ -z "$(ls -A /tmp/artifacts)" ]; then
@@ -94,10 +109,24 @@ jobs:
         if: matrix.os == 'windows-latest'
         shell: bash
         run: |
+          # Check if bundle directory exists
+          if [ ! -d "src-tauri/target/release/bundle" ]; then
+            echo "Error: Bundle directory does not exist. Build may have failed."
+            echo "Listing target directory contents:"
+            ls -R src-tauri/target/release/ || echo "Target directory does not exist"
+            exit 1
+          fi
+          
           cd src-tauri/target/release/bundle
           mkdir -p /tmp/artifacts
+          
+          # List available bundle types
+          echo "Available bundle directories:"
+          ls -la
+          
           cp -v msi/*.msi /tmp/artifacts/ 2>/dev/null || echo "No .msi files found"
           cp -v nsis/*.exe /tmp/artifacts/ 2>/dev/null || echo "No .exe files found"
+          
           ls -lah /tmp/artifacts
           # Verify at least some files were copied
           if [ -z "$(ls -A /tmp/artifacts)" ]; then
