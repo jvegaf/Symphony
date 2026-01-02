@@ -2,12 +2,13 @@ import { getCurrentWindow } from "@tauri-apps/api/window";
 
 import type { ImportProgress } from "../../types/library";
 
-type Tab = "library" | "settings" | "import" | "export" | "tools" | "benchmark";
+type Tab = "library" | "import" | "export" | "tools" | "benchmark";
 
 interface HeaderProps {
   activeTab: Tab;
   onTabChange: (tab: Tab) => void;
   onImport: () => void;
+  onSettingsClick: () => void;
   isImporting: boolean;
   progress: ImportProgress;
   selectedTracksCount?: number;
@@ -23,6 +24,7 @@ export const Header = ({
   activeTab,
   onTabChange,
   onImport,
+  onSettingsClick,
   isImporting,
   progress,
   selectedTracksCount = 0,
@@ -41,7 +43,6 @@ export const Header = ({
   };
   const tabs: { id: Tab; label: string }[] = [
     { id: "library", label: "Library" },
-    { id: "settings", label: "Settings" },
     { id: "import", label: "Import" },
     { id: "export", label: "Export" },
     { id: "tools", label: "Tools" },
@@ -124,6 +125,16 @@ export const Header = ({
             />
           </div>
         )}
+        <button
+          type="button"
+          onClick={onSettingsClick}
+          className="material-icons text-base cursor-pointer hover:text-gray-300 hover:bg-gray-700/50 rounded p-1 transition-colors"
+          data-testid="window-settings"
+          aria-label="Abrir configuración"
+          title="Configuración"
+        >
+          settings
+        </button>
         <button
           type="button"
           onClick={handleMinimize}

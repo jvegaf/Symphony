@@ -14,7 +14,7 @@ import { useEffect, useRef } from "react";
 import type { Track } from "../../../types/library";
 import { useUpdateTrackRating, useDeleteTrack } from "../../../hooks/library";
 import { TableHeader, TrackRow, EmptyState, LoadingState } from "./components";
-import { useTrackSorting, useTrackSelection, useContextMenu, type SortColumn, type SortDirection } from "./hooks";
+import { useTrackSorting, useTrackSelection, useContextMenu, useColumnVisibility, type SortColumn, type SortDirection } from "./hooks";
 
 // Re-exportar tipos para compatibilidad
 export type { SortColumn, SortDirection };
@@ -66,6 +66,10 @@ export const TrackTable = ({
   
   // Hook para eliminar track de DB y borrar archivo
   const { mutate: deleteTrack } = useDeleteTrack();
+
+  // Hook para visibilidad de columnas
+  const { visibleColumns, toggleColumn, resetColumns } = useColumnVisibility();
+  const visibleColumnsSet = new Set(visibleColumns);
 
   // Estado de ordenamiento - usar props externas si están disponibles
   const sortColumn = externalSortColumn ?? 'title';
@@ -157,6 +161,9 @@ export const TrackTable = ({
           sortColumn={sortColumn}
           sortDirection={sortDirection}
           onSort={handleSort}
+          visibleColumns={visibleColumnsSet}
+          onToggleColumn={toggleColumn}
+          onResetColumns={resetColumns}
         />
         <tbody>
           {sortedTracks.map((track, index) => {
@@ -172,6 +179,7 @@ export const TrackTable = ({
                 isSelected={isSelected}
                 isPlaying={isPlaying}
                 isFocused={isFocused}
+                visibleColumns={visibleColumnsSet}
                 onClick={handleTrackClick}
                 onDoubleClick={() => handleDoubleClick(track, index)}
                 onContextMenu={handleContextMenu}

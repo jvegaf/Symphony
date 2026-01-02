@@ -2,6 +2,7 @@ import { Check } from 'lucide-react';
 import { StarRating } from '../../../ui/StarRating';
 import { formatDuration, formatDate } from '../utils/formatters';
 import type { Track } from '../../../../types/library';
+import type { SortColumn } from '../hooks/useTrackSorting';
 
 export interface TrackRowProps {
   track: Track;
@@ -9,6 +10,7 @@ export interface TrackRowProps {
   isSelected: boolean;
   isPlaying: boolean;
   isFocused: boolean;
+  visibleColumns: Set<SortColumn>;
   onClick: (track: Track, index: number, e: React.MouseEvent) => void;
   onDoubleClick: (track: Track) => void;
   onContextMenu: (e: React.MouseEvent, track: Track) => void;
@@ -18,6 +20,9 @@ export interface TrackRowProps {
 /**
  * Fila de track con todos los datos y estilos visuales
  * Maneja selección, focus, reproducción activa, y contexto
+ * Solo renderiza columnas visibles según visibleColumns
+ * 
+ * AIDEV-NOTE: El orden de las columnas debe coincidir EXACTAMENTE con TableHeader
  */
 export const TrackRow = ({
   track,
@@ -25,6 +30,7 @@ export const TrackRow = ({
   isSelected,
   isPlaying,
   isFocused,
+  visibleColumns,
   onClick,
   onDoubleClick,
   onContextMenu,
@@ -49,72 +55,96 @@ export const TrackRow = ({
       onContextMenu={(e) => onContextMenu(e, track)}
     >
       {/* Fixed indicator */}
-      <td className="px-3 py-2 whitespace-nowrap text-sm text-center">
-        {track.beatportId && (
-          <span className="inline-flex items-center">
-            <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
-          </span>
-        )}
-      </td>
+      {visibleColumns.has('fixed') && (
+        <td className="px-3 py-2 whitespace-nowrap text-sm text-center">
+          {track.beatportId && (
+            <span className="inline-flex items-center">
+              <Check className="w-4 h-4 text-green-600 dark:text-green-400" />
+            </span>
+          )}
+        </td>
+      )}
 
       {/* Title */}
-      <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
-        {track.title}
-      </td>
+      {visibleColumns.has('title') && (
+        <td className="px-3 py-2 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+          {track.title}
+        </td>
+      )}
 
       {/* Artist */}
-      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
-        {track.artist}
-      </td>
+      {visibleColumns.has('artist') && (
+        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-700 dark:text-gray-300">
+          {track.artist}
+        </td>
+      )}
 
       {/* Album */}
-      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-        {track.album || '-'}
-      </td>
+      {visibleColumns.has('album') && (
+        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+          {track.album || '-'}
+        </td>
+      )}
 
       {/* Duration */}
-      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-        {formatDuration(track.duration)}
-      </td>
+      {visibleColumns.has('duration') && (
+        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+          {formatDuration(track.duration)}
+        </td>
+      )}
 
       {/* BPM */}
-      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-        {track.bpm ?? '-'}
-      </td>
+      {visibleColumns.has('bpm') && (
+        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+          {track.bpm ?? '-'}
+        </td>
+      )}
 
       {/* Rating */}
-      <td className="px-3 py-2 whitespace-nowrap text-sm">
-        <StarRating
-          value={track.rating ?? 0}
-          onChange={(newRating) => track.id && onUpdateRating(track.id, newRating)}
-          size="sm"
-        />
-      </td>
+      {visibleColumns.has('rating') && (
+        <td className="px-3 py-2 whitespace-nowrap text-sm">
+          <StarRating
+            value={track.rating ?? 0}
+            onChange={(newRating) => onUpdateRating(track.id ?? '', newRating)}
+            size="sm"
+          />
+        </td>
+      )}
 
       {/* Year */}
-      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-        {track.year ?? '-'}
-      </td>
+      {visibleColumns.has('year') && (
+        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+          {track.year ?? '-'}
+        </td>
+      )}
 
       {/* Date Added */}
-      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-        {formatDate(track.dateAdded)}
-      </td>
+      {visibleColumns.has('dateAdded') && (
+        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+          {formatDate(track.dateAdded)}
+        </td>
+      )}
 
       {/* Bitrate */}
-      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-        {track.bitrate ? `${track.bitrate} kbps` : '-'}
-      </td>
+      {visibleColumns.has('bitrate') && (
+        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+          {track.bitrate ? `${track.bitrate} kbps` : '-'}
+        </td>
+      )}
 
       {/* Genre */}
-      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-        {track.genre ?? '-'}
-      </td>
+      {visibleColumns.has('genre') && (
+        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+          {track.genre ?? '-'}
+        </td>
+      )}
 
       {/* Key */}
-      <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-        {track.key ?? '-'}
-      </td>
+      {visibleColumns.has('key') && (
+        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
+          {track.key ?? '-'}
+        </td>
+      )}
     </tr>
   );
 };

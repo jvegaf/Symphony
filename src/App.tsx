@@ -8,6 +8,7 @@ import {
   TrackTable,
 } from "./components/layout";
 import type { SortColumn, SortDirection } from "./components/layout/TrackTable";
+import { SettingsModal } from "./components/SettingsModal";
 import { TrackDetail } from "./components/TrackDetail";
 import { BeatportResultsModal } from "./components/ui/BeatportResultsModal";
 import { BeatportSelectionModal } from "./components/ui/BeatportSelectionModal";
@@ -16,17 +17,17 @@ import { useAudioPlayer } from "./hooks/useAudioPlayer";
 import { useGetAllTracks } from "./hooks/library";
 import { usePlaybackQueue } from "./hooks/usePlaybackQueue";
 import { usePlayerShortcuts } from "./hooks/usePlayerShortcuts";
-import { Settings } from "./pages/Settings/index";
 import type { Track } from "./types/library";
 // AIDEV-NOTE: Import waveform debugger to expose window.debugWaveform()
 // import "./utils/waveform-debug";
 
 function App() {
   const [activeTab, setActiveTab] = useState<
-    "library" | "settings" | "import" | "export" | "tools" | "benchmark"
+    "library" | "import" | "export" | "tools" | "benchmark"
   >("library");
   const [searchQuery, setSearchQuery] = useState("");
   const [playingTrack, setPlayingTrack] = useState<Track | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   // AIDEV-NOTE: Estado de ordenamiento levantado para persistir al navegar
   const [sortColumn, setSortColumn] = useState<SortColumn>('title');
@@ -157,18 +158,14 @@ function App() {
           activeTab={activeTab}
           onTabChange={setActiveTab}
           onImport={handleImport}
+          onSettingsClick={() => setIsSettingsOpen(true)}
           isImporting={isImporting}
           progress={importProgress}
           selectedTracksCount={selectedTracks.length}
         />
 
-        {/* AIDEV-NOTE: Usamos hidden en lugar de condicional para evitar desmontaje
-            Esto preserva el estado del waveform cuando navegamos a Settings */}
-        <div className={activeTab === "settings" ? "flex flex-1 overflow-hidden" : "hidden"}>
-          <Settings />
-        </div>
-
-        <div className={activeTab !== "settings" ? "flex flex-1 overflow-hidden" : "hidden"}>
+        {/* AIDEV-NOTE: Removido condicional de Settings, ahora siempre mostramos library */}
+        <div className="flex flex-1 overflow-hidden">
           <Sidebar
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
@@ -295,6 +292,12 @@ function App() {
             )}
           />
         )}
+
+        {/* AIDEV-NOTE: Modal de configuración */}
+        <SettingsModal
+          isOpen={isSettingsOpen}
+          onClose={() => setIsSettingsOpen(false)}
+        />
       </div>
     </ErrorBoundary>
   );

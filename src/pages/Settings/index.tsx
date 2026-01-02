@@ -6,6 +6,7 @@ import { Toast } from '../../components/Toast';
 /**
  * Página de Configuración
  * Permite al usuario ajustar preferencias de UI, audio, biblioteca y conversión
+ * AIDEV-NOTE: Este componente se mantiene por compatibilidad, pero se recomienda usar SettingsModal
  */
 export const Settings = () => {
   const [activeTab, setActiveTab] = useState<'ui' | 'audio' | 'library' | 'conversion'>('ui');
@@ -22,28 +23,18 @@ export const Settings = () => {
     isResetting,
     isLoading,
     error,
-  } = useSettingsForm({
-    onSaveSuccess: () => {
-      setToastMessage('⚙️ Configuración guardada correctamente');
+  } = useSettingsForm(
+    (message: string) => {
+      setToastMessage(message);
       setToastType('success');
       setToastVisible(true);
     },
-    onSaveError: (error) => {
-      setToastMessage(`❌ Error al guardar configuración: ${error}`);
+    (message: string) => {
+      setToastMessage(message);
       setToastType('error');
       setToastVisible(true);
-    },
-    onResetSuccess: () => {
-      setToastMessage('🔄 Configuración reiniciada a valores por defecto');
-      setToastType('success');
-      setToastVisible(true);
-    },
-    onResetError: (error) => {
-      setToastMessage(`❌ Error al reiniciar configuración: ${error}`);
-      setToastType('error');
-      setToastVisible(true);
-    },
-  });
+    }
+  );
 
   /**
    * Muestra un toast con el mensaje especificado
@@ -106,6 +97,7 @@ export const Settings = () => {
             {tabs.map((tab) => (
               <button
                 key={tab.id}
+                type="button"
                 data-testid={`settings-tab-${tab.id}`}
                 onClick={() => setActiveTab(tab.id)}
                 className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
@@ -144,6 +136,7 @@ export const Settings = () => {
             {/* Action Buttons */}
             <div className="mt-8 flex items-center space-x-4 p-6 bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm border border-gray-200 dark:border-gray-800 rounded-xl shadow-xl">
               <button
+                type="button"
                 data-testid="settings-save-button"
                 onClick={handleSave}
                 disabled={isUpdating || isResetting}
@@ -163,6 +156,7 @@ export const Settings = () => {
               </button>
 
               <button
+                type="button"
                 data-testid="settings-reset-button"
                 onClick={handleReset}
                 disabled={isUpdating || isResetting}
