@@ -19,6 +19,13 @@ export interface UseSettingsFormReturn {
   isResetting: boolean;
 }
 
+export interface UseSettingsFormCallbacks {
+  onSaveSuccess?: () => void;
+  onSaveError?: (error: string) => void;
+  onResetSuccess?: () => void;
+  onResetError?: (error: string) => void;
+}
+
 /**
  * Hook para manejar el estado y lógica del formulario de Settings
  * 
@@ -28,12 +35,10 @@ export interface UseSettingsFormReturn {
  * - Conversión de AppSettings a array de updates
  * - Callbacks de save/reset
  * 
- * @param onSuccess - Callback cuando se guarda exitosamente
- * @param onError - Callback cuando falla el guardado
+ * @param callbacks - Callbacks para eventos de save/reset
  */
 export const useSettingsForm = (
-  onSuccess?: (message: string) => void,
-  onError?: (message: string) => void
+  callbacks?: UseSettingsFormCallbacks
 ) => {
   const { settings, isLoading, error, updateSettings, resetSettings, isUpdating, isResetting } = useSettings();
   const [localSettings, setLocalSettings] = useState(settings ?? DEFAULT_SETTINGS);
@@ -83,10 +88,10 @@ export const useSettingsForm = (
 
     updateSettings(updates, {
       onSuccess: () => {
-        onSuccess?.('✅ Configuración guardada exitosamente');
+        callbacks?.onSaveSuccess?.();
       },
       onError: (error) => {
-        onError?.(`❌ Error al guardar: ${error}`);
+        callbacks?.onSaveError?.(String(error));
       },
     });
   };
@@ -96,7 +101,10 @@ export const useSettingsForm = (
       resetSettings(undefined, {
         onSuccess: () => {
           setLocalSettings(DEFAULT_SETTINGS);
-          onSuccess?.('✅ Configuración reseteada a valores por defecto');
+          callbacks?.onResetSuccess?.();
+        },
+        onError: (error) => {
+          callbacks?.onResetError?.(String(error));
         },
       });
     }

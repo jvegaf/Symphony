@@ -17,6 +17,7 @@ import { useGetAllTracks } from "./hooks/library";
 import { usePlaybackQueue } from "./hooks/usePlaybackQueue";
 import { usePlayerShortcuts } from "./hooks/usePlayerShortcuts";
 import { Settings } from "./pages/Settings/index";
+import type { Track } from "./types/library";
 // AIDEV-NOTE: Import waveform debugger to expose window.debugWaveform()
 // import "./utils/waveform-debug";
 
