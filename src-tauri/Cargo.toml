@@ -1,6 +1,6 @@
 [package]
 name = "symphony"
-version = "0.17.1"
+version = "0.18.0"
 description = "The Old School Music Manager"
 authors = ["Jose Vega"]
 edition = "2021"
@@ -62,6 +62,7 @@ reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-feature
 scraper = "0.22"
 urlencoding = "2.1"
 walkdir = "2.5.0"
+regex = "1.11"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["full"] }

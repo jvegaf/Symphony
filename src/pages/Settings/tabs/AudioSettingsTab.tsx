@@ -1,5 +1,6 @@
 import { SettingsSection, SettingsSlider } from '../components';
 import type { AppSettings } from '../../../types/settings';
+import { useTheme } from '../../../hooks/useTheme';
 
 export interface AudioSettingsTabProps {
   settings: AppSettings;
@@ -11,6 +12,8 @@ export interface AudioSettingsTabProps {
  * Incluye: Dispositivo de salida, Sample rate, Buffer size
  */
 export const AudioSettingsTab = ({ settings, onChange }: AudioSettingsTabProps) => {
+  const { theme } = useTheme();
+
   return (
     <div className="w-full space-y-6">
       {/* Audio Device Section */}
@@ -76,7 +79,8 @@ export const AudioSettingsTab = ({ settings, onChange }: AudioSettingsTabProps) 
                   audio: { ...settings.audio, sampleRate: Number(e.target.value) as 44100 | 48000 | 96000 },
                 })
               }
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              style={{ colorScheme: theme }}
             >
               <option value="44100">🎵 44.1 kHz (Calidad CD)</option>
               <option value="48000">🎧 48 kHz (Estándar)</option>

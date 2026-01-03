@@ -107,7 +107,7 @@ describe('settings types', () => {
     it('should convert AppSettings to settings array', () => {
       const settings = appSettingsToSettingsArray(DEFAULT_SETTINGS);
 
-      expect(settings).toHaveLength(14);
+      expect(settings).toHaveLength(15); // AIDEV-NOTE: Actualizado de 14 a 15 por app.first_run_completed
       
       const themeSetting = settings.find((s) => s.key === 'ui.theme');
       expect(themeSetting).toBeDefined();

@@ -2,6 +2,7 @@ import { Menu, MenuItem } from "@tauri-apps/api/menu";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { confirm } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { invoke } from "@tauri-apps/api/core";
 import type { Track } from '../../../../types/library';
 
 export interface UseContextMenuProps {
@@ -52,45 +53,43 @@ export const useContextMenu = ({
     }
 
     // Opciones de búsqueda - usar el track clickeado
-    if (true) {
-      const currentTrack = track;
-      const hasSearchableData = currentTrack.artist && currentTrack.title;
+    const currentTrack = track;
+    const hasSearchableData = currentTrack.artist && currentTrack.title;
 
-      if (hasSearchableData) {
-        // Separador antes de búsquedas
-        const separator1 = await MenuItem.new({
-          id: 'separator1',
-          text: '─────── Search ───────'
-        });
-        menuItems.push(separator1);
+    if (hasSearchableData) {
+      // Separador antes de búsquedas
+      const separator1 = await MenuItem.new({
+        id: 'separator1',
+        text: '─────── Search ───────'
+      });
+      menuItems.push(separator1);
 
-        const googleSearchItem = await MenuItem.new({
-          id: 'search-google',
-          text: '🔍 Search on Google',
-          action: async () => {
-            const query = encodeURIComponent(`${currentTrack.artist} ${currentTrack.title}`);
-            await openUrl(`https://www.google.com/search?q=${query}`);
-          }
-        });
-        menuItems.push(googleSearchItem);
+      const googleSearchItem = await MenuItem.new({
+        id: 'search-google',
+        text: '🔍 Search on Google',
+        action: async () => {
+          const query = encodeURIComponent(`${currentTrack.artist} ${currentTrack.title}`);
+          await openUrl(`https://www.google.com/search?q=${query}`);
+        }
+      });
+      menuItems.push(googleSearchItem);
 
-        const beatportSearchItem = await MenuItem.new({
-          id: 'search-beatport',
-          text: '🎵 Search on Beatport',
-          action: async () => {
-            const query = encodeURIComponent(`${currentTrack.artist} ${currentTrack.title}`);
-            await openUrl(`https://www.beatport.com/search?q=${query}`);
-          }
-        });
-        menuItems.push(beatportSearchItem);
+      const beatportSearchItem = await MenuItem.new({
+        id: 'search-beatport',
+        text: '🎵 Search on Beatport',
+        action: async () => {
+          const query = encodeURIComponent(`${currentTrack.artist} ${currentTrack.title}`);
+          await openUrl(`https://www.beatport.com/search?q=${query}`);
+        }
+      });
+      menuItems.push(beatportSearchItem);
 
-        // Separador después de búsquedas
-        const separator2 = await MenuItem.new({
-          id: 'separator2',
-          text: '─────────────────────'
-        });
-        menuItems.push(separator2);
-      }
+      // Separador después de búsquedas
+      const separator2 = await MenuItem.new({
+        id: 'separator2',
+        text: '─────────────────────'
+      });
+      menuItems.push(separator2);
     }
 
     // Opción "Filename→Tags" para batch edit
@@ -166,15 +165,19 @@ export const useContextMenu = ({
     });
     menuItems.push(deleteItem);
 
-    // Opción DevTools
-    const devToolsItem = await MenuItem.new({
-      id: 'devtools',
-      text: 'Open DevTools (F12)',
-      action: () => {
-        alert('Press F12 to open DevTools\n\nOr use:\n- Windows/Linux: Ctrl+Shift+I\n- macOS: Cmd+Option+I');
+    // Opción "Open in File Browser" - abre el explorador de archivos con el archivo seleccionado
+    const openInBrowserItem = await MenuItem.new({
+      id: 'open-in-browser',
+      text: '📂 Open in File Browser',
+      action: async () => {
+        try {
+          await invoke('open_in_file_browser', { filePath: track.path });
+        } catch (error) {
+          console.error('Error abriendo explorador de archivos:', error);
+        }
       }
     });
-    menuItems.push(devToolsItem);
+    menuItems.push(openInBrowserItem);
 
     const menu = await Menu.new({ items: menuItems });
     await menu.popup(new LogicalPosition(e.clientX, e.clientY));

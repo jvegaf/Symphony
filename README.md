@@ -3,14 +3,16 @@
 Aplicación de escritorio profesional para gestionar bibliotecas musicales con importación, reproducción, análisis de audio y herramientas de organización avanzadas.
 
 [![Build Status](https://img.shields.io/badge/build-passing-brightgreen)]()
-![Version](https://img.shields.io/badge/version-0.17.0-blue)
+![Version](https://img.shields.io/badge/version-0.18.0-blue)
 [![License](https://img.shields.io/badge/license-MIT-green)]()
-[![Tests](https://img.shields.io/badge/tests-618%20passing-brightgreen)]()
+[![Tests](https://img.shields.io/badge/tests-868%20passing-brightgreen)]()
 [![Coverage](https://img.shields.io/badge/coverage-80%25+-brightgreen)]()
 
 ## ✨ Características
 
-- 📁 **Importación de Bibliotecas:** Escaneo recursivo con preservación de estructura
+- 🎉 **Onboarding de Primera Ejecución:** Wizard de bienvenida que guía al usuario en la configuración inicial
+- 📁 **Importación de Bibliotecas:** Escaneo recursivo con preservación de estructura y detección automática de fechas
+- 🗓️ **Detección Inteligente de Fechas:** Extrae fechas desde rutas (ej: `2401` → Enero 2024) para mejor organización
 - 🎵 **Reproducción Integrada:** Player completo con waveform interactivo (canvas propio, streaming progresivo, seek visual, feedback instantáneo). Ver [docs/waveform-implementation.md](./docs/waveform-implementation.md) para detalles.
 - ⌨️ **Atajos de Teclado:** Navegación rápida con A/D (anterior/siguiente), W/S (±10s), Espacio (pausa)
 - 📊 **Análisis de Audio:** Beatgrids automáticos, cue points y loops personalizados
@@ -19,6 +21,57 @@ Aplicación de escritorio profesional para gestionar bibliotecas musicales con i
 - 🔄 **Conversión de Audio:** Opcional a MP3 durante importación
 - 🌙 **Modo Oscuro:** Interfaz optimizada para uso prolongado
 - 🎧 **Integración con Beatport:** Selección manual de matches con indicadores visuales precisos
+
+## 🆕 Novedades v0.18.0
+
+### 🎉 Sistema de Onboarding para Primer Arranque
+
+Symphony ahora incluye un wizard de bienvenida profesional que se muestra en la primera ejecución:
+
+- **Paso 1 - Bienvenida:** Pantalla de introducción con 3 tarjetas destacando las características principales (Organización Inteligente, Reproducción Rápida, Ultra Rápido)
+- **Paso 2 - Importación:** Progreso en tiempo real con barra animada, contador de archivos y fase actual
+- **Paso 3 - Éxito:** Celebración con contador de pistas importadas y botón para comenzar a usar Symphony
+- **Diseño moderno:** Gradientes vibrantes (purple → pink → orange), animaciones suaves, totalmente responsive
+- **UX guiada:** El modal no se puede cerrar hasta completar el proceso, asegurando que el usuario configure su biblioteca
+
+**Técnico:**
+- Nuevo hook `useFirstRun` con 7 tests (100% cobertura)
+- Componente `OnboardingModal` con 13 tests cubriendo todos los flujos
+- Setting `app.first_run_completed` en base de datos SQLite
+- 20 nuevos tests (total: **677 frontend + 191 backend = 868 tests pasando**)
+
+### 🗓️ Detección Automática de Fechas desde Rutas
+
+Symphony detecta automáticamente fechas en nombres de carpetas y las usa como `date_added`:
+
+- **Formato YYMM:** `2401` → Enero 2024
+- **Formato YYMMDD:** `240125` → 25 Enero 2024
+- **Mejora la organización:** Las pistas mantienen su fecha original de importación según tu estructura de carpetas
+- **Casos edge cubiertos:** Años bisiestos, meses inválidos, validación de días (24 tests)
+
+**Ejemplo:**
+```
+/music/2401/Artist/Track.mp3  → date_added: "2024-01-01"
+/music/240125/Album/Song.flac → date_added: "2024-01-25"
+```
+
+**Técnico:**
+- Implementado en `src-tauri/src/utils/path_utils.rs`
+- Funciones: `extract_date_from_path()`, `extract_full_date_from_path()`
+- Integrado en el importador con fallback a timestamp actual
+- Estrategia: YYMM → YYMMDD → current timestamp
+
+### 🎨 UI de Configuración Mejorada
+
+La sección de biblioteca en Settings tiene un diseño renovado:
+
+- **"Carpeta de Música"** (antes "Carpeta de Importación")
+- Input de solo lectura mostrando la ruta seleccionada
+- Botón **"Elegir"** con degradado para abrir el selector nativo
+- Explicación visual del sistema de detección de fechas YYMM
+- Placeholder: "Ninguna carpeta seleccionada"
+
+---
 
 ## 🆕 Novedades v0.17.0
 

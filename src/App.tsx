@@ -8,11 +8,12 @@ import {
   TrackTable,
 } from "./components/layout";
 import type { SortColumn, SortDirection } from "./components/layout/TrackTable";
+import { OnboardingModal } from "./components/OnboardingModal";
 import { SettingsModal } from "./components/SettingsModal";
 import { TrackDetail } from "./components/TrackDetail";
 import { BeatportResultsModal } from "./components/ui/BeatportResultsModal";
 import { BeatportSelectionModal } from "./components/ui/BeatportSelectionModal";
-import { useLibraryHandlers, useBeatportHandlers, useTrackActions } from "./hooks/app";
+import { useLibraryHandlers, useBeatportHandlers, useTrackActions, useFirstRun } from "./hooks/app";
 import { useAudioPlayer } from "./hooks/useAudioPlayer";
 import { useGetAllTracks } from "./hooks/library";
 import { usePlaybackQueue } from "./hooks/usePlaybackQueue";
@@ -28,6 +29,9 @@ function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [playingTrack, setPlayingTrack] = useState<Track | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+
+  // AIDEV-NOTE: Hook de primer arranque para mostrar onboarding modal
+  const { isFirstRun, completeFirstRun, isLoading: isLoadingFirstRun } = useFirstRun();
 
   // AIDEV-NOTE: Estado de ordenamiento levantado para persistir al navegar
   const [sortColumn, setSortColumn] = useState<SortColumn>('title');
@@ -298,6 +302,11 @@ function App() {
           isOpen={isSettingsOpen}
           onClose={() => setIsSettingsOpen(false)}
         />
+
+        {/* AIDEV-NOTE: Modal de bienvenida (primer arranque) */}
+        {!isLoadingFirstRun && isFirstRun && (
+          <OnboardingModal onComplete={completeFirstRun} />
+        )}
       </div>
     </ErrorBoundary>
   );

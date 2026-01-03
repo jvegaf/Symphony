@@ -5,6 +5,77 @@ Todos los cambios notables de Symphony se documentan aquí.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/),
 y este proyecto sigue [Semantic Versioning](https://semver.org/lang/es/).
 
+## [0.18.0] - 2026-01-03
+
+### Agregado
+- **Sistema de Onboarding para Primer Arranque:**
+  - Modal de bienvenida que se muestra en el primer arranque de la aplicación
+  - Paso 1: Pantalla de bienvenida con 3 tarjetas de características destacadas
+  - Paso 2: Progreso de importación en tiempo real con barra animada
+  - Paso 3: Pantalla de éxito con contador de pistas importadas
+  - Diseño moderno con gradientes (purple → pink → orange)
+  - No se puede cerrar hasta completar el proceso (UX intencional)
+  - Integración completa con el selector de carpeta y sistema de importación
+  - Setting `app.first_run_completed` en base de datos para controlar visibilidad
+
+- **Detección Automática de Fechas desde Rutas:**
+  - Symphony detecta automáticamente fechas en nombres de carpetas
+  - Formato YYMM: `2401` → Enero 2024
+  - Formato YYMMDD: `240125` → 25 Enero 2024
+  - Usa la fecha detectada como `date_added` en lugar del timestamp actual
+  - Mejora el ordenamiento cronológico de la biblioteca
+  - 24 tests cubriendo casos edge (años bisiestos, meses inválidos, etc.)
+  - Implementado en `src-tauri/src/utils/path_utils.rs`
+
+- **Nuevo Hook `useFirstRun`:**
+  - `isFirstRun` - Detecta si es el primer arranque
+  - `completeFirstRun()` - Marca el onboarding como completado
+  - `isLoading` / `isUpdating` - Estados de carga
+  - 7 tests con 100% de cobertura
+
+- **Nuevo Tipo `AppGeneralSettings`:**
+  - Categoría `app` en settings para configuraciones globales de la aplicación
+  - Campo `firstRunCompleted: boolean` para controlar el onboarding
+  - Integrado en `AppSettings` junto a `ui`, `audio`, `library`, `conversion`
+
+### Cambiado
+- **UI de Configuración de Biblioteca Mejorada:**
+  - "Carpeta de Importación" → "Carpeta de Música"
+  - Input de solo lectura en lugar de editable
+  - Botón "Elegir" con diseño degradado para seleccionar carpeta
+  - Explicación visual del sistema de detección de fechas YYMM
+  - Placeholder actualizado: "Ninguna carpeta seleccionada"
+
+- **API de `useSettingsForm` Refactorizada:**
+  - Cambio de 2 funciones callback separadas → objeto de callbacks único
+  - `onSaveSuccess`, `onSaveError`, `onResetSuccess`, `onResetError`
+  - Mejor tipado y más consistente con convenciones modernas
+
+### Corregido
+- TypeScript: Firma incorrecta de `useSettingsForm` en SettingsModal y Settings/index.tsx
+- Tests: Labels desactualizados ("Ruta predeterminada" → "Ubicación de tu biblioteca")
+- Tests: Selector ambiguo de "Mantenimiento" usando `getByRole('heading')`
+- Tests: Count de settings actualizado (14 → 15)
+- Tests: Timeout en test de limpieza de caché (agregado `waitFor`)
+
+### Técnico
+- **Archivos Creados:**
+  - `src/hooks/app/useFirstRun.ts` (59 líneas)
+  - `src/hooks/app/useFirstRun.test.tsx` (207 líneas, 7 tests)
+  - `src/components/OnboardingModal.tsx` (320 líneas)
+  - `src/components/OnboardingModal.test.tsx` (306 líneas, 13 tests)
+  - `src-tauri/src/utils/path_utils.rs` (con tests integrados)
+
+- **Tests:**
+  - Frontend: 677 tests pasando (✅ 100%)
+  - Backend: 191 tests pasando (✅ 100%)
+  - Total: 868 tests pasando
+  - Cobertura: >80% (cumple requisitos TDD)
+
+- **Base de Datos:**
+  - Nueva key en tabla `settings`: `app.first_run_completed`
+  - Mapeo: `app.first_run_completed` ↔ `AppSettings.app.firstRunCompleted`
+
 ## [0.16.0] - 2025-01-30
 
 ### Corregido

@@ -238,7 +238,7 @@ describe('Settings', () => {
       const libraryTab = screen.getByText(/📚\s*Biblioteca/);
       await userEvent.click(libraryTab);
 
-      expect(screen.getByLabelText('Ruta predeterminada')).toBeInTheDocument();
+      expect(screen.getByLabelText('Ubicación de tu biblioteca')).toBeInTheDocument();
     });
 
     it('debería permitir activar escaneo automático', async () => {
@@ -262,7 +262,7 @@ describe('Settings', () => {
       const libraryTab = screen.getByText(/📚\s*Biblioteca/);
       await userEvent.click(libraryTab);
 
-      expect(screen.getByText('Mantenimiento')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'Mantenimiento' })).toBeInTheDocument();
       expect(screen.getByText('Limpiar caché de waveforms')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Limpiar caché' })).toBeInTheDocument();
     });
@@ -293,9 +293,13 @@ describe('Settings', () => {
       const clearButton = screen.getByRole('button', { name: 'Limpiar caché' });
       await user.click(clearButton);
 
-      expect(screen.getByRole('button', { name: 'Limpiando...' })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: 'Limpiando...' })).toBeDisabled();
+      // AIDEV-NOTE: Esperar a que aparezca el estado de carga
+      await waitFor(() => {
+        expect(screen.getByRole('button', { name: 'Limpiando...' })).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: 'Limpiando...' })).toBeDisabled();
+      });
 
+      // Esperar a que termine la operación
       await waitFor(() => {
         expect(screen.getByRole('button', { name: 'Limpiar caché' })).toBeInTheDocument();
       });
@@ -562,8 +566,8 @@ describe('Settings', () => {
       const libraryTab = screen.getByText(/📚\s*Biblioteca/);
       await userEvent.click(libraryTab);
 
-      const importFolderInput = screen.getByLabelText('Ruta predeterminada') as HTMLInputElement;
-      expect(importFolderInput.placeholder).toBe('/home/user/Música');
+      const importFolderInput = screen.getByLabelText('Ubicación de tu biblioteca') as HTMLInputElement;
+      expect(importFolderInput.placeholder).toBe('Ninguna carpeta seleccionada');
     });
 
     it('debería mostrar placeholder en carpeta de salida de conversión', async () => {

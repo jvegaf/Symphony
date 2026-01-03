@@ -1,5 +1,6 @@
 import { SettingsSection, SettingsToggle } from '../components';
 import type { AppSettings } from '../../../types/settings';
+import { useTheme } from '../../../hooks/useTheme';
 
 export interface ConversionSettingsTabProps {
   settings: AppSettings;
@@ -12,6 +13,7 @@ export interface ConversionSettingsTabProps {
  */
 export const ConversionSettingsTab = ({ settings, onChange }: ConversionSettingsTabProps) => {
   const isEnabled = settings.conversion.enabled;
+  const { theme } = useTheme();
 
   return (
     <div className="w-full space-y-6">
@@ -85,7 +87,8 @@ export const ConversionSettingsTab = ({ settings, onChange }: ConversionSettings
               })
             }
             disabled={!isEnabled}
-            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{ colorScheme: theme }}
           >
             <option value="128">🎵 128 kbps (Básico)</option>
             <option value="192">🎧 192 kbps (Estándar)</option>

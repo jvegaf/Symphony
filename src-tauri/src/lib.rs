@@ -142,6 +142,7 @@ pub fn run() {
             commands::library::reset_library,
             commands::library::consolidate_library,
             commands::library::get_track_artwork,
+            commands::library::open_in_file_browser,
             // Playlist commands
             commands::playlists::create_playlist,
             commands::playlists::get_playlists,

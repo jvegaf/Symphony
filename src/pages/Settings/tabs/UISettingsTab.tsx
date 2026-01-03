@@ -1,5 +1,6 @@
 import { SettingsSection, SettingsSlider } from '../components';
 import type { AppSettings } from '../../../types/settings';
+import { useTheme } from '../../../hooks/useTheme';
 
 export interface UISettingsTabProps {
   settings: AppSettings;
@@ -11,6 +12,8 @@ export interface UISettingsTabProps {
  * Incluye: Tema, Idioma, Resolución de waveform
  */
 export const UISettingsTab = ({ settings, onChange }: UISettingsTabProps) => {
+  const { theme } = useTheme();
+
   return (
     <div className="w-full space-y-6">
       {/* Theme Section */}
@@ -40,7 +43,8 @@ export const UISettingsTab = ({ settings, onChange }: UISettingsTabProps) => {
                   ui: { ...settings.ui, theme: e.target.value as 'light' | 'dark' | 'system' },
                 })
               }
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              style={{ colorScheme: theme }}
             >
               <option value="system">🖥️ Usar tema del sistema</option>
               <option value="light">☀️ Modo claro</option>
@@ -68,7 +72,8 @@ export const UISettingsTab = ({ settings, onChange }: UISettingsTabProps) => {
                   ui: { ...settings.ui, language: e.target.value },
                 })
               }
-              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              style={{ colorScheme: theme }}
             >
               <option value="es">🇪🇸 Español</option>
               <option value="en">🇬🇧 English</option>

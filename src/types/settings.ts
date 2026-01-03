@@ -11,10 +11,18 @@ export interface Setting {
  * Settings agrupados por categoría
  */
 export interface AppSettings {
+  app: AppGeneralSettings;
   ui: UISettings;
   audio: AudioSettings;
   library: LibrarySettings;
   conversion: ConversionSettings;
+}
+
+/**
+ * Configuración general de la aplicación
+ */
+export interface AppGeneralSettings {
+  firstRunCompleted: boolean;
 }
 
 /**
@@ -90,6 +98,9 @@ export interface ConversionProgress {
  * Valores por defecto para settings
  */
 export const DEFAULT_SETTINGS: AppSettings = {
+  app: {
+    firstRunCompleted: false,
+  },
   ui: {
     theme: 'system',
     language: 'es',
@@ -150,6 +161,7 @@ export function stringifySettingValue(value: unknown, valueType: Setting['valueT
 export function settingsArrayToAppSettings(settings: Setting[]): AppSettings {
   // AIDEV-NOTE: Deep copy para evitar mutación del objeto DEFAULT_SETTINGS
   const result: AppSettings = {
+    app: { ...DEFAULT_SETTINGS.app },
     ui: { ...DEFAULT_SETTINGS.ui },
     audio: { ...DEFAULT_SETTINGS.audio },
     library: { ...DEFAULT_SETTINGS.library },
@@ -159,6 +171,7 @@ export function settingsArrayToAppSettings(settings: Setting[]): AppSettings {
   // AIDEV-NOTE: Las keys en la DB usan snake_case (ej: waveform_resolution)
   // pero las propiedades TypeScript usan camelCase (waveformResolution)
   const keyMap: Record<string, { category: keyof AppSettings; field: string }> = {
+    'app.first_run_completed': { category: 'app', field: 'firstRunCompleted' },
     'ui.theme': { category: 'ui', field: 'theme' },
     'ui.language': { category: 'ui', field: 'language' },
     'ui.waveform_resolution': { category: 'ui', field: 'waveformResolution' },
@@ -192,6 +205,11 @@ export function settingsArrayToAppSettings(settings: Setting[]): AppSettings {
  */
 export function appSettingsToSettingsArray(appSettings: AppSettings): Setting[] {
   const settings: Setting[] = [];
+
+  // App settings
+  settings.push(
+    { key: 'app.first_run_completed', value: String(appSettings.app.firstRunCompleted), valueType: 'boolean' }
+  );
 
   // UI settings
   settings.push(

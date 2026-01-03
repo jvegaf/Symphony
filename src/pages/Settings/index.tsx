@@ -23,18 +23,28 @@ export const Settings = () => {
     isResetting,
     isLoading,
     error,
-  } = useSettingsForm(
-    (message: string) => {
-      setToastMessage(message);
+  } = useSettingsForm({
+    onSaveSuccess: () => {
+      setToastMessage('✅ Configuración guardada correctamente');
       setToastType('success');
       setToastVisible(true);
     },
-    (message: string) => {
-      setToastMessage(message);
+    onSaveError: (message: string) => {
+      setToastMessage(`❌ Error: ${message}`);
       setToastType('error');
       setToastVisible(true);
-    }
-  );
+    },
+    onResetSuccess: () => {
+      setToastMessage('✅ Configuración restablecida a valores predeterminados');
+      setToastType('success');
+      setToastVisible(true);
+    },
+    onResetError: (message: string) => {
+      setToastMessage(`❌ Error al restablecer: ${message}`);
+      setToastType('error');
+      setToastVisible(true);
+    },
+  });
 
   /**
    * Muestra un toast con el mensaje especificado

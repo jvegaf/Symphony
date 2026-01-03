@@ -94,9 +94,16 @@ pub fn get_all_tracks(conn: &Connection) -> Result<Vec<Track>> {
 /// (si un ID no existe, no aparece en el resultado)
 ///
 /// # Example
-/// ```
+/// ```no_run
+/// use rusqlite::Connection;
+/// use symphony_lib::db::queries::get_tracks_batch;
+/// 
+/// # fn main() -> Result<(), Box<dyn std::error::Error>> {
+/// let conn = Connection::open_in_memory()?;
 /// let ids = vec!["uuid1".to_string(), "uuid2".to_string()];
 /// let tracks = get_tracks_batch(&conn, &ids)?;
+/// # Ok(())
+/// # }
 /// ```
 pub fn get_tracks_batch(conn: &Connection, ids: &[String]) -> Result<Vec<Track>> {
     // AIDEV-NOTE: Optimización para Fix Tags - reduce N queries individuales a 1 batch query

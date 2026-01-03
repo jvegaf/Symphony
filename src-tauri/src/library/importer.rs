@@ -187,6 +187,12 @@ impl LibraryImporter {
 
         let now = chrono::Local::now().to_rfc3339();
 
+        // AIDEV-NOTE: Intentar extraer fecha del path (formato YYMM en carpetas)
+        // Si se encuentra, usar esa fecha; sino usar fecha actual
+        let date_added = crate::utils::extract_date_from_path(path)
+            .or_else(|| crate::utils::extract_full_date_from_path(path))
+            .unwrap_or_else(|| now.clone());
+
         Ok(Track {
             id: None, // Se asigna al insertar en DB
             path: metadata.path.clone(),
@@ -210,7 +216,7 @@ impl LibraryImporter {
             rating: metadata.rating, // ✅ USAR EL RATING DE LOS METADATOS
             play_count: 0,
             last_played: None,
-            date_added: now.clone(),
+            date_added,
             date_modified: now,
             label: None,        // Se obtendrá de Beatport
             isrc: None,         // Se obtendrá de Beatport
@@ -344,6 +350,51 @@ mod tests {
             "Rating should be preserved from metadata"
         );
         assert!(track.file_size > 0);
+        // date_added debe ser la fecha actual (no hay carpeta YYMM en el path)
+        assert!(
+            track.date_added.len() > 0,
+            "date_added should be populated"
+        );
+    }
+
+    #[test]
+    fn test_metadata_to_track_with_date_in_path() {
+        let importer = LibraryImporter::new();
+        let temp_dir = TempDir::new().unwrap();
+
+        // Crear estructura con carpeta YYMM (enero 2024 = 2401)
+        let year_month_dir = temp_dir.path().join("2401");
+        fs::create_dir(&year_month_dir).unwrap();
+        let file_path = year_month_dir.join("test.wav");
+        create_test_wav(&file_path);
+
+        let metadata = super::super::metadata::TrackMetadata {
+            path: file_path.to_string_lossy().to_string(),
+            title: Some("Test Song".to_string()),
+            artist: Some("Test Artist".to_string()),
+            album: None,
+            year: None,
+            genre: None,
+            bpm: None,
+            key: None,
+            rating: None,
+            comment: None,
+            duration: 120.0,
+            bitrate: 320,
+            sample_rate: 44100,
+            channels: 2,
+            format: "wav".to_string(),
+            artwork: None,
+        };
+
+        let result = importer.metadata_to_track(&metadata, &file_path);
+        assert!(result.is_ok());
+
+        let track = result.unwrap();
+        assert_eq!(
+            track.date_added, "2024-01",
+            "date_added should be extracted from path (2401 -> 2024-01)"
+        );
     }
 
     #[test]

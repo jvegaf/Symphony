@@ -8,6 +8,11 @@ use crate::db::queries;
 use crate::library::metadata::{extract_artwork, write_metadata, TrackMetadata};
 use crate::library::{ImportResult, LibraryImporter};
 
+#[cfg(target_os = "windows")]
+use std::process::Command;
+#[cfg(not(target_os = "windows"))]
+use std::process::Command;
+
 /// Estado global del importador de biblioteca
 pub struct LibraryState {
     importer: Arc<Mutex<LibraryImporter>>,
@@ -398,6 +403,54 @@ pub async fn consolidate_library(library_paths: Vec<String>) -> Result<queries::
     );
     
     Ok(result)
+}
+
+/// Abre el explorador de archivos del sistema con el archivo seleccionado
+///
+/// AIDEV-NOTE: Usa comandos específicos del sistema operativo para revelar
+/// el archivo en el explorador de archivos nativo:
+/// - Windows: explorer.exe /select
+/// - macOS: open -R
+/// - Linux: xdg-open (abre la carpeta padre)
+#[tauri::command]
+pub async fn open_in_file_browser(file_path: String) -> Result<(), String> {
+    let path = PathBuf::from(&file_path);
+    
+    // Verificar que el archivo existe
+    if !path.exists() {
+        return Err(format!("Archivo no encontrado: {}", file_path));
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("explorer")
+            .args(["/select,", &file_path])
+            .spawn()
+            .map_err(|e| format!("Error al abrir explorador de archivos: {}", e))?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        Command::new("open")
+            .args(["-R", &file_path])
+            .spawn()
+            .map_err(|e| format!("Error al abrir Finder: {}", e))?;
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        // En Linux, xdg-open no soporta revelar archivos, así que abrimos la carpeta padre
+        let parent = path.parent()
+            .ok_or_else(|| "No se pudo determinar la carpeta padre".to_string())?;
+        
+        Command::new("xdg-open")
+            .arg(parent)
+            .spawn()
+            .map_err(|e| format!("Error al abrir explorador de archivos: {}", e))?;
+    }
+
+    log::info!("📂 Abriendo explorador de archivos: {}", file_path);
+    Ok(())
 }
 
 #[cfg(test)]

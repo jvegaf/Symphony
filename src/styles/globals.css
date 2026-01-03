@@ -58,3 +58,17 @@ body {
   vertical-align: middle;
 }
 
+
+/* Custom select styles for dark mode */
+/* AIDEV-NOTE: Los navegadores no respetan bien los estilos CSS en elementos <option>.
+   Solución: usar color-scheme: dark para que el navegador aplique su tema oscuro nativo.
+   Esto funciona en todos los navegadores modernos (Chrome, Firefox, Safari, Edge). */
+.dark select {
+  color-scheme: dark;
+}
+
+.dark select option {
+  background-color: #1f2937;
+  color: #f3f4f6;
+}
+
