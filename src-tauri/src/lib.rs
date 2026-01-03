@@ -1,5 +1,6 @@
 pub mod audio;
 pub mod commands;
+pub mod config;
 pub mod db;
 pub mod library;
 pub mod utils;
@@ -141,6 +142,7 @@ pub fn run() {
             commands::library::delete_track,
             commands::library::reset_library,
             commands::library::consolidate_library,
+            commands::library::get_library_paths,
             commands::library::get_track_artwork,
             commands::library::open_in_file_browser,
             // Playlist commands

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { Button } from '../../../components/ui/Button';
-import type { Track, ConsolidateLibraryResult } from '../../../types/library';
+import type { ConsolidateLibraryResult } from '../../../types/library';
 
 export interface MaintenanceActionsProps {
   /** Callback para mostrar toasts */
@@ -45,22 +45,13 @@ export const MaintenanceActions = ({ onShowToast }: MaintenanceActionsProps) => 
 
     setIsConsolidating(true);
     try {
-      // Obtener rutas de biblioteca desde tracks existentes
-      const tracks = await invoke<Track[]>('get_all_tracks');
-      const libraryPaths = [
-        ...new Set(
-          tracks.map((t) => {
-            const parts = t.path.split('/');
-            // Buscar carpeta Music/Música
-            const musicIndex = parts.findIndex((p) => p === 'Music' || p === 'Música' || p === 'music');
-            if (musicIndex > 0) {
-              return parts.slice(0, musicIndex + 1).join('/');
-            }
-            // Fallback: directorio padre
-            return parts.slice(0, -1).join('/');
-          })
-        ),
-      ];
+      // Obtener rutas de biblioteca desde settings.json (guardadas durante import)
+      const libraryPaths = await invoke<string[]>('get_library_paths');
+
+      if (libraryPaths.length === 0) {
+        onShowToast('⚠️ No hay carpetas de biblioteca configuradas. Importa una biblioteca primero.');
+        return;
+      }
 
       const result = await invoke<ConsolidateLibraryResult>('consolidate_library', {
         libraryPaths,

@@ -37,6 +37,9 @@ impl LibraryState {
 /// Escanea recursivamente el directorio, extrae metadatos
 /// de archivos de audio e inserta en la base de datos.
 ///
+/// AIDEV-NOTE: También guarda el path en settings.json para que consolidate_library
+/// pueda encontrar archivos nuevos en la misma carpeta posteriormente.
+///
 /// Emite eventos:
 /// - `library:import-progress` con progreso actual
 /// - `library:import-complete` con resultado final
@@ -68,6 +71,19 @@ pub async fn import_library(
             "Directorio añadido al asset protocol scope: {:?}",
             library_path
         );
+    }
+
+    // ✅ Guardar el path de la biblioteca en settings.json para uso posterior
+    // AIDEV-NOTE: Esto permite que consolidate_library encuentre archivos nuevos
+    {
+        let mut config = crate::config::AppConfig::load();
+        if config.add_library_path(&path) {
+            if let Err(e) = config.save() {
+                log::warn!("No se pudo guardar library path en settings.json: {}", e);
+            } else {
+                log::info!("📁 Library path guardado en settings.json: {}", path);
+            }
+        }
     }
 
     // Obtener importador
@@ -374,6 +390,16 @@ pub async fn reset_library() -> Result<queries::ResetLibraryResult, String> {
     Ok(result)
 }
 
+/// Obtiene los paths de biblioteca guardados en settings.json
+///
+/// AIDEV-NOTE: Retorna los paths que se guardaron durante import_library.
+/// Usado por el frontend para consolidate_library.
+#[tauri::command]
+pub async fn get_library_paths() -> Result<Vec<String>, String> {
+    let config = crate::config::AppConfig::load();
+    Ok(config.library_paths)
+}
+
 /// Consolida la biblioteca verificando archivos, eliminando huérfanos, duplicados y agregando nuevos
 ///
 /// AIDEV-NOTE: Operación de mantenimiento que:
@@ -389,6 +415,7 @@ pub async fn consolidate_library(library_paths: Vec<String>) -> Result<queries::
     let db = crate::db::get_connection().map_err(|e| e.to_string())?;
     
     log::info!("🔧 Iniciando consolidación de biblioteca...");
+    log::info!("📂 Paths recibidos: {:?}", library_paths);
     
     let result = queries::consolidate_library(&db.conn, &library_paths)
         .map_err(|e| format!("Error al consolidar biblioteca: {}", e))?;

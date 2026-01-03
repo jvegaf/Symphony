@@ -5,6 +5,39 @@ Todos los cambios notables de Symphony se documentan aquí.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/),
 y este proyecto sigue [Semantic Versioning](https://semver.org/lang/es/).
 
+## [0.19.0] - 2026-01-03
+
+### Agregado
+- **Sistema de Configuración Persistente para Library Paths:**
+  - Nuevo módulo `config.rs` para gestión de configuración de la aplicación
+  - Los paths de biblioteca se guardan en `~/.config/symphony/settings.json`
+  - Al importar una biblioteca, el path se guarda automáticamente
+  - Nuevo comando `get_library_paths` para recuperar paths guardados
+
+### Mejorado
+- **Consolidación de Biblioteca Mejorada:**
+  - La función "Consolidate Library" en Settings ahora utiliza los paths guardados
+  - Detección automática de fecha `date_added` desde carpetas con formato YYMM
+  - Ejemplo: archivos en `/Music/BOX/2402/` obtienen `date_added = "2024-02"`
+  - Fallback a fecha actual si no se detecta patrón YYMM válido
+
+### Corregido
+- **Bug crítico en consolidación de archivos con metadata corrupta:**
+  - Archivos con metadata UTF-16 BOM corrupta (común en Beatport) fallaban silenciosamente
+  - El campo `artist` es NOT NULL en la base de datos, causando constraint violation
+  - Solución: fallback a `artist = "Unknown"` y `title = filename` para archivos con metadata corrupta
+  - Los archivos ahora se importan correctamente con metadata básica
+
+### Técnico
+- Archivos nuevos:
+  - `src-tauri/src/config.rs` - Módulo de configuración persistente
+- Archivos modificados:
+  - `src-tauri/src/lib.rs` - Exportación del módulo config
+  - `src-tauri/src/commands/library.rs` - Integración con config para guardar/leer paths
+  - `src-tauri/src/db/queries/tracks/consolidate.rs` - Extracción de fecha del path, fallbacks para metadata
+  - `src-tauri/src/utils/mod.rs` - Re-exportación de `extract_date_from_path`
+  - `src/pages/Settings/components/MaintenanceActions.tsx` - Uso de `get_library_paths`
+
 ## [0.18.1] - 2026-01-03
 
 ### Corregido

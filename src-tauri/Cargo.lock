@@ -4672,7 +4672,7 @@ dependencies = [
 
 [[package]]
 name = "symphony"
-version = "0.18.2"
+version = "0.19.0"
 dependencies = [
  "atomic-wait",
  "base64 0.22.1",
