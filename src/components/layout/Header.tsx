@@ -41,9 +41,10 @@ export const Header = ({
   const handleClose = () => {
     getCurrentWindow().close();
   };
-  const tabs: { id: Tab; label: string }[] = [
+  const tabs: { id: Tab; label: string; action?: () => void }[] = [
     { id: "library", label: "Library" },
-    { id: "import", label: "Import" },
+    { id: "settings" as Tab, label: "Settings", action: onSettingsClick },
+    { id: "import", label: "Import", action: onImport },
     { id: "export", label: "Export" },
     { id: "tools", label: "Tools" },
   ];
@@ -88,8 +89,8 @@ export const Header = ({
               type="button"
               data-testid={`tab-${tab.id}`}
               onClick={() => {
-                if (tab.id === "import") {
-                  onImport();
+                if (tab.action) {
+                  tab.action();
                 } else {
                   onTabChange(tab.id);
                 }
@@ -125,16 +126,6 @@ export const Header = ({
             />
           </div>
         )}
-        <button
-          type="button"
-          onClick={onSettingsClick}
-          className="material-icons text-base cursor-pointer hover:text-gray-300 hover:bg-gray-700/50 rounded p-1 transition-colors"
-          data-testid="window-settings"
-          aria-label="Abrir configuración"
-          title="Configuración"
-        >
-          settings
-        </button>
         <button
           type="button"
           onClick={handleMinimize}
