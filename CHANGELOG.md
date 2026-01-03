@@ -5,6 +5,27 @@ Todos los cambios notables de Symphony se documentan aquí.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/),
 y este proyecto sigue [Semantic Versioning](https://semver.org/lang/es/).
 
+## [0.18.1] - 2026-01-03
+
+### Corregido
+- **Iconos no se mostraban en AppImage:**
+  - Problema: Material Icons se cargaban desde Google Fonts CDN, bloqueado por CSP/red en AppImage
+  - Los iconos aparecían como texto: `play_arrow`, `equalizer`, etc.
+  - Solución: Bundlear Material Icons localmente usando paquete npm `material-icons`
+  - Solución: Bundlear Spline Sans localmente usando `@fontsource/spline-sans`
+  - Removidos links externos de `index.html`
+  - Agregados imports en `src/styles/globals.css`
+
+### Técnico
+- Paquetes agregados:
+  - `material-icons@1.13.12` - Fuente de iconos Material Design
+  - `@fontsource/spline-sans@5.1.0` - Tipografía principal (pesos 400, 500, 700)
+- Archivos modificados:
+  - `index.html`: Eliminados `<link>` de Google Fonts
+  - `src/styles/globals.css`: Agregados `@import` para fuentes locales
+- Todas las fuentes ahora se incluyen en el bundle de la aplicación
+- No requiere conexión externa para cargar UI correctamente
+
 ## [0.18.0] - 2026-01-03
 
 ### Agregado
