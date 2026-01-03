@@ -1,8 +1,7 @@
 @import "tailwindcss";
-@import "material-icons/iconfont/material-icons.css";
-@import "@fontsource/spline-sans/400.css";
-@import "@fontsource/spline-sans/500.css";
-@import "@fontsource/spline-sans/700.css";
+/* AIDEV-NOTE: Las fuentes Material Icons y Spline Sans se importan en main.tsx
+   para que Vite las procese correctamente. El @import de CSS desde node_modules
+   no resuelve las URLs relativas de los archivos .woff/.woff2 */
 
 @theme {
   --color-primary-50: #fff8eb;
