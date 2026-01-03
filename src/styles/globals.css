@@ -1,4 +1,8 @@
 @import "tailwindcss";
+@import "material-icons/iconfont/material-icons.css";
+@import "@fontsource/spline-sans/400.css";
+@import "@fontsource/spline-sans/500.css";
+@import "@fontsource/spline-sans/700.css";
 
 @theme {
   --color-primary-50: #fff8eb;
