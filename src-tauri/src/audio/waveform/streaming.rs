@@ -5,6 +5,7 @@ use tauri::{AppHandle, Emitter};
 use tokio_util::sync::CancellationToken;
 
 use crate::audio::AudioResult;
+use crate::db::DbPool;
 
 use super::cache::{check_and_emit_cached, save_to_cache};
 use super::generation::generate_and_stream_peaks;
@@ -13,7 +14,7 @@ use super::types::{WaveformCompletePayload, WaveformErrorPayload, WaveformState}
 /// Genera waveform con streaming progresivo
 ///
 /// AIDEV-NOTE: Workflow completo:
-/// 1. Verificar cache en DB
+/// 1. Verificar cache en DB (usando DbPool con spawn_blocking)
 /// 2. Si existe, emitir evento "complete" y retornar
 /// 3. Si no, generar en background:
 ///    - Registrar CancellationToken
@@ -27,15 +28,15 @@ pub async fn generate_waveform_streaming(
     duration: f64,
     app: AppHandle,
     state: Arc<WaveformState>,
-    db: Arc<tokio::sync::Mutex<rusqlite::Connection>>,
+    pool: Arc<DbPool>,
 ) -> AudioResult<()> {
     log::info!("========== GENERATE_WAVEFORM_STREAMING START ==========");
     log::info!("Track ID: {}", track_id);
     log::info!("Track Path: {}", track_path);
     log::info!("Duration: {:.2}s", duration);
 
-    // 1. Verificar cache en DB
-    if check_and_emit_cached(&track_id, &db, &app).await.is_some() {
+    // 1. Verificar cache en DB (usando pool)
+    if check_and_emit_cached(&track_id, &pool, &app).await.is_some() {
         return Ok(());
     }
 
@@ -50,7 +51,7 @@ pub async fn generate_waveform_streaming(
     let track_id_clone = track_id.clone();
     let app_clone = app.clone();
     let state_clone = state.clone();
-    let db_clone = db.clone();
+    let pool_clone = pool.clone();
 
     tokio::task::spawn(async move {
         let result = generate_and_stream_peaks(
@@ -66,8 +67,8 @@ pub async fn generate_waveform_streaming(
             Ok(peaks) => {
                 log::info!("✅ Waveform generation SUCCESS - {} peaks", peaks.len());
 
-                // Guardar en DB
-                save_to_cache(&track_id_clone, &peaks, &db_clone).await;
+                // Guardar en DB usando pool
+                save_to_cache(&track_id_clone, &peaks, &pool_clone).await;
 
                 // Emitir evento final
                 log::info!(

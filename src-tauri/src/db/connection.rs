@@ -51,8 +51,27 @@ impl Database {
 
 /// Obtiene una conexión global a la base de datos
 ///
-/// NOTA: Esta es una implementación simple. Para producción,
-/// considerar usar un pool de conexiones.
+/// AIDEV-NOTE: DEPRECATED - Usar DbPool en su lugar para mejor rendimiento.
+/// Esta función crea una nueva conexión cada vez que se llama, lo cual es
+/// ineficiente (~100-500ms de overhead por operación). El pool de conexiones
+/// reutiliza conexiones existentes (~1-5ms).
+///
+/// El pool se obtiene como State<DbPool> en comandos Tauri:
+/// ```ignore
+/// #[tauri::command]
+/// pub async fn my_command(pool: State<'_, DbPool>) -> Result<(), String> {
+///     let pool = pool.inner().clone();
+///     tokio::task::spawn_blocking(move || {
+///         let conn = pool.get().map_err(|e| e.to_string())?;
+///         // ... operaciones DB
+///         Ok(())
+///     }).await.map_err(|e| format!("{}", e))?
+/// }
+/// ```
+#[deprecated(
+    since = "0.19.0",
+    note = "Use DbPool instead. See db::create_pool() and State<DbPool> in Tauri commands."
+)]
 pub fn get_connection() -> Result<Database> {
     Database::new()
 }

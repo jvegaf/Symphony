@@ -12,6 +12,8 @@ export interface UseContextMenuProps {
   onBatchFilenameToTags?: (tracks: Track[]) => void;
   onFixTags?: (trackIds: string[]) => void;
   onFindArtwork?: (trackIds: string[]) => void;
+  /** Callback para crear nuevo playlist con los tracks seleccionados */
+  onAddToNewPlaylist?: (trackIds: string[]) => void;
   deleteTrack: (trackId: string) => void;
 }
 
@@ -26,6 +28,7 @@ export const useContextMenu = ({
   onBatchFilenameToTags,
   onFixTags,
   onFindArtwork,
+  onAddToNewPlaylist,
   deleteTrack,
 }: UseContextMenuProps) => {
   const handleContextMenu = async (e: React.MouseEvent, track: Track) => {
@@ -134,6 +137,30 @@ export const useContextMenu = ({
         }
       });
       menuItems.push(findArtworkItem);
+    }
+
+    // AIDEV-NOTE: Separador antes de opciones de playlist
+    const playlistSeparator = await MenuItem.new({
+      id: 'separator-playlist',
+      text: '─────── Playlists ───────'
+    });
+    menuItems.push(playlistSeparator);
+
+    // Opción "Agregar a nuevo playlist" - crear nuevo playlist con tracks seleccionados
+    if (onAddToNewPlaylist) {
+      const tracksForPlaylist = isTrackSelected ? selectedTracks : [track];
+      const trackIds = tracksForPlaylist
+        .filter(t => t.id !== undefined)
+        .map(t => t.id as string);
+      
+      const addToPlaylistItem = await MenuItem.new({
+        id: 'add-to-new-playlist',
+        text: `Agregar a nuevo playlist (${tracksForPlaylist.length} track${tracksForPlaylist.length > 1 ? 's' : ''})`,
+        action: () => {
+          onAddToNewPlaylist(trackIds);
+        }
+      });
+      menuItems.push(addToPlaylistItem);
     }
 
     // Opción "Delete Track" - elimina de DB y borra archivo

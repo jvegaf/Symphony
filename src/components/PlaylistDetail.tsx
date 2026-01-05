@@ -166,8 +166,8 @@ export const PlaylistDetail: React.FC<PlaylistDetailProps> = ({
 
     // Auto-guardar reordenamiento
     reorderMutation.mutate({
-      playlist_id: playlistId,
-      track_ids: reorderedTracks.map((t) => t.id).filter((id): id is string => id !== undefined),
+      playlistId: playlistId,
+      trackIds: reorderedTracks.map((t) => t.id).filter((id): id is string => id !== undefined),
     });
   };
 
@@ -178,8 +178,8 @@ export const PlaylistDetail: React.FC<PlaylistDetailProps> = ({
 
     addTrackMutation.mutate(
       {
-        playlist_id: playlistId,
-        track_id: trackIdToAdd,
+        playlistId: playlistId,
+        trackId: trackIdToAdd,
       },
       {
         onSuccess: () => {
@@ -202,8 +202,8 @@ export const PlaylistDetail: React.FC<PlaylistDetailProps> = ({
 
     removeTrackMutation.mutate(
       {
-        playlist_id: playlistId,
-        track_id: selectedTrackId,
+        playlistId: playlistId,
+        trackId: selectedTrackId,
       },
       {
         onSuccess: () => {

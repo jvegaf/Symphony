@@ -26,7 +26,8 @@ pub fn consolidate_library(
     library_paths: &[String],
 ) -> Result<ConsolidateLibraryResult> {
     // 1. Contar tracks iniciales
-    let initial_tracks: usize = conn.query_row("SELECT COUNT(*) FROM tracks", [], |row| row.get(0))?;
+    let initial_tracks: usize =
+        conn.query_row("SELECT COUNT(*) FROM tracks", [], |row| row.get(0))?;
 
     // 2. Obtener todos los tracks y verificar si existen físicamente
     let mut stmt = conn.prepare("SELECT id, path FROM tracks")?;
@@ -82,7 +83,10 @@ pub fn consolidate_library(
     let supported_extensions = ["mp3", "flac", "wav", "ogg", "m4a", "aac"];
     let mut new_files: Vec<std::path::PathBuf> = Vec::new();
 
-    log::info!("📂 Escaneando {} carpetas de biblioteca...", library_paths.len());
+    log::info!(
+        "📂 Escaneando {} carpetas de biblioteca...",
+        library_paths.len()
+    );
     for library_path in library_paths {
         log::info!("📂 Escaneando: {}", library_path);
         let mut files_in_folder = 0;
@@ -94,7 +98,9 @@ pub fn consolidate_library(
             let path = entry.path();
             if path.is_file() {
                 if let Some(ext) = path.extension() {
-                    if supported_extensions.contains(&ext.to_str().unwrap_or("").to_lowercase().as_str()) {
+                    if supported_extensions
+                        .contains(&ext.to_str().unwrap_or("").to_lowercase().as_str())
+                    {
                         files_in_folder += 1;
                         let path_str = path.to_string_lossy().to_string();
                         if !existing_paths.contains(&path_str) {
@@ -104,9 +110,16 @@ pub fn consolidate_library(
                 }
             }
         }
-        log::info!("📂 Encontrados {} archivos de audio en {}", files_in_folder, library_path);
+        log::info!(
+            "📂 Encontrados {} archivos de audio en {}",
+            files_in_folder,
+            library_path
+        );
     }
-    log::info!("🆕 Total de archivos nuevos a importar: {}", new_files.len());
+    log::info!(
+        "🆕 Total de archivos nuevos a importar: {}",
+        new_files.len()
+    );
 
     // 10. Importar archivos nuevos
     // AIDEV-NOTE: Si falla la extracción de metadatos (ej: UTF-16 BOM corrupto),
@@ -114,9 +127,8 @@ pub fn consolidate_library(
     let mut new_tracks_added = 0;
     let mut metadata_errors = 0;
     let mut insert_errors = 0;
-    
+
     for file_path in new_files.iter() {
-        
         // Crear MetadataExtractor en scope aislado para evitar memory corruption
         let metadata_result = {
             let extractor = MetadataExtractor::new();
@@ -126,7 +138,7 @@ pub fn consolidate_library(
         // Generar UUID para el nuevo track
         let id = uuid::Uuid::new_v4().to_string();
         let path_str = file_path.to_string_lossy();
-        
+
         // Obtener tamaño de archivo
         let file_size = std::fs::metadata(file_path)
             .map(|m| m.len() as i64)
@@ -146,11 +158,18 @@ pub fn consolidate_library(
 
         // Preparar valores para inserción (usar metadata si disponible, sino fallback)
         // AIDEV-NOTE: artist es NOT NULL en la BD, por eso usamos unwrap_or
-        let (title, artist, album, genre, year, duration, bitrate, sample_rate, bpm, key) = 
+        let (title, artist, album, genre, year, duration, bitrate, sample_rate, bpm, key) =
             match &metadata_result {
                 Ok(metadata) => (
-                    metadata.title.as_deref().unwrap_or(&fallback_title).to_string(),
-                    metadata.artist.clone().unwrap_or_else(|| "Unknown".to_string()),
+                    metadata
+                        .title
+                        .as_deref()
+                        .unwrap_or(&fallback_title)
+                        .to_string(),
+                    metadata
+                        .artist
+                        .clone()
+                        .unwrap_or_else(|| "Unknown".to_string()),
                     metadata.album.clone(),
                     metadata.genre.clone(),
                     metadata.year,
@@ -163,22 +182,25 @@ pub fn consolidate_library(
                 Err(e) => {
                     metadata_errors += 1;
                     if metadata_errors <= 5 {
-                        log::warn!("⚠️ Metadata corrupta, usando fallback para {:?}: {}", 
-                            file_path.file_name(), e);
+                        log::warn!(
+                            "⚠️ Metadata corrupta, usando fallback para {:?}: {}",
+                            file_path.file_name(),
+                            e
+                        );
                     }
                     // Fallback: usar nombre de archivo como título, "Unknown" para artist
                     // AIDEV-NOTE: La BD requiere artist NOT NULL
                     (
                         fallback_title,
-                        "Unknown".to_string(),  // artist - NOT NULL en BD
-                        None,  // album
-                        None,  // genre
-                        None,  // year
-                        0.0,   // duration - se puede calcular después
-                        0,     // bitrate
-                        44100, // sample_rate default
-                        None,  // bpm
-                        None,  // key
+                        "Unknown".to_string(), // artist - NOT NULL en BD
+                        None,                  // album
+                        None,                  // genre
+                        None,                  // year
+                        0.0,                   // duration - se puede calcular después
+                        0,                     // bitrate
+                        44100,                 // sample_rate default
+                        None,                  // bpm
+                        None,                  // key
                     )
                 }
             };
@@ -223,12 +245,20 @@ pub fn consolidate_library(
             }
         }
     }
-    
+
     if metadata_errors > 0 {
-        log::info!("⚠️ {} archivos importados con metadata básica (de {} nuevos)", metadata_errors, new_files.len());
+        log::info!(
+            "⚠️ {} archivos importados con metadata básica (de {} nuevos)",
+            metadata_errors,
+            new_files.len()
+        );
     }
     if insert_errors > 0 {
-        log::warn!("❌ Total errores de inserción: {} de {} archivos", insert_errors, new_files.len());
+        log::warn!(
+            "❌ Total errores de inserción: {} de {} archivos",
+            insert_errors,
+            new_files.len()
+        );
     }
 
     // 11. Optimizar base de datos
@@ -236,7 +266,8 @@ pub fn consolidate_library(
     conn.execute("ANALYZE", [])?;
 
     // 12. Contar tracks finales
-    let total_tracks: usize = conn.query_row("SELECT COUNT(*) FROM tracks", [], |row| row.get(0))?;
+    let total_tracks: usize =
+        conn.query_row("SELECT COUNT(*) FROM tracks", [], |row| row.get(0))?;
 
     Ok(ConsolidateLibraryResult {
         orphans_removed,

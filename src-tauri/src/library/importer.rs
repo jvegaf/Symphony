@@ -8,7 +8,7 @@ use super::error::Result;
 use super::metadata::MetadataExtractor;
 use super::scanner::LibraryScanner;
 use crate::db::models::Track;
-use crate::db::{get_connection, queries};
+use crate::db::{queries, DbPool};
 
 /// Evento de progreso de importación
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -82,6 +82,7 @@ impl LibraryImporter {
     ///
     /// # Arguments
     /// * `app_handle` - Handle de la aplicación Tauri (para eventos)
+    /// * `pool` - Pool de conexiones SQLite
     /// * `library_path` - Ruta al directorio de la biblioteca
     ///
     /// # Returns
@@ -91,9 +92,13 @@ impl LibraryImporter {
     /// Emite eventos:
     /// - `library:import-progress` con ImportProgress
     /// - `library:import-complete` con ImportResult
+    ///
+    /// AIDEV-NOTE: Migrado de get_connection() a DbPool para consistencia
+    /// con el resto de comandos y mejor performance (conexiones reutilizadas).
     pub async fn import_library(
         &self,
         app_handle: AppHandle,
+        pool: DbPool,
         library_path: &Path,
     ) -> Result<ImportResult> {
         let start_time = Instant::now();
@@ -111,8 +116,9 @@ impl LibraryImporter {
         let audio_files = self.scanner.scan_directory(library_path)?;
         let total_files = audio_files.len();
 
-        // Obtener conexión a DB
-        let db = get_connection()
+        // Obtener conexión del pool
+        let conn = pool
+            .get()
             .map_err(|e| super::error::LibraryError::DatabaseError(e.to_string()))?;
 
         // Fase 2: Importar archivos
@@ -128,7 +134,7 @@ impl LibraryImporter {
                     match self.metadata_to_track(&metadata, file_path) {
                         Ok(track) => {
                             // Insertar en DB
-                            if let Err(e) = queries::insert_track(&db.conn, &track) {
+                            if let Err(e) = queries::insert_track(&conn, &track) {
                                 log::error!("Error insertando pista {}: {}", track.path, e);
                                 failed += 1;
                             } else {

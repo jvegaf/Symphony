@@ -19,6 +19,7 @@ use crate::audio::{
     cancel_waveform_generation, generate_waveform_streaming, AudioDecoder, AudioDeviceInfo,
     AudioMetadata, CpalAudioOutput, PlayerControlEvent, WaveformState,
 };
+use crate::db::DbPool;
 
 // ============================================================================
 // ESTADO GLOBAL
@@ -88,7 +89,7 @@ pub struct AudioBlobResponse {
 /// Obtiene waveform con cache y streaming
 ///
 /// AIDEV-NOTE: Sistema estilo Musicat con:
-/// - Verificación de cache en SQLite
+/// - Verificación de cache en SQLite (usando DbPool + spawn_blocking)
 /// - Generación streaming si no existe
 /// - Eventos: waveform:progress, waveform:complete, waveform:error
 #[tauri::command]
@@ -98,7 +99,7 @@ pub async fn get_waveform(
     duration: f64,
     app: AppHandle,
     waveform_state: State<'_, Arc<WaveformState>>,
-    db: State<'_, Arc<tokio::sync::Mutex<rusqlite::Connection>>>,
+    pool: State<'_, DbPool>,
 ) -> Result<(), String> {
     log::info!(
         "🎵 get_waveform: track_id={}, path={}",
@@ -112,7 +113,7 @@ pub async fn get_waveform(
         duration,
         app,
         waveform_state.inner().clone(),
-        db.inner().clone(),
+        Arc::new(pool.inner().clone()),
     )
     .await
     .map_err(|e| e.to_string())
@@ -133,16 +134,21 @@ pub async fn cancel_waveform(
 ///
 /// AIDEV-NOTE: Útil cuando se cambian parámetros de generación (ej. WAVEFORM_WINDOW_SIZE)
 /// y se necesita regenerar todos los waveforms con la nueva configuración.
+/// Migrado a DbPool + spawn_blocking para no bloquear el runtime de Tokio.
 #[tauri::command]
 pub async fn clear_waveform_cache(
-    db: State<'_, Arc<tokio::sync::Mutex<rusqlite::Connection>>>,
+    pool: State<'_, DbPool>,
 ) -> Result<usize, String> {
     log::info!("🧹 clear_waveform_cache: Limpiando cache de waveforms...");
 
-    let conn = db.lock().await;
-    let deleted = conn
-        .execute("DELETE FROM waveforms", [])
-        .map_err(|e| format!("Error limpiando cache: {}", e))?;
+    let pool = pool.inner().clone();
+    let deleted = tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        conn.execute("DELETE FROM waveforms", [])
+            .map_err(|e| format!("Error limpiando cache: {}", e))
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))??;
 
     log::info!("✅ Cache limpiado: {} waveforms eliminados", deleted);
     Ok(deleted)

@@ -1,12 +1,15 @@
+//! Comandos Tauri para análisis de audio: beatgrid, cue points y loops
+//!
+//! AIDEV-NOTE: Migrado a DbPool + spawn_blocking para evitar bloquear el runtime de Tokio.
+//! Todas las operaciones de base de datos se ejecutan en threads dedicados del pool de Tokio.
+
 use crate::audio::beatgrid_detector::BeatgridDetector;
 use crate::db::{
     models::{Beatgrid, CuePoint, Loop},
-    queries,
+    queries, DbPool,
 };
-use rusqlite::Connection;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
-use std::sync::Mutex;
 use tauri::State;
 
 // ============================================================================
@@ -144,7 +147,7 @@ impl From<Loop> for LoopResponse {
 pub async fn analyze_beatgrid(
     track_id: String,
     track_path: String,
-    db: State<'_, Mutex<Connection>>,
+    pool: State<'_, DbPool>,
 ) -> Result<BeatgridResponse, String> {
     // Analizar en thread separado para no bloquear UI
     let path = track_path.clone();
@@ -153,58 +156,75 @@ pub async fn analyze_beatgrid(
         .map_err(|e| format!("Error en task: {}", e))?
         .map_err(|e| format!("Error de análisis: {}", e))?;
 
-    // Guardar en DB
-    let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
-    queries::upsert_beatgrid(
-        &conn,
-        &track_id,
-        analysis.bpm,
-        analysis.offset,
-        Some(analysis.confidence),
-    )
-    .map_err(|e| format!("Error guardando beatgrid: {}", e))?;
+    // Guardar en DB usando el pool
+    let pool = pool.inner().clone();
+    let track_id_clone = track_id.clone();
+    let bpm = analysis.bpm;
+    let offset = analysis.offset;
+    let confidence = analysis.confidence;
 
-    // Obtener beatgrid guardado con timestamp
-    let saved = queries::get_beatgrid(&conn, &track_id)
-        .map_err(|e| format!("Error obteniendo beatgrid: {}", e))?
-        .ok_or_else(|| "Beatgrid no encontrado después de guardar".to_string())?;
+    tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
 
-    Ok(BeatgridResponse::from(saved))
+        queries::upsert_beatgrid(&conn, &track_id_clone, bpm, offset, Some(confidence))
+            .map_err(|e| format!("Error guardando beatgrid: {}", e))?;
+
+        // Obtener beatgrid guardado con timestamp
+        let saved = queries::get_beatgrid(&conn, &track_id_clone)
+            .map_err(|e| format!("Error obteniendo beatgrid: {}", e))?
+            .ok_or_else(|| "Beatgrid no encontrado después de guardar".to_string())?;
+
+        Ok(BeatgridResponse::from(saved))
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 /// Obtiene beatgrid de una pista si existe
 #[tauri::command]
-pub fn get_beatgrid(
+pub async fn get_beatgrid(
     track_id: String,
-    db: State<'_, Mutex<Connection>>,
+    pool: State<'_, DbPool>,
 ) -> Result<Option<BeatgridResponse>, String> {
-    let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
-
-    queries::get_beatgrid(&conn, &track_id)
-        .map(|opt| opt.map(BeatgridResponse::from))
-        .map_err(|e| format!("Error obteniendo beatgrid: {}", e))
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        queries::get_beatgrid(&conn, &track_id)
+            .map(|opt| opt.map(BeatgridResponse::from))
+            .map_err(|e| format!("Error obteniendo beatgrid: {}", e))
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 /// Actualiza offset del beatgrid (ajuste manual fino)
 #[tauri::command]
-pub fn update_beatgrid_offset(
+pub async fn update_beatgrid_offset(
     track_id: String,
     offset: f64,
-    db: State<'_, Mutex<Connection>>,
+    pool: State<'_, DbPool>,
 ) -> Result<(), String> {
-    let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
-
-    queries::update_beatgrid_offset(&conn, &track_id, offset)
-        .map_err(|e| format!("Error actualizando offset: {}", e))
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        queries::update_beatgrid_offset(&conn, &track_id, offset)
+            .map_err(|e| format!("Error actualizando offset: {}", e))
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 /// Elimina beatgrid de una pista
 #[tauri::command]
-pub fn delete_beatgrid(track_id: String, db: State<'_, Mutex<Connection>>) -> Result<(), String> {
-    let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
-
-    queries::delete_beatgrid(&conn, &track_id)
-        .map_err(|e| format!("Error eliminando beatgrid: {}", e))
+pub async fn delete_beatgrid(track_id: String, pool: State<'_, DbPool>) -> Result<(), String> {
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        queries::delete_beatgrid(&conn, &track_id)
+            .map_err(|e| format!("Error eliminando beatgrid: {}", e))
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 // ============================================================================
@@ -213,76 +233,93 @@ pub fn delete_beatgrid(track_id: String, db: State<'_, Mutex<Connection>>) -> Re
 
 /// Crea nuevo cue point
 #[tauri::command]
-pub fn create_cue_point(
+pub async fn create_cue_point(
     request: CreateCuePointRequest,
-    db: State<'_, Mutex<Connection>>,
+    pool: State<'_, DbPool>,
 ) -> Result<CuePointResponse, String> {
-    let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
 
-    let id = queries::insert_cue_point(
-        &conn,
-        &request.track_id,
-        request.position,
-        request.label.as_deref().unwrap_or(""),
-        request.color.as_deref().unwrap_or("#FFFFFF"),
-        &request.cue_type,
-        request.hotkey,
-    )
-    .map_err(|e| format!("Error creando cue point: {}", e))?;
+        let id = queries::insert_cue_point(
+            &conn,
+            &request.track_id,
+            request.position,
+            request.label.as_deref().unwrap_or(""),
+            request.color.as_deref().unwrap_or("#FFFFFF"),
+            &request.cue_type,
+            request.hotkey,
+        )
+        .map_err(|e| format!("Error creando cue point: {}", e))?;
 
-    // Retornar el cue point creado
-    Ok(CuePointResponse {
-        id,
-        track_id: request.track_id,
-        position: request.position,
-        label: request.label.unwrap_or_default(),
-        color: request.color.unwrap_or_else(|| "#FFFFFF".to_string()),
-        cue_type: request.cue_type,
-        hotkey: request.hotkey,
-        created_at: chrono::Utc::now().to_rfc3339(),
+        // Retornar el cue point creado
+        Ok(CuePointResponse {
+            id,
+            track_id: request.track_id,
+            position: request.position,
+            label: request.label.unwrap_or_default(),
+            color: request.color.unwrap_or_else(|| "#FFFFFF".to_string()),
+            cue_type: request.cue_type,
+            hotkey: request.hotkey,
+            created_at: chrono::Utc::now().to_rfc3339(),
+        })
     })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 /// Obtiene todos los cue points de una pista
 #[tauri::command]
-pub fn get_cue_points(
+pub async fn get_cue_points(
     track_id: String,
-    db: State<'_, Mutex<Connection>>,
+    pool: State<'_, DbPool>,
 ) -> Result<Vec<CuePointResponse>, String> {
-    let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
-
-    queries::get_cue_points(&conn, &track_id)
-        .map(|cues| cues.into_iter().map(CuePointResponse::from).collect())
-        .map_err(|e| format!("Error obteniendo cue points: {}", e))
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        queries::get_cue_points(&conn, &track_id)
+            .map(|cues| cues.into_iter().map(CuePointResponse::from).collect())
+            .map_err(|e| format!("Error obteniendo cue points: {}", e))
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 /// Actualiza un cue point existente
 #[tauri::command]
-pub fn update_cue_point(
+pub async fn update_cue_point(
     id: String,
     request: UpdateCuePointRequest,
-    db: State<'_, Mutex<Connection>>,
+    pool: State<'_, DbPool>,
 ) -> Result<(), String> {
-    let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
-
-    queries::update_cue_point(
-        &conn,
-        &id,
-        request.position,
-        request.label.as_deref(),
-        request.color.as_deref(),
-        request.cue_type.as_deref(),
-        request.hotkey,
-    )
-    .map_err(|e| format!("Error actualizando cue point: {}", e))
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        queries::update_cue_point(
+            &conn,
+            &id,
+            request.position,
+            request.label.as_deref(),
+            request.color.as_deref(),
+            request.cue_type.as_deref(),
+            request.hotkey,
+        )
+        .map_err(|e| format!("Error actualizando cue point: {}", e))
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 /// Elimina un cue point
 #[tauri::command]
-pub fn delete_cue_point(id: String, db: State<'_, Mutex<Connection>>) -> Result<(), String> {
-    let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
-
-    queries::delete_cue_point(&conn, &id).map_err(|e| format!("Error eliminando cue point: {}", e))
+pub async fn delete_cue_point(id: String, pool: State<'_, DbPool>) -> Result<(), String> {
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        queries::delete_cue_point(&conn, &id).map_err(|e| format!("Error eliminando cue point: {}", e))
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 // ============================================================================
@@ -291,72 +328,89 @@ pub fn delete_cue_point(id: String, db: State<'_, Mutex<Connection>>) -> Result<
 
 /// Crea nuevo loop
 #[tauri::command]
-pub fn create_loop(
+pub async fn create_loop(
     request: CreateLoopRequest,
-    db: State<'_, Mutex<Connection>>,
+    pool: State<'_, DbPool>,
 ) -> Result<LoopResponse, String> {
-    let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
 
-    let id = queries::insert_loop(
-        &conn,
-        &request.track_id,
-        request.label.as_deref().unwrap_or(""),
-        request.loop_start,
-        request.loop_end,
-    )
-    .map_err(|e| format!("Error creando loop: {}", e))?;
+        let id = queries::insert_loop(
+            &conn,
+            &request.track_id,
+            request.label.as_deref().unwrap_or(""),
+            request.loop_start,
+            request.loop_end,
+        )
+        .map_err(|e| format!("Error creando loop: {}", e))?;
 
-    // Retornar el loop creado
-    Ok(LoopResponse {
-        id,
-        track_id: request.track_id,
-        label: request.label.unwrap_or_default(),
-        loop_start: request.loop_start,
-        loop_end: request.loop_end,
-        is_active: request.is_active.unwrap_or(false),
-        created_at: chrono::Utc::now().to_rfc3339(),
+        // Retornar el loop creado
+        Ok(LoopResponse {
+            id,
+            track_id: request.track_id,
+            label: request.label.unwrap_or_default(),
+            loop_start: request.loop_start,
+            loop_end: request.loop_end,
+            is_active: request.is_active.unwrap_or(false),
+            created_at: chrono::Utc::now().to_rfc3339(),
+        })
     })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 /// Obtiene todos los loops de una pista
 #[tauri::command]
-pub fn get_loops(
+pub async fn get_loops(
     track_id: String,
-    db: State<'_, Mutex<Connection>>,
+    pool: State<'_, DbPool>,
 ) -> Result<Vec<LoopResponse>, String> {
-    let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
-
-    queries::get_loops(&conn, &track_id)
-        .map(|loops| loops.into_iter().map(LoopResponse::from).collect())
-        .map_err(|e| format!("Error obteniendo loops: {}", e))
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        queries::get_loops(&conn, &track_id)
+            .map(|loops| loops.into_iter().map(LoopResponse::from).collect())
+            .map_err(|e| format!("Error obteniendo loops: {}", e))
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 /// Actualiza un loop existente
 #[tauri::command]
-pub fn update_loop(
+pub async fn update_loop(
     id: String,
     request: UpdateLoopRequest,
-    db: State<'_, Mutex<Connection>>,
+    pool: State<'_, DbPool>,
 ) -> Result<(), String> {
-    let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
-
-    queries::update_loop(
-        &conn,
-        &id,
-        request.label.as_deref(),
-        request.loop_start,
-        request.loop_end,
-        request.is_active,
-    )
-    .map_err(|e| format!("Error actualizando loop: {}", e))
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        queries::update_loop(
+            &conn,
+            &id,
+            request.label.as_deref(),
+            request.loop_start,
+            request.loop_end,
+            request.is_active,
+        )
+        .map_err(|e| format!("Error actualizando loop: {}", e))
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 /// Elimina un loop
 #[tauri::command]
-pub fn delete_loop(id: String, db: State<'_, Mutex<Connection>>) -> Result<(), String> {
-    let conn = db.lock().map_err(|e| format!("Lock error: {}", e))?;
-
-    queries::delete_loop(&conn, &id).map_err(|e| format!("Error eliminando loop: {}", e))
+pub async fn delete_loop(id: String, pool: State<'_, DbPool>) -> Result<(), String> {
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        queries::delete_loop(&conn, &id).map_err(|e| format!("Error eliminando loop: {}", e))
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 // ============================================================================

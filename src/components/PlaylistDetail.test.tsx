@@ -238,8 +238,8 @@ describe("PlaylistDetail", () => {
       expect(addTrackCall).toBeDefined();
       expect(addTrackCall![1]).toEqual(
         expect.objectContaining({
-          playlist_id: "1",
-          track_id: "3",
+          playlistId: "1",
+          trackId: "3",
         })
       );
     });
@@ -277,8 +277,8 @@ describe("PlaylistDetail", () => {
       expect(removeTrackCall).toBeDefined();
       expect(removeTrackCall![1]).toEqual(
         expect.objectContaining({
-          playlist_id: "1",
-          track_id: "1",
+          playlistId: "1",
+          trackId: "1",
         })
       );
     });

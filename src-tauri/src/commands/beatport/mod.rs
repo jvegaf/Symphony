@@ -1,31 +1,34 @@
 /**
  * Comandos Tauri para integración con Beatport
- * 
+ *
+ * AIDEV-NOTE: Migrado a DbPool + spawn_blocking para evitar bloquear el runtime de Tokio.
+ * Todas las operaciones de base de datos se ejecutan en threads dedicados del pool de Tokio.
+ *
  * NOTA: Todos los comandos Tauri deben estar en el módulo raíz (este archivo)
  * porque el macro #[tauri::command] genera funciones auxiliares `__cmd__nombre`
  * que deben ser accesibles desde donde se invocan (ver Task 13).
- * 
+ *
  * ## Comandos
- * 
+ *
  * - **fix_tags** (deprecado): Búsqueda y aplicación automática de tags
  * - **find_artwork**: Búsqueda y aplicación solo de artwork
  * - **search_beatport_candidates**: Búsqueda de candidatos (selección manual)
  * - **apply_selected_tags**: Aplicación de tags seleccionados manualmente
  */
 
+use futures::future::join_all;
 use std::path::Path;
 use std::sync::Arc;
 use tauri::{AppHandle, Emitter, State};
 use tokio::sync::Semaphore;
-use futures::future::join_all;
 
-use crate::db::{get_connection, queries};
-use crate::library::beatport::{
-    BatchFixResult, BeatportClient, BeatportTags, BeatportTagger, FixTagsPhase, FixTagsProgress,
-    FixTagsResult, SearchCandidatesResult, TrackCandidates, TrackSelection,
-    ConcurrencyConfig, RateLimitState,
-};
 use crate::commands::library::LibraryState;
+use crate::db::{queries, DbPool};
+use crate::library::beatport::{
+    BatchFixResult, BeatportClient, BeatportTagger, BeatportTags, ConcurrencyConfig,
+    FixTagsPhase, FixTagsProgress, FixTagsResult, RateLimitState, SearchCandidatesResult,
+    TrackCandidates, TrackSelection,
+};
 
 // ============================================================================
 // COMANDOS TAURI
@@ -47,6 +50,7 @@ use crate::commands::library::LibraryState;
 #[tauri::command]
 pub async fn fix_tags(
     app: AppHandle,
+    pool: State<'_, DbPool>,
     _library_state: State<'_, LibraryState>,
     track_ids: Vec<String>,
 ) -> Result<BatchFixResult, String> {
@@ -61,17 +65,22 @@ pub async fn fix_tags(
         BeatportClient::new().map_err(|e| format!("Error creando cliente Beatport: {}", e))?,
     );
     let tagger = BeatportTagger::new(client);
+    let pool_arc = Arc::new(pool.inner().clone());
 
     let mut results: Vec<FixTagsResult> = Vec::with_capacity(total);
 
     // Procesar cada track
     for (index, track_id) in track_ids.iter().enumerate() {
         // Obtener información del track desde la base de datos
-        let track = {
-            let db = get_connection().map_err(|e| e.to_string())?;
-            queries::get_track(&db.conn, track_id)
-                .map_err(|e| format!("Error obteniendo track {}: {}", track_id, e))?
-        };
+        let pool_clone = pool_arc.clone();
+        let track_id_clone = track_id.clone();
+        let track = tokio::task::spawn_blocking(move || {
+            let conn = pool_clone.get().map_err(|e| e.to_string())?;
+            queries::get_track(&conn, &track_id_clone)
+                .map_err(|e| format!("Error obteniendo track {}: {}", track_id_clone, e))
+        })
+        .await
+        .map_err(|e| format!("Task join error: {}", e))??;
 
         // Emitir progreso - fase de búsqueda
         let progress = FixTagsProgress {
@@ -104,11 +113,13 @@ pub async fn fix_tags(
         if result.success {
             if let Some(ref tags) = result.tags_applied {
                 let update_result = update_track_in_db(
+                    pool_arc.clone(),
                     track_id,
                     tags,
                     track.bpm, // Pasamos el BPM actual para la lógica de merge en DB
                     result.beatport_track_id, // Guardar el beatport_id para tracking
-                );
+                )
+                .await;
 
                 if let Err(e) = update_result {
                     eprintln!("Warning: No se pudo actualizar DB para {}: {}", track_id, e);
@@ -153,6 +164,7 @@ pub async fn fix_tags(
 #[tauri::command]
 pub async fn find_artwork(
     app: AppHandle,
+    pool: State<'_, DbPool>,
     _library_state: State<'_, LibraryState>,
     track_ids: Vec<String>,
 ) -> Result<BatchFixResult, String> {
@@ -167,17 +179,22 @@ pub async fn find_artwork(
         BeatportClient::new().map_err(|e| format!("Error creando cliente Beatport: {}", e))?,
     );
     let tagger = BeatportTagger::new(client);
+    let pool_arc = Arc::new(pool.inner().clone());
 
     let mut results: Vec<FixTagsResult> = Vec::with_capacity(total);
 
     // Procesar cada track
     for (index, track_id) in track_ids.iter().enumerate() {
         // Obtener información del track desde la base de datos
-        let track = {
-            let db = get_connection().map_err(|e| e.to_string())?;
-            queries::get_track(&db.conn, track_id)
-                .map_err(|e| format!("Error obteniendo track {}: {}", track_id, e))?
-        };
+        let pool_clone = pool_arc.clone();
+        let track_id_clone = track_id.clone();
+        let track = tokio::task::spawn_blocking(move || {
+            let conn = pool_clone.get().map_err(|e| e.to_string())?;
+            queries::get_track(&conn, &track_id_clone)
+                .map_err(|e| format!("Error obteniendo track {}: {}", track_id_clone, e))
+        })
+        .await
+        .map_err(|e| format!("Task join error: {}", e))??;
 
         // Emitir progreso - fase de búsqueda
         let progress = FixTagsProgress {
@@ -247,6 +264,7 @@ pub async fn find_artwork(
 #[tauri::command]
 pub async fn search_beatport_candidates(
     app: AppHandle,
+    pool: State<'_, DbPool>,
     _library_state: State<'_, LibraryState>,
     track_ids: Vec<String>,
 ) -> Result<SearchCandidatesResult, String> {
@@ -257,14 +275,24 @@ pub async fn search_beatport_candidates(
     }
 
     // OPTIMIZACIÓN 1: Batch DB query - cargar todos los tracks de una vez
-    let tracks_map = Arc::new({
-        let db = get_connection().map_err(|e| e.to_string())?;
-        queries::get_tracks_batch(&db.conn, &track_ids)
-            .map_err(|e| format!("Error obteniendo tracks en batch: {}", e))?
-            .into_iter()
-            .filter_map(|t| t.id.clone().map(|id| (id, t)))
-            .collect::<std::collections::HashMap<_, _>>()
-    });
+    let pool_arc = Arc::new(pool.inner().clone());
+    let pool_clone = pool_arc.clone();
+    let track_ids_clone = track_ids.clone();
+    let tracks_map = Arc::new(
+        tokio::task::spawn_blocking(move || {
+            let conn = pool_clone.get().map_err(|e| e.to_string())?;
+            queries::get_tracks_batch(&conn, &track_ids_clone)
+                .map_err(|e| format!("Error obteniendo tracks en batch: {}", e))
+                .map(|tracks| {
+                    tracks
+                        .into_iter()
+                        .filter_map(|t| t.id.clone().map(|id| (id, t)))
+                        .collect::<std::collections::HashMap<_, _>>()
+                })
+        })
+        .await
+        .map_err(|e| format!("Task join error: {}", e))??,
+    );
 
     // Crear cliente Beatport compartido entre todos los requests
     let client = Arc::new(
@@ -431,6 +459,7 @@ pub async fn search_beatport_candidates(
 #[tauri::command]
 pub async fn apply_selected_tags(
     app: AppHandle,
+    pool: State<'_, DbPool>,
     _library_state: State<'_, LibraryState>,
     selections: Vec<TrackSelection>,
 ) -> Result<BatchFixResult, String> {
@@ -451,15 +480,25 @@ pub async fn apply_selected_tags(
         .iter()
         .map(|s| s.local_track_id.clone())
         .collect();
-    
-    let tracks_map = Arc::new({
-        let db = get_connection().map_err(|e| e.to_string())?;
-        queries::get_tracks_batch(&db.conn, &track_ids)
-            .map_err(|e| format!("Error obteniendo tracks en batch: {}", e))?
-            .into_iter()
-            .filter_map(|t| t.id.clone().map(|id| (id, t)))
-            .collect::<std::collections::HashMap<_, _>>()
-    });
+
+    let pool_arc = Arc::new(pool.inner().clone());
+    let pool_clone = pool_arc.clone();
+    let track_ids_clone = track_ids.clone();
+    let tracks_map = Arc::new(
+        tokio::task::spawn_blocking(move || {
+            let conn = pool_clone.get().map_err(|e| e.to_string())?;
+            queries::get_tracks_batch(&conn, &track_ids_clone)
+                .map_err(|e| format!("Error obteniendo tracks en batch: {}", e))
+                .map(|tracks| {
+                    tracks
+                        .into_iter()
+                        .filter_map(|t| t.id.clone().map(|id| (id, t)))
+                        .collect::<std::collections::HashMap<_, _>>()
+                })
+        })
+        .await
+        .map_err(|e| format!("Task join error: {}", e))??,
+    );
 
     // Crear cliente Beatport compartido
     let client = Arc::new(
@@ -485,6 +524,7 @@ pub async fn apply_selected_tags(
         let beatport_id = selection.beatport_track_id.unwrap(); // Safe: ya filtramos
         let local_track_id = selection.local_track_id.clone();
         let tracks_map = tracks_map.clone();
+        let pool_arc = pool_arc.clone();
 
         async move {
             // Adquirir permiso del semáforo
@@ -544,11 +584,13 @@ pub async fn apply_selected_tags(
             if result.success {
                 if let Some(ref tags) = result.tags_applied {
                     let update_result = update_track_in_db(
+                        pool_arc.clone(),
                         &local_track_id,
                         tags,
                         track.bpm,
                         Some(beatport_id),
-                    );
+                    )
+                    .await;
 
                     if let Err(e) = update_result {
                         eprintln!(
@@ -583,97 +625,104 @@ pub async fn apply_selected_tags(
 // ============================================================================
 
 /// Actualiza el track en la base de datos con los nuevos tags
-fn update_track_in_db(
+async fn update_track_in_db(
+    pool: Arc<DbPool>,
     track_id: &str,
     tags: &BeatportTags,
     _current_bpm: Option<f64>,
     beatport_id: Option<i64>,
 ) -> Result<(), String> {
-    let db = get_connection().map_err(|e| e.to_string())?;
+    let track_id = track_id.to_string();
+    let tags = tags.clone();
 
-    // Construir query dinámico solo con los campos que tienen valor
-    let mut updates: Vec<String> = Vec::new();
-    let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+    tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
 
-    // Title: Siempre se actualiza si tiene valor (corrige nombres)
-    if let Some(ref title) = tags.title {
-        updates.push("title = ?".to_string());
-        params.push(Box::new(title.clone()));
-    }
+        // Construir query dinámico solo con los campos que tienen valor
+        let mut updates: Vec<String> = Vec::new();
+        let mut params: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
 
-    // Artist: Siempre se actualiza si tiene valor (corrige artistas)
-    if let Some(ref artist) = tags.artist {
-        updates.push("artist = ?".to_string());
-        params.push(Box::new(artist.clone()));
-    }
+        // Title: Siempre se actualiza si tiene valor (corrige nombres)
+        if let Some(ref title) = tags.title {
+            updates.push("title = ?".to_string());
+            params.push(Box::new(title.clone()));
+        }
 
-    // BPM: Siempre actualizar si Beatport tiene valor (igual que Key)
-    if let Some(bpm) = tags.bpm {
-        updates.push("bpm = ?".to_string());
-        params.push(Box::new(bpm));
-    }
+        // Artist: Siempre se actualiza si tiene valor (corrige artistas)
+        if let Some(ref artist) = tags.artist {
+            updates.push("artist = ?".to_string());
+            params.push(Box::new(artist.clone()));
+        }
 
-    // Key: Siempre se actualiza si tiene valor
-    if let Some(ref key) = tags.key {
-        updates.push("key = ?".to_string());
-        params.push(Box::new(key.clone()));
-    }
+        // BPM: Siempre actualizar si Beatport tiene valor (igual que Key)
+        if let Some(bpm) = tags.bpm {
+            updates.push("bpm = ?".to_string());
+            params.push(Box::new(bpm));
+        }
 
-    // Genre: Siempre se actualiza si tiene valor (corrige géneros)
-    if let Some(ref genre) = tags.genre {
-        updates.push("genre = ?".to_string());
-        params.push(Box::new(genre.clone()));
-    }
+        // Key: Siempre se actualiza si tiene valor
+        if let Some(ref key) = tags.key {
+            updates.push("key = ?".to_string());
+            params.push(Box::new(key.clone()));
+        }
 
-    // Album: Siempre se actualiza si tiene valor (corrige álbumes)
-    if let Some(ref album) = tags.album {
-        updates.push("album = ?".to_string());
-        params.push(Box::new(album.clone()));
-    }
+        // Genre: Siempre se actualiza si tiene valor (corrige géneros)
+        if let Some(ref genre) = tags.genre {
+            updates.push("genre = ?".to_string());
+            params.push(Box::new(genre.clone()));
+        }
 
-    // Year: Siempre se actualiza si tiene valor (corrige años)
-    if let Some(year) = tags.year {
-        updates.push("year = ?".to_string());
-        params.push(Box::new(year));
-    }
+        // Album: Siempre se actualiza si tiene valor (corrige álbumes)
+        if let Some(ref album) = tags.album {
+            updates.push("album = ?".to_string());
+            params.push(Box::new(album.clone()));
+        }
 
-    // Label: Siempre se actualiza si tiene valor
-    if let Some(ref label) = tags.label {
-        updates.push("label = ?".to_string());
-        params.push(Box::new(label.clone()));
-    }
+        // Year: Siempre se actualiza si tiene valor (corrige años)
+        if let Some(year) = tags.year {
+            updates.push("year = ?".to_string());
+            params.push(Box::new(year));
+        }
 
-    // ISRC: Siempre se actualiza si tiene valor
-    if let Some(ref isrc) = tags.isrc {
-        updates.push("isrc = ?".to_string());
-        params.push(Box::new(isrc.clone()));
-    }
+        // Label: Siempre se actualiza si tiene valor
+        if let Some(ref label) = tags.label {
+            updates.push("label = ?".to_string());
+            params.push(Box::new(label.clone()));
+        }
 
-    // Beatport ID: Siempre se actualiza para marcar que fue fixeado
-    if let Some(bp_id) = beatport_id {
-        updates.push("beatport_id = ?".to_string());
-        params.push(Box::new(bp_id));
-    }
+        // ISRC: Siempre se actualiza si tiene valor
+        if let Some(ref isrc) = tags.isrc {
+            updates.push("isrc = ?".to_string());
+            params.push(Box::new(isrc.clone()));
+        }
 
-    // Si no hay nada que actualizar, retornar
-    if updates.is_empty() {
-        return Ok(());
-    }
+        // Beatport ID: Siempre se actualiza para marcar que fue fixeado
+        if let Some(bp_id) = beatport_id {
+            updates.push("beatport_id = ?".to_string());
+            params.push(Box::new(bp_id));
+        }
 
-    // Agregar track_id al final de los parámetros
-    params.push(Box::new(track_id.to_string()));
+        // Si no hay nada que actualizar, retornar
+        if updates.is_empty() {
+            return Ok(());
+        }
 
-    // Construir y ejecutar query
-    let query = format!("UPDATE tracks SET {} WHERE id = ?", updates.join(", "));
+        // Agregar track_id al final de los parámetros
+        params.push(Box::new(track_id.to_string()));
 
-    // Convertir params a referencias
-    let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
+        // Construir y ejecutar query
+        let query = format!("UPDATE tracks SET {} WHERE id = ?", updates.join(", "));
 
-    db.conn
-        .execute(&query, param_refs.as_slice())
-        .map_err(|e| format!("Error actualizando track: {}", e))?;
+        // Convertir params a referencias
+        let param_refs: Vec<&dyn rusqlite::ToSql> = params.iter().map(|p| p.as_ref()).collect();
 
-    Ok(())
+        conn.execute(&query, param_refs.as_slice())
+            .map_err(|e| format!("Error actualizando track: {}", e))?;
+
+        Ok(())
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 #[cfg(test)]

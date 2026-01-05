@@ -29,6 +29,9 @@ function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [playingTrack, setPlayingTrack] = useState<Track | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  
+  // AIDEV-NOTE: Estado para tracks pendientes para crear nuevo playlist (desde context menu)
+  const [pendingTracksForNewPlaylist, setPendingTracksForNewPlaylist] = useState<{ trackIds: string[] } | null>(null);
 
   // AIDEV-NOTE: Hook de primer arranque para mostrar onboarding modal
   const { isFirstRun, completeFirstRun, isLoading: isLoadingFirstRun } = useFirstRun();
@@ -152,6 +155,22 @@ function App() {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [playingTrack, isPlaying, pause, resume, handleKeyPress, isShortcutKey]);
 
+  /**
+   * Handler para crear nuevo playlist con tracks seleccionados
+   * Se activa desde el context menu de TrackTable
+   */
+  const handleAddToNewPlaylist = (trackIds: string[]) => {
+    setPendingTracksForNewPlaylist({ trackIds });
+  };
+
+  /**
+   * Callback cuando se completa la creación del playlist
+   * Limpia el estado pendiente
+   */
+  const handlePlaylistCreatedWithTracks = () => {
+    setPendingTracksForNewPlaylist(null);
+  };
+
   return (
     <ErrorBoundary>
       <div
@@ -174,6 +193,8 @@ function App() {
             searchQuery={searchQuery}
             onSearchChange={setSearchQuery}
             totalTracks={tracks.length}
+            pendingTracksForNewPlaylist={pendingTracksForNewPlaylist}
+            onPlaylistCreatedWithTracks={handlePlaylistCreatedWithTracks}
           />
 
           <div className="flex-1 flex flex-col overflow-hidden">
@@ -193,6 +214,7 @@ function App() {
               onBatchFilenameToTags={handleBatchFilenameToTags}
               onFixTags={handleFixTags}
               onFindArtwork={handleFindArtwork}
+              onAddToNewPlaylist={handleAddToNewPlaylist}
               isLoading={isLoading}
               sortColumn={sortColumn}
               sortDirection={sortDirection}

@@ -1,3 +1,4 @@
+import { memo } from 'react';
 import { Check } from 'lucide-react';
 import { StarRating } from '../../../ui/StarRating';
 import { formatDuration, formatDate } from '../utils/formatters';
@@ -23,8 +24,11 @@ export interface TrackRowProps {
  * Solo renderiza columnas visibles según visibleColumns
  * 
  * AIDEV-NOTE: El orden de las columnas debe coincidir EXACTAMENTE con TableHeader
+ * AIDEV-NOTE: Memoizado con React.memo para evitar re-renders innecesarios
+ * cuando otras filas de la tabla cambian. Solo se re-renderiza cuando
+ * cambian sus props específicas (track, isSelected, isPlaying, etc.)
  */
-export const TrackRow = ({
+const TrackRowComponent = ({
   track,
   index,
   isSelected,
@@ -148,3 +152,13 @@ export const TrackRow = ({
     </tr>
   );
 };
+
+/**
+ * Memoized TrackRow - solo se re-renderiza cuando sus props cambian
+ * AIDEV-NOTE: Comparación superficial por defecto es suficiente porque:
+ * - track.id cambia solo si el track cambia
+ * - isSelected/isPlaying/isFocused son booleanos
+ * - visibleColumns es un Set que solo cambia cuando el usuario modifica columnas
+ */
+export const TrackRow = memo(TrackRowComponent);
+TrackRow.displayName = 'TrackRow';

@@ -1,7 +1,6 @@
 /**
  * CRUD para cue points (puntos de marcación)
  */
-
 use crate::db::models::CuePoint;
 use rusqlite::{params, Connection, Result};
 use uuid::Uuid;

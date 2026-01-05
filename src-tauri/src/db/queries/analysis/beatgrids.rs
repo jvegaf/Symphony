@@ -1,7 +1,6 @@
 /**
  * CRUD para beatgrids (análisis de tempo y grid)
  */
-
 use crate::db::models::Beatgrid;
 use rusqlite::{params, Connection, OptionalExtension, Result};
 use uuid::Uuid;

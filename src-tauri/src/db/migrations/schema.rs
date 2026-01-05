@@ -1,10 +1,9 @@
 /**
  * Definiciones de esquema de base de datos
- * 
+ *
  * Contiene todas las funciones de migración que crean o modifican
  * el esquema de la base de datos.
  */
-
 use rusqlite::{Connection, Result};
 
 /// Migración 001: Esquema inicial
@@ -332,7 +331,7 @@ pub(super) fn migration_003_uuid_migration(conn: &Connection) -> Result<()> {
 }
 
 /// Migración 004: Añade campos label e isrc para integración con Beatport
-/// 
+///
 /// Añade columnas opcionales para almacenar información adicional
 /// extraída de Beatport al hacer "Fix Tags".
 pub(super) fn migration_004_beatport_fields(conn: &Connection) -> Result<()> {
@@ -353,7 +352,7 @@ pub(super) fn migration_004_beatport_fields(conn: &Connection) -> Result<()> {
 }
 
 /// Migración 005: Añade campo beatport_id para tracking de pistas fixeadas
-/// 
+///
 /// Este campo almacena el ID de Beatport cuando una pista fue fixeada,
 /// permitiendo identificar rápidamente qué pistas fueron procesadas.
 pub(super) fn migration_005_beatport_id(conn: &Connection) -> Result<()> {

@@ -1,12 +1,11 @@
+use super::schema;
 /**
  * Runner de migraciones
- * 
+ *
  * Gestiona la ejecución de migraciones pendientes y el control
  * de versiones del esquema de la base de datos.
  */
-
 use rusqlite::{Connection, Result};
-use super::schema;
 
 /// Versión actual del esquema
 /// AIDEV-NOTE: Versión 5 añade columna beatport_id para tracking de pistas fixeadas

@@ -9,7 +9,9 @@ use std::time::{Duration, Instant};
 use crate::audio::constants::TIMESTAMP_INTERVAL_MS;
 use crate::audio::output::{AudioOutput, CpalAudioOutput};
 
-use super::decoder::{decode_next_frame, open_audio_file, probe_file_sample_rate, seek_to_position};
+use super::decoder::{
+    decode_next_frame, open_audio_file, probe_file_sample_rate, seek_to_position,
+};
 use super::events::{emit_end_of_track, emit_error, emit_state, emit_timestamp};
 use super::state::{DecodeResult, DecoderState};
 use super::types::PlayerControlEvent;
@@ -63,9 +65,17 @@ pub fn decode_loop<R: tauri::Runtime>(
                                 }
                             };
 
+                        // AIDEV-NOTE: Cerrar output anterior de forma segura antes de crear uno nuevo
+                        // Esto evita race conditions con el callback de audio de cpal
+                        if let Some(ref mut output) = audio_output {
+                            output.stop();
+                        }
+                        // Pequeña pausa para asegurar que el stream de cpal se ha detenido completamente
+                        thread::sleep(Duration::from_millis(10));
+                        audio_output = None; // Destruir output anterior
+
                         // Recrear output con el sample rate y canales del archivo
                         // Esto permite que el dispositivo se configure correctamente si lo soporta
-                        audio_output = None; // Destruir output anterior
                         match CpalAudioOutput::new(
                             current_device.as_deref(),
                             codec_sample_rate,

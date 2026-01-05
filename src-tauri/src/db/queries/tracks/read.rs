@@ -97,7 +97,7 @@ pub fn get_all_tracks(conn: &Connection) -> Result<Vec<Track>> {
 /// ```no_run
 /// use rusqlite::Connection;
 /// use symphony_lib::db::queries::get_tracks_batch;
-/// 
+///
 /// # fn main() -> Result<(), Box<dyn std::error::Error>> {
 /// let conn = Connection::open_in_memory()?;
 /// let ids = vec!["uuid1".to_string(), "uuid2".to_string()];
@@ -110,7 +110,7 @@ pub fn get_tracks_batch(conn: &Connection, ids: &[String]) -> Result<Vec<Track>>
     if ids.is_empty() {
         return Ok(Vec::new());
     }
-    
+
     // Construir placeholders: "?,?,?"
     let placeholders = ids.iter().map(|_| "?").collect::<Vec<_>>().join(",");
     let query = format!(
@@ -121,14 +121,13 @@ pub fn get_tracks_batch(conn: &Connection, ids: &[String]) -> Result<Vec<Track>>
          FROM tracks WHERE id IN ({})",
         placeholders
     );
-    
+
     let mut stmt = conn.prepare(&query)?;
-    
+
     // Convertir Vec<String> a Vec<&dyn ToSql>
-    let params: Vec<&dyn rusqlite::ToSql> = ids.iter()
-        .map(|id| id as &dyn rusqlite::ToSql)
-        .collect();
-    
+    let params: Vec<&dyn rusqlite::ToSql> =
+        ids.iter().map(|id| id as &dyn rusqlite::ToSql).collect();
+
     let tracks = stmt.query_map(params.as_slice(), |row| {
         Ok(Track {
             id: row.get(0)?,
@@ -154,7 +153,7 @@ pub fn get_tracks_batch(conn: &Connection, ids: &[String]) -> Result<Vec<Track>>
             beatport_id: row.get(20)?,
         })
     })?;
-    
+
     tracks.collect()
 }
 
@@ -165,7 +164,7 @@ mod tests {
 
     fn create_test_db() -> Connection {
         let conn = Connection::open_in_memory().unwrap();
-        
+
         // Crear tabla tracks
         conn.execute(
             "CREATE TABLE tracks (
@@ -192,8 +191,9 @@ mod tests {
                 beatport_id INTEGER
             )",
             [],
-        ).unwrap();
-        
+        )
+        .unwrap();
+
         conn
     }
 
@@ -216,10 +216,10 @@ mod tests {
     fn test_get_tracks_batch_single() {
         let conn = create_test_db();
         insert_test_track(&conn, "track1", "Track 1");
-        
+
         let ids = vec!["track1".to_string()];
         let result = get_tracks_batch(&conn, &ids).unwrap();
-        
+
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].id, Some("track1".to_string()));
         assert_eq!(result[0].title, "Track 1");
@@ -231,13 +231,14 @@ mod tests {
         insert_test_track(&conn, "track1", "Track 1");
         insert_test_track(&conn, "track2", "Track 2");
         insert_test_track(&conn, "track3", "Track 3");
-        
+
         let ids = vec!["track1".to_string(), "track3".to_string()];
         let result = get_tracks_batch(&conn, &ids).unwrap();
-        
+
         assert_eq!(result.len(), 2);
         // Verificar que ambos tracks están presentes (orden puede variar)
-        let ids_result: Vec<String> = result.iter()
+        let ids_result: Vec<String> = result
+            .iter()
             .filter_map(|t| t.id.as_ref().cloned())
             .collect();
         assert!(ids_result.contains(&"track1".to_string()));
@@ -248,10 +249,10 @@ mod tests {
     fn test_get_tracks_batch_nonexistent() {
         let conn = create_test_db();
         insert_test_track(&conn, "track1", "Track 1");
-        
+
         let ids = vec!["track1".to_string(), "nonexistent".to_string()];
         let result = get_tracks_batch(&conn, &ids).unwrap();
-        
+
         // Solo debe devolver el track que existe
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].id, Some("track1".to_string()));

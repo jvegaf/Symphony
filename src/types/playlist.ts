@@ -52,24 +52,27 @@ export interface UpdateTrackMetadataRequest {
 
 /**
  * Request para agregar track a playlist
+ * AIDEV-NOTE: Tauri 2.0 usa camelCase para parámetros en JavaScript
  */
 export interface AddTrackToPlaylistRequest {
-  playlist_id: string;
-  track_id: string;
+  playlistId: string;
+  trackId: string;
 }
 
 /**
  * Request para remover track de playlist
+ * AIDEV-NOTE: Tauri 2.0 usa camelCase para parámetros en JavaScript
  */
 export interface RemoveTrackFromPlaylistRequest {
-  playlist_id: string;
-  track_id: string;
+  playlistId: string;
+  trackId: string;
 }
 
 /**
  * Request para reordenar tracks en playlist
+ * AIDEV-NOTE: Tauri 2.0 usa camelCase para parámetros en JavaScript
  */
 export interface ReorderPlaylistTracksRequest {
-  playlist_id: string;
-  track_ids: string[];
+  playlistId: string;
+  trackIds: string[];
 }

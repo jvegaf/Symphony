@@ -20,6 +20,12 @@ export {
   useReorderPlaylistTracks,
 } from "./usePlaylistMutations";
 
+// Batch operations
+export {
+  useAddTracksToPlaylist,
+  useCreatePlaylistWithTracks,
+} from "./useAddTracksToPlaylist";
+
 // Types
 export type {
   CreatePlaylistRequest,
@@ -28,3 +34,8 @@ export type {
   RemoveTrackFromPlaylistRequest,
   ReorderPlaylistTracksRequest,
 } from "./usePlaylistMutations";
+
+export type {
+  AddTracksToPlaylistRequest,
+  CreatePlaylistWithTracksRequest,
+} from "./useAddTracksToPlaylist";

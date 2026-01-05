@@ -21,9 +21,15 @@ pub fn delete_track(conn: &Connection, id: &str) -> Result<()> {
 /// Resetea completamente la biblioteca (elimina todos los tracks, playlists, waveforms)
 pub fn reset_library(conn: &Connection) -> Result<ResetLibraryResult> {
     // Contar antes de eliminar
-    let tracks_deleted = conn.query_row("SELECT COUNT(*) FROM tracks", [], |row| row.get::<_, usize>(0))?;
-    let playlists_deleted = conn.query_row("SELECT COUNT(*) FROM playlists", [], |row| row.get::<_, usize>(0))?;
-    let waveforms_deleted = conn.query_row("SELECT COUNT(*) FROM waveforms", [], |row| row.get::<_, usize>(0))?;
+    let tracks_deleted = conn.query_row("SELECT COUNT(*) FROM tracks", [], |row| {
+        row.get::<_, usize>(0)
+    })?;
+    let playlists_deleted = conn.query_row("SELECT COUNT(*) FROM playlists", [], |row| {
+        row.get::<_, usize>(0)
+    })?;
+    let waveforms_deleted = conn.query_row("SELECT COUNT(*) FROM waveforms", [], |row| {
+        row.get::<_, usize>(0)
+    })?;
 
     // Eliminar en orden para respetar foreign keys
     conn.execute("DELETE FROM waveforms", [])?;

@@ -35,6 +35,8 @@ export interface TrackTableProps {
   onBatchFilenameToTags?: (tracks: Track[]) => void;
   onFixTags?: (trackIds: string[]) => void;
   onFindArtwork?: (trackIds: string[]) => void;
+  /** Callback para crear nuevo playlist con los tracks seleccionados */
+  onAddToNewPlaylist?: (trackIds: string[]) => void;
   isLoading: boolean;
   // Props para sort controlado desde padre (persiste al navegar)
   sortColumn?: SortColumn;
@@ -55,6 +57,7 @@ export const TrackTable = ({
   onBatchFilenameToTags,
   onFixTags,
   onFindArtwork,
+  onAddToNewPlaylist,
   isLoading,
   sortColumn: externalSortColumn,
   sortDirection: externalSortDirection,
@@ -104,6 +107,7 @@ export const TrackTable = ({
     onBatchFilenameToTags,
     onFixTags,
     onFindArtwork,
+    onAddToNewPlaylist,
     deleteTrack,
   });
 

@@ -272,13 +272,13 @@ describe("usePlaylists hooks", () => {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate({ playlist_id: "1", track_id: "5" });
+      result.current.mutate({ playlistId: "1", trackId: "5" });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(mockInvoke).toHaveBeenCalledWith("add_track_to_playlist", {
-        playlist_id: "1",
-        track_id: "5",
+        playlistId: "1",
+        trackId: "5",
       });
     });
 
@@ -289,7 +289,7 @@ describe("usePlaylists hooks", () => {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate({ playlist_id: "1", track_id: "999" });
+      result.current.mutate({ playlistId: "1", trackId: "999" });
 
       await waitFor(() => expect(result.current.isError).toBe(true));
     });
@@ -303,13 +303,13 @@ describe("usePlaylists hooks", () => {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate({ playlist_id: "1", track_id: "5" });
+      result.current.mutate({ playlistId: "1", trackId: "5" });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(mockInvoke).toHaveBeenCalledWith("remove_track_from_playlist", {
-        playlist_id: "1",
-        track_id: "5",
+        playlistId: "1",
+        trackId: "5",
       });
     });
 
@@ -322,7 +322,7 @@ describe("usePlaylists hooks", () => {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate({ playlist_id: "1", track_id: "999" });
+      result.current.mutate({ playlistId: "1", trackId: "999" });
 
       await waitFor(() => expect(result.current.isError).toBe(true));
     });
@@ -336,13 +336,13 @@ describe("usePlaylists hooks", () => {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate({ playlist_id: "1", track_ids: ["3", "1", "2"] });
+      result.current.mutate({ playlistId: "1", trackIds: ["3", "1", "2"] });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(mockInvoke).toHaveBeenCalledWith("reorder_playlist_tracks", {
-        playlist_id: "1",
-        track_ids: ["3", "1", "2"],
+        playlistId: "1",
+        trackIds: ["3", "1", "2"],
       });
     });
 
@@ -353,13 +353,13 @@ describe("usePlaylists hooks", () => {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate({ playlist_id: "1", track_ids: [] });
+      result.current.mutate({ playlistId: "1", trackIds: [] });
 
       await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
       expect(mockInvoke).toHaveBeenCalledWith("reorder_playlist_tracks", {
-        playlist_id: "1",
-        track_ids: [],
+        playlistId: "1",
+        trackIds: [],
       });
     });
 
@@ -370,7 +370,7 @@ describe("usePlaylists hooks", () => {
         wrapper: createWrapper(),
       });
 
-      result.current.mutate({ playlist_id: "1", track_ids: ["1", "2"] });
+      result.current.mutate({ playlistId: "1", trackIds: ["1", "2"] });
 
       await waitFor(() => expect(result.current.isError).toBe(true));
     });

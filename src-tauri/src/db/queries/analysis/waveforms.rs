@@ -1,7 +1,6 @@
 /**
  * CRUD para waveforms (caché de visualización)
  */
-
 use rusqlite::{params, Connection, OptionalExtension, Result};
 use uuid::Uuid;
 

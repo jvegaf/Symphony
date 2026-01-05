@@ -2,9 +2,11 @@ use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use tauri::{AppHandle, Manager, State};
 use tokio::sync::Mutex;
+// AIDEV-NOTE: Arc y Mutex solo se usan para LibraryState, no para conexiones DB
 
 use crate::db::models::Track;
 use crate::db::queries;
+use crate::db::DbPool;
 use crate::library::metadata::{extract_artwork, write_metadata, TrackMetadata};
 use crate::library::{ImportResult, LibraryImporter};
 
@@ -39,6 +41,7 @@ impl LibraryState {
 ///
 /// AIDEV-NOTE: También guarda el path en settings.json para que consolidate_library
 /// pueda encontrar archivos nuevos en la misma carpeta posteriormente.
+/// Migrado a usar DbPool para consistencia con el resto de comandos.
 ///
 /// Emite eventos:
 /// - `library:import-progress` con progreso actual
@@ -47,6 +50,7 @@ impl LibraryState {
 pub async fn import_library(
     app_handle: AppHandle,
     library_state: State<'_, LibraryState>,
+    pool: State<'_, DbPool>,
     path: String,
 ) -> Result<ImportResult, String> {
     let library_path = PathBuf::from(&path);
@@ -86,75 +90,105 @@ pub async fn import_library(
         }
     }
 
-    // Obtener importador
+    // Obtener importador y pool
     let importer = library_state.importer.lock().await;
+    let pool = pool.inner().clone();
 
     // Iniciar importación
     importer
-        .import_library(app_handle, &library_path)
+        .import_library(app_handle, pool, &library_path)
         .await
         .map_err(|e| e.to_string())
 }
 
 /// Obtiene todas las pistas de la biblioteca
+///
+/// AIDEV-NOTE: Migrado a pool + spawn_blocking para evitar bloquear el runtime de Tokio.
+/// El pool se obtiene como State<DbPool> y la operación sync se ejecuta en un thread dedicado.
 #[tauri::command]
-pub async fn get_all_tracks() -> Result<Vec<Track>, String> {
-    let db = crate::db::get_connection().map_err(|e| e.to_string())?;
-    queries::get_all_tracks(&db.conn).map_err(|e| e.to_string())
+pub async fn get_all_tracks(pool: State<'_, DbPool>) -> Result<Vec<Track>, String> {
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        queries::get_all_tracks(&conn).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 /// Busca pistas por título, artista o álbum
 #[tauri::command]
-pub async fn search_tracks(query: String) -> Result<Vec<Track>, String> {
-    let db = crate::db::get_connection().map_err(|e| e.to_string())?;
-    queries::search_tracks(&db.conn, &query).map_err(|e| e.to_string())
+pub async fn search_tracks(
+    pool: State<'_, DbPool>,
+    query: String,
+) -> Result<Vec<Track>, String> {
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        queries::search_tracks(&conn, &query).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 /// Obtiene una pista por ID (UUID)
 #[tauri::command]
-pub async fn get_track_by_id(id: String) -> Result<Track, String> {
-    let db = crate::db::get_connection().map_err(|e| e.to_string())?;
-    queries::get_track(&db.conn, &id).map_err(|e| e.to_string())
+pub async fn get_track_by_id(
+    pool: State<'_, DbPool>,
+    id: String,
+) -> Result<Track, String> {
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        queries::get_track(&conn, &id).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 /// Obtiene estadísticas de la biblioteca
 #[tauri::command]
-pub async fn get_library_stats() -> Result<LibraryStats, String> {
-    let db = crate::db::get_connection().map_err(|e| e.to_string())?;
-    let tracks = queries::get_all_tracks(&db.conn).map_err(|e| e.to_string())?;
+pub async fn get_library_stats(pool: State<'_, DbPool>) -> Result<LibraryStats, String> {
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        let tracks = queries::get_all_tracks(&conn).map_err(|e| e.to_string())?;
 
-    let total_tracks = tracks.len();
-    let total_duration: f64 = tracks.iter().map(|t| t.duration).sum();
-    let total_size: i64 = tracks.iter().map(|t| t.file_size).sum();
+        let total_tracks = tracks.len();
+        let total_duration: f64 = tracks.iter().map(|t| t.duration).sum();
+        let total_size: i64 = tracks.iter().map(|t| t.file_size).sum();
 
-    // Contar artistas y álbumes únicos
-    let mut artists = std::collections::HashSet::new();
-    let mut albums = std::collections::HashSet::new();
+        // Contar artistas y álbumes únicos
+        let mut artists = std::collections::HashSet::new();
+        let mut albums = std::collections::HashSet::new();
 
-    // Calcular distribución de ratings [0, 1, 2, 3, 4, 5]
-    let mut rating_distribution = vec![0usize; 6]; // índices 0-5 para ratings 0-5
+        // Calcular distribución de ratings [0, 1, 2, 3, 4, 5]
+        let mut rating_distribution = vec![0usize; 6]; // índices 0-5 para ratings 0-5
 
-    for track in tracks {
-        artists.insert(track.artist.clone());
-        if let Some(album) = track.album {
-            albums.insert(album);
+        for track in tracks {
+            artists.insert(track.artist.clone());
+            if let Some(album) = track.album {
+                albums.insert(album);
+            }
+
+            // Contar rating (si es None, se considera 0)
+            let rating = track.rating.unwrap_or(0) as usize;
+            if rating <= 5 {
+                rating_distribution[rating] += 1;
+            }
         }
 
-        // Contar rating (si es None, se considera 0)
-        let rating = track.rating.unwrap_or(0) as usize;
-        if rating <= 5 {
-            rating_distribution[rating] += 1;
-        }
-    }
-
-    Ok(LibraryStats {
-        total_tracks,
-        total_artists: artists.len(),
-        total_albums: albums.len(),
-        total_duration_hours: total_duration / 3600.0,
-        total_size_gb: total_size as f64 / 1_073_741_824.0,
-        rating_distribution,
+        Ok(LibraryStats {
+            total_tracks,
+            total_artists: artists.len(),
+            total_albums: albums.len(),
+            total_duration_hours: total_duration / 3600.0,
+            total_size_gb: total_size as f64 / 1_073_741_824.0,
+            rating_distribution,
+        })
     })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 /// Estructura para actualizar metadatos de track
@@ -178,99 +212,109 @@ pub struct UpdateTrackMetadataRequest {
 /// AIDEV-NOTE: Ahora escribe tags físicamente al archivo usando lofty (como SongUpdater.update_song_from_tag en Python)
 /// 1. Actualiza la base de datos SQLite
 /// 2. Escribe tags ID3v2/MP4/Vorbis al archivo físico
+///
+/// Migrado a pool + spawn_blocking para evitar bloquear el runtime.
 #[tauri::command]
-pub async fn update_track_metadata(request: UpdateTrackMetadataRequest) -> Result<(), String> {
-    let db = crate::db::get_connection().map_err(|e| e.to_string())?;
+pub async fn update_track_metadata(
+    pool: State<'_, DbPool>,
+    request: UpdateTrackMetadataRequest,
+) -> Result<(), String> {
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
 
-    // Paso 1: Obtener el track actual para conocer su ruta
-    let track =
-        queries::get_track(&db.conn, &request.id).map_err(|e| format!("Track not found: {}", e))?;
+        // Paso 1: Obtener el track actual para conocer su ruta
+        let track = queries::get_track(&conn, &request.id)
+            .map_err(|e| format!("Track not found: {}", e))?;
 
-    // Paso 2: Actualizar base de datos
-    queries::update_track_metadata(
-        &db.conn,
-        &request.id,
-        request.title.as_deref(),
-        request.artist.as_deref(),
-        request.album.as_deref(),
-        request.year,
-        request.genre.as_deref(),
-        request.bpm,
-        request.key.as_deref(),
-        request.rating,
-    )
-    .map_err(|e| e.to_string())?;
+        // Paso 2: Actualizar base de datos
+        queries::update_track_metadata(
+            &conn,
+            &request.id,
+            request.title.as_deref(),
+            request.artist.as_deref(),
+            request.album.as_deref(),
+            request.year,
+            request.genre.as_deref(),
+            request.bpm,
+            request.key.as_deref(),
+            request.rating,
+        )
+        .map_err(|e| e.to_string())?;
 
-    // Paso 3: Escribir tags físicamente al archivo (nuevo comportamiento)
-    let file_path = Path::new(&track.path);
+        // Paso 3: Escribir tags físicamente al archivo (nuevo comportamiento)
+        let file_path = Path::new(&track.path);
 
-    // Crear TrackMetadata con los valores actualizados
-    // AIDEV-NOTE: Si el request contiene Some(""), borra el campo (no usa valor anterior)
-    // Si es None, mantiene el valor existente del track
-    let metadata_to_write = TrackMetadata {
-        path: track.path.clone(),
-        title: match &request.title {
-            Some(s) if s.is_empty() => None,  // String vacío = borrar
-            Some(s) => Some(s.clone()),       // Valor nuevo
-            None => Some(track.title.clone()), // Mantener existente
-        },
-        artist: match &request.artist {
-            Some(s) if s.is_empty() => None,
-            Some(s) => Some(s.clone()),
-            None => Some(track.artist.clone()),
-        },
-        album: match &request.album {
-            Some(s) if s.is_empty() => None,
-            Some(s) => Some(s.clone()),
-            None => track.album.clone(),
-        },
-        year: match request.year {
-            Some(0) => None,  // Year 0 = borrar
-            Some(y) => Some(y),
-            None => track.year,
-        },
-        genre: match &request.genre {
-            Some(s) if s.is_empty() => None,
-            Some(s) => Some(s.clone()),
-            None => track.genre.clone(),
-        },
-        bpm: match request.bpm {
-            Some(b) if b <= 0.0 => None,  // BPM 0 o negativo = borrar
-            Some(b) => Some(b),
-            None => track.bpm,
-        },
-        key: match &request.key {
-            Some(s) if s.is_empty() => None,
-            Some(s) => Some(s.clone()),
-            None => track.key.clone(),
-        },
-        rating: match request.rating {
-            Some(r) => Some(r),
-            None => track.rating,
-        },
-        comment: None, // Comment no existe en Track model
-        // Campos técnicos no cambian
-        duration: track.duration,
-        bitrate: track.bitrate,
-        sample_rate: track.sample_rate as u32,
-        channels: 2, // Asumimos stereo, no lo tenemos en DB
-        format: file_path
-            .extension()
-            .and_then(|e| e.to_str())
-            .unwrap_or("unknown")
-            .to_lowercase(),
-        artwork: None,
-    };
+        // Crear TrackMetadata con los valores actualizados
+        // AIDEV-NOTE: Si el request contiene Some(""), borra el campo (no usa valor anterior)
+        // Si es None, mantiene el valor existente del track
+        let metadata_to_write = TrackMetadata {
+            path: track.path.clone(),
+            title: match &request.title {
+                Some(s) if s.is_empty() => None, // String vacío = borrar
+                Some(s) => Some(s.clone()),      // Valor nuevo
+                None => Some(track.title.clone()), // Mantener existente
+            },
+            artist: match &request.artist {
+                Some(s) if s.is_empty() => None,
+                Some(s) => Some(s.clone()),
+                None => Some(track.artist.clone()),
+            },
+            album: match &request.album {
+                Some(s) if s.is_empty() => None,
+                Some(s) => Some(s.clone()),
+                None => track.album.clone(),
+            },
+            year: match request.year {
+                Some(0) => None, // Year 0 = borrar
+                Some(y) => Some(y),
+                None => track.year,
+            },
+            genre: match &request.genre {
+                Some(s) if s.is_empty() => None,
+                Some(s) => Some(s.clone()),
+                None => track.genre.clone(),
+            },
+            bpm: match request.bpm {
+                Some(b) if b <= 0.0 => None, // BPM 0 o negativo = borrar
+                Some(b) => Some(b),
+                None => track.bpm,
+            },
+            key: match &request.key {
+                Some(s) if s.is_empty() => None,
+                Some(s) => Some(s.clone()),
+                None => track.key.clone(),
+            },
+            rating: match request.rating {
+                Some(r) => Some(r),
+                None => track.rating,
+            },
+            comment: None, // Comment no existe en Track model
+            // Campos técnicos no cambian
+            duration: track.duration,
+            bitrate: track.bitrate,
+            sample_rate: track.sample_rate as u32,
+            channels: 2, // Asumimos stereo, no lo tenemos en DB
+            format: file_path
+                .extension()
+                .and_then(|e| e.to_str())
+                .unwrap_or("unknown")
+                .to_lowercase(),
+            artwork: None,
+        };
 
-    // Escribir tags al archivo físico
-    write_metadata(file_path, &metadata_to_write)
-        .map_err(|e| format!("Failed to write tags to file: {}", e))?;
+        // Escribir tags al archivo físico
+        write_metadata(file_path, &metadata_to_write)
+            .map_err(|e| format!("Failed to write tags to file: {}", e))?;
 
-    log::info!(
-        "Metadatos actualizados en DB y archivo físico para track {}",
-        request.id
-    );
-    Ok(())
+        log::info!(
+            "Metadatos actualizados en DB y archivo físico para track {}",
+            request.id
+        );
+        Ok(())
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 /// Estadísticas de la biblioteca
@@ -291,44 +335,58 @@ pub struct LibraryStats {
 /// 2. Elimina la pista de la base de datos
 /// 3. Borra el archivo físico del disco
 /// 4. Si falla el borrado del archivo, igual retorna OK (la pista ya no está en DB)
+///
+/// Migrado a pool + spawn_blocking.
 #[tauri::command]
-pub async fn delete_track(id: String) -> Result<DeleteTrackResult, String> {
-    let db = crate::db::get_connection().map_err(|e| e.to_string())?;
+pub async fn delete_track(
+    pool: State<'_, DbPool>,
+    id: String,
+) -> Result<DeleteTrackResult, String> {
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
 
-    // Paso 1: Obtener la pista para conocer su ruta
-    let track = queries::get_track(&db.conn, &id)
-        .map_err(|e| format!("Track not found: {}", e))?;
-    
-    let file_path = PathBuf::from(&track.path);
+        // Paso 1: Obtener la pista para conocer su ruta
+        let track =
+            queries::get_track(&conn, &id).map_err(|e| format!("Track not found: {}", e))?;
 
-    // Paso 2: Eliminar de la base de datos
-    queries::delete_track(&db.conn, &id)
-        .map_err(|e| format!("Failed to delete from database: {}", e))?;
+        let file_path = PathBuf::from(&track.path);
 
-    log::info!("Track eliminado de la base de datos: {} ({})", track.title, id);
+        // Paso 2: Eliminar de la base de datos
+        queries::delete_track(&conn, &id)
+            .map_err(|e| format!("Failed to delete from database: {}", e))?;
 
-    // Paso 3: Borrar el archivo físico
-    let file_deleted = if file_path.exists() {
-        match std::fs::remove_file(&file_path) {
-            Ok(_) => {
-                log::info!("Archivo eliminado: {:?}", file_path);
-                true
+        log::info!(
+            "Track eliminado de la base de datos: {} ({})",
+            track.title,
+            id
+        );
+
+        // Paso 3: Borrar el archivo físico
+        let file_deleted = if file_path.exists() {
+            match std::fs::remove_file(&file_path) {
+                Ok(_) => {
+                    log::info!("Archivo eliminado: {:?}", file_path);
+                    true
+                }
+                Err(e) => {
+                    log::warn!("No se pudo eliminar el archivo {:?}: {}", file_path, e);
+                    false
+                }
             }
-            Err(e) => {
-                log::warn!("No se pudo eliminar el archivo {:?}: {}", file_path, e);
-                false
-            }
-        }
-    } else {
-        log::warn!("El archivo no existe: {:?}", file_path);
-        false
-    };
+        } else {
+            log::warn!("El archivo no existe: {:?}", file_path);
+            false
+        };
 
-    Ok(DeleteTrackResult {
-        track_id: id,
-        file_deleted,
-        file_path: track.path,
+        Ok(DeleteTrackResult {
+            track_id: id,
+            file_deleted,
+            file_path: track.path,
+        })
     })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 /// Resultado de la eliminación de una pista
@@ -344,6 +402,7 @@ pub struct DeleteTrackResult {
 ///
 /// AIDEV-NOTE: Extrae la imagen embedded del archivo de audio usando lofty.
 /// Retorna base64 data URI listo para usar en <img src="...">
+/// Migrado a pool + spawn_blocking.
 ///
 /// # Arguments
 /// * `id` - UUID de la pista en la base de datos
@@ -353,41 +412,54 @@ pub struct DeleteTrackResult {
 /// - `Ok(None)` si no hay artwork embedded
 /// - `Err` si la pista no existe o hay error leyendo el archivo
 #[tauri::command]
-pub async fn get_track_artwork(id: String) -> Result<Option<String>, String> {
-    let db = crate::db::get_connection().map_err(|e| e.to_string())?;
-    
-    // Obtener la pista para conocer su ruta
-    let track = queries::get_track(&db.conn, &id)
-        .map_err(|e| format!("Track not found: {}", e))?;
-    
-    let file_path = Path::new(&track.path);
-    
-    // Extraer artwork usando extract_artwork
-    extract_artwork(file_path)
-        .map_err(|e| format!("Error extracting artwork: {}", e))
+pub async fn get_track_artwork(
+    pool: State<'_, DbPool>,
+    id: String,
+) -> Result<Option<String>, String> {
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+
+        // Obtener la pista para conocer su ruta
+        let track =
+            queries::get_track(&conn, &id).map_err(|e| format!("Track not found: {}", e))?;
+
+        let file_path = Path::new(&track.path);
+
+        // Extraer artwork usando extract_artwork
+        extract_artwork(file_path).map_err(|e| format!("Error extracting artwork: {}", e))
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 /// Resetea la biblioteca eliminando todas las pistas, playlists y caché de waveforms
 ///
 /// AIDEV-NOTE: Esta operación es destructiva pero no elimina archivos físicos.
 /// Solo limpia la base de datos para empezar de cero.
+/// Migrado a pool + spawn_blocking.
 #[tauri::command]
-pub async fn reset_library() -> Result<queries::ResetLibraryResult, String> {
-    let db = crate::db::get_connection().map_err(|e| e.to_string())?;
-    
-    log::warn!("🗑️ Iniciando reset de biblioteca...");
-    
-    let result = queries::reset_library(&db.conn)
-        .map_err(|e| format!("Error al resetear biblioteca: {}", e))?;
-    
-    log::info!(
-        "✅ Biblioteca reseteada: {} pistas, {} playlists, {} waveforms eliminados",
-        result.tracks_deleted,
-        result.playlists_deleted,
-        result.waveforms_deleted
-    );
-    
-    Ok(result)
+pub async fn reset_library(pool: State<'_, DbPool>) -> Result<queries::ResetLibraryResult, String> {
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+
+        log::warn!("🗑️ Iniciando reset de biblioteca...");
+
+        let result = queries::reset_library(&conn)
+            .map_err(|e| format!("Error al resetear biblioteca: {}", e))?;
+
+        log::info!(
+            "✅ Biblioteca reseteada: {} pistas, {} playlists, {} waveforms eliminados",
+            result.tracks_deleted,
+            result.playlists_deleted,
+            result.waveforms_deleted
+        );
+
+        Ok(result)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 /// Obtiene los paths de biblioteca guardados en settings.json
@@ -410,26 +482,35 @@ pub async fn get_library_paths() -> Result<Vec<String>, String> {
 /// 5. Optimiza la base de datos (VACUUM + ANALYZE)
 ///
 /// Esta operación es segura: solo elimina entradas de la BD, no archivos físicos.
+/// Migrado a pool + spawn_blocking.
 #[tauri::command]
-pub async fn consolidate_library(library_paths: Vec<String>) -> Result<queries::ConsolidateLibraryResult, String> {
-    let db = crate::db::get_connection().map_err(|e| e.to_string())?;
-    
-    log::info!("🔧 Iniciando consolidación de biblioteca...");
-    log::info!("📂 Paths recibidos: {:?}", library_paths);
-    
-    let result = queries::consolidate_library(&db.conn, &library_paths)
-        .map_err(|e| format!("Error al consolidar biblioteca: {}", e))?;
-    
-    log::info!(
-        "✅ Biblioteca consolidada: {} huérfanos, {} duplicados eliminados, {} nuevas pistas agregadas. Total: {} pistas (antes: {})",
-        result.orphans_removed,
-        result.duplicates_removed,
-        result.new_tracks_added,
-        result.total_tracks,
-        result.initial_tracks
-    );
-    
-    Ok(result)
+pub async fn consolidate_library(
+    pool: State<'_, DbPool>,
+    library_paths: Vec<String>,
+) -> Result<queries::ConsolidateLibraryResult, String> {
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+
+        log::info!("🔧 Iniciando consolidación de biblioteca...");
+        log::info!("📂 Paths recibidos: {:?}", library_paths);
+
+        let result = queries::consolidate_library(&conn, &library_paths)
+            .map_err(|e| format!("Error al consolidar biblioteca: {}", e))?;
+
+        log::info!(
+            "✅ Biblioteca consolidada: {} huérfanos, {} duplicados eliminados, {} nuevas pistas agregadas. Total: {} pistas (antes: {})",
+            result.orphans_removed,
+            result.duplicates_removed,
+            result.new_tracks_added,
+            result.total_tracks,
+            result.initial_tracks
+        );
+
+        Ok(result)
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 /// Abre el explorador de archivos del sistema con el archivo seleccionado

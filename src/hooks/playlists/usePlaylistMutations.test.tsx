@@ -229,14 +229,14 @@ describe("useAddTrackToPlaylist", () => {
 
     await act(async () => {
       await result.current.mutateAsync({
-        playlist_id: "playlist-1",
-        track_id: "track-123",
+        playlistId: "playlist-1",
+        trackId: "track-123",
       });
     });
 
     expect(invoke).toHaveBeenCalledWith("add_track_to_playlist", {
-      playlist_id: "playlist-1",
-      track_id: "track-123",
+      playlistId: "playlist-1",
+      trackId: "track-123",
     });
   });
 
@@ -254,8 +254,8 @@ describe("useAddTrackToPlaylist", () => {
 
     await act(async () => {
       await result.current.mutateAsync({
-        playlist_id: "playlist-7",
-        track_id: "track-456",
+        playlistId: "playlist-7",
+        trackId: "track-456",
       });
     });
 
@@ -279,14 +279,14 @@ describe("useRemoveTrackFromPlaylist", () => {
 
     await act(async () => {
       await result.current.mutateAsync({
-        playlist_id: "playlist-2",
-        track_id: "track-789",
+        playlistId: "playlist-2",
+        trackId: "track-789",
       });
     });
 
     expect(invoke).toHaveBeenCalledWith("remove_track_from_playlist", {
-      playlist_id: "playlist-2",
-      track_id: "track-789",
+      playlistId: "playlist-2",
+      trackId: "track-789",
     });
   });
 
@@ -306,8 +306,8 @@ describe("useRemoveTrackFromPlaylist", () => {
 
     await act(async () => {
       await result.current.mutateAsync({
-        playlist_id: "playlist-4",
-        track_id: "track-999",
+        playlistId: "playlist-4",
+        trackId: "track-999",
       });
     });
 
@@ -333,14 +333,14 @@ describe("useReorderPlaylistTracks", () => {
 
     await act(async () => {
       await result.current.mutateAsync({
-        playlist_id: "playlist-1",
-        track_ids: newOrder,
+        playlistId: "playlist-1",
+        trackIds: newOrder,
       });
     });
 
     expect(invoke).toHaveBeenCalledWith("reorder_playlist_tracks", {
-      playlist_id: "playlist-1",
-      track_ids: newOrder,
+      playlistId: "playlist-1",
+      trackIds: newOrder,
     });
   });
 
@@ -360,8 +360,8 @@ describe("useReorderPlaylistTracks", () => {
 
     await act(async () => {
       await result.current.mutateAsync({
-        playlist_id: "playlist-6",
-        track_ids: ["a", "b", "c"],
+        playlistId: "playlist-6",
+        trackIds: ["a", "b", "c"],
       });
     });
 
@@ -379,14 +379,14 @@ describe("useReorderPlaylistTracks", () => {
 
     await act(async () => {
       await result.current.mutateAsync({
-        playlist_id: "playlist-1",
-        track_ids: [],
+        playlistId: "playlist-1",
+        trackIds: [],
       });
     });
 
     expect(invoke).toHaveBeenCalledWith("reorder_playlist_tracks", {
-      playlist_id: "playlist-1",
-      track_ids: [],
+      playlistId: "playlist-1",
+      trackIds: [],
     });
   });
 });

@@ -1,18 +1,17 @@
 /**
  * CRUD para análisis de audio (beatgrids, cue points, loops)
- * 
+ *
  * ## Módulos
- * 
+ *
  * - **waveforms**: Caché de visualización de waveforms
  * - **beatgrids**: Análisis de tempo y beatgrid
  * - **cue_points**: Puntos de marcación en pistas
  * - **loops**: Bucles de reproducción
- * 
+ *
  * ## Notas
- * 
+ *
  * Todos los módulos usan UUIDs (String) como identificadores primarios.
  */
-
 mod beatgrids;
 mod cue_points;
 mod loops;

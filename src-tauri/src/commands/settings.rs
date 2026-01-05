@@ -1,49 +1,72 @@
+//! Comandos Tauri para gestión de configuraciones
+//!
+//! AIDEV-NOTE: Migrado a DbPool + spawn_blocking para evitar bloquear el runtime de Tokio.
+
 use crate::db::models::Setting;
 use crate::db::queries::settings;
-use rusqlite::Connection;
-use std::sync::Mutex;
+use crate::db::DbPool;
 use tauri::State;
 
 /// Obtiene el valor de una configuración específica
 #[tauri::command]
-pub fn get_setting(
-    db: State<'_, Mutex<Connection>>,
+pub async fn get_setting(
+    pool: State<'_, DbPool>,
     key: String,
 ) -> Result<Option<Setting>, String> {
-    let conn = db.lock().unwrap();
-    settings::get_setting(&conn, &key).map_err(|e| e.to_string())
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        settings::get_setting(&conn, &key).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 /// Obtiene todas las configuraciones
 #[tauri::command]
-pub fn get_all_settings(db: State<'_, Mutex<Connection>>) -> Result<Vec<Setting>, String> {
-    let conn = db.lock().unwrap();
-    settings::get_all_settings(&conn).map_err(|e| e.to_string())
+pub async fn get_all_settings(pool: State<'_, DbPool>) -> Result<Vec<Setting>, String> {
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        settings::get_all_settings(&conn).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 /// Actualiza o crea una configuración
 #[tauri::command]
-pub fn update_setting(
-    db: State<'_, Mutex<Connection>>,
+pub async fn update_setting(
+    pool: State<'_, DbPool>,
     key: String,
     value: String,
     value_type: String,
 ) -> Result<(), String> {
-    let conn = db.lock().unwrap();
-    settings::upsert_setting(&conn, &key, &value, &value_type).map_err(|e| e.to_string())
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        settings::upsert_setting(&conn, &key, &value, &value_type).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 /// Resetea todas las configuraciones a valores por defecto
 #[tauri::command]
-pub fn reset_settings(db: State<'_, Mutex<Connection>>) -> Result<(), String> {
-    let conn = db.lock().unwrap();
-    settings::reset_all_settings(&conn).map_err(|e| e.to_string())
+pub async fn reset_settings(pool: State<'_, DbPool>) -> Result<(), String> {
+    let pool = pool.inner().clone();
+    tokio::task::spawn_blocking(move || {
+        let conn = pool.get().map_err(|e| e.to_string())?;
+        settings::reset_all_settings(&conn).map_err(|e| e.to_string())
+    })
+    .await
+    .map_err(|e| format!("Task join error: {}", e))?
 }
 
 #[cfg(test)]
 mod tests {
     // AIDEV-NOTE: Los tests para comandos Tauri requieren un entorno de runtime completo.
-    // State<'_, Mutex<Connection>> no se puede construir en tests unitarios porque
+    // State<'_, DbPool> no se puede construir en tests unitarios porque
     // requiere el contexto de runtime de Tauri.
     //
     // Los tests para estos comandos deben ejecutarse como tests de integración E2E

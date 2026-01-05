@@ -27,28 +27,29 @@ describe("Convenciones de Naming - Documentación", () => {
     });
   });
 
-  describe("Regla 2: Interfaces de IPC (Tauri) usan snake_case", () => {
-    it("los request types para invoke() usan snake_case para coincidir con Rust", () => {
+  describe("Regla 2: Interfaces de IPC (Tauri 2.0) usan camelCase", () => {
+    it("los request types para invoke() usan camelCase (Tauri 2.0 auto-convierte)", () => {
+      // AIDEV-NOTE: Tauri 2.0 convierte automáticamente camelCase de JS a snake_case de Rust
       // Ejemplo: AddTrackToPlaylistRequest
       const ejemploRequest = {
-        playlist_id: "uuid-1",    // ✓ snake_case (Rust binding)
-        track_id: "uuid-2",       // ✓ snake_case (Rust binding)
+        playlistId: "uuid-1",    // ✓ camelCase (Tauri 2.0 → rust: playlist_id)
+        trackId: "uuid-2",       // ✓ camelCase (Tauri 2.0 → rust: track_id)
       };
 
-      expect(ejemploRequest.playlist_id).toBeDefined();
-      expect(ejemploRequest.track_id).toBeDefined();
+      expect(ejemploRequest.playlistId).toBeDefined();
+      expect(ejemploRequest.trackId).toBeDefined();
     });
 
-    it("esto permite que serde deserialice correctamente en Rust", () => {
-      // En Rust: #[serde(rename_all = "snake_case")]
-      // El JSON enviado debe coincidir con nombres de campos Rust
+    it("Tauri 2.0 convierte automáticamente a snake_case para Rust", () => {
+      // En Tauri 2.0, el frontend usa camelCase y Tauri convierte automáticamente
+      // a snake_case para los parámetros de comandos Rust
       const invokePayload = {
-        playlist_id: "123",  // → rust: playlist_id
-        track_ids: ["a"],    // → rust: track_ids
+        playlistId: "123",  // → rust: playlist_id
+        trackIds: ["a"],    // → rust: track_ids
       };
 
-      expect(invokePayload).toHaveProperty("playlist_id");
-      expect(invokePayload).toHaveProperty("track_ids");
+      expect(invokePayload).toHaveProperty("playlistId");
+      expect(invokePayload).toHaveProperty("trackIds");
     });
   });
 

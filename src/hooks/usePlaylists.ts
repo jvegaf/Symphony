@@ -67,7 +67,7 @@ export const useGetPlaylistTracks = (playlistId: string) => {
     queryKey: ["playlists", playlistId, "tracks"],
     queryFn: async () => {
       const tracks = await invoke<Track[]>("get_playlist_tracks_cmd", {
-        playlist_id: playlistId,
+        playlistId: playlistId,
       });
       return tracks;
     },
@@ -144,14 +144,14 @@ export const useAddTrackToPlaylist = () => {
   return useMutation({
     mutationFn: async (data: AddTrackToPlaylistRequest) => {
       await invoke("add_track_to_playlist", {
-        playlist_id: data.playlist_id,
-        track_id: data.track_id,
+        playlistId: data.playlistId,
+        trackId: data.trackId,
       });
     },
     onSuccess: (_, variables) => {
       // Invalidar tracks de la playlist
       queryClient.invalidateQueries({
-        queryKey: ["playlists", variables.playlist_id, "tracks"],
+        queryKey: ["playlists", variables.playlistId, "tracks"],
       });
     },
   });
@@ -166,14 +166,14 @@ export const useRemoveTrackFromPlaylist = () => {
   return useMutation({
     mutationFn: async (data: RemoveTrackFromPlaylistRequest) => {
       await invoke("remove_track_from_playlist", {
-        playlist_id: data.playlist_id,
-        track_id: data.track_id,
+        playlistId: data.playlistId,
+        trackId: data.trackId,
       });
     },
     onSuccess: (_, variables) => {
       // Invalidar tracks de la playlist
       queryClient.invalidateQueries({
-        queryKey: ["playlists", variables.playlist_id, "tracks"],
+        queryKey: ["playlists", variables.playlistId, "tracks"],
       });
     },
   });
@@ -188,14 +188,14 @@ export const useReorderPlaylistTracks = () => {
   return useMutation({
     mutationFn: async (data: ReorderPlaylistTracksRequest) => {
       await invoke("reorder_playlist_tracks", {
-        playlist_id: data.playlist_id,
-        track_ids: data.track_ids,
+        playlistId: data.playlistId,
+        trackIds: data.trackIds,
       });
     },
     onSuccess: (_, variables) => {
       // Invalidar tracks de la playlist para recargar con nuevo orden
       queryClient.invalidateQueries({
-        queryKey: ["playlists", variables.playlist_id, "tracks"],
+        queryKey: ["playlists", variables.playlistId, "tracks"],
       });
     },
   });

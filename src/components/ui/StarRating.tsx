@@ -1,5 +1,5 @@
 import type React from "react";
-import { useState } from "react";
+import { useState, memo } from "react";
 import { cn } from "../../utils/cn";
 
 export interface StarRatingProps {
@@ -55,6 +55,10 @@ export interface StarRatingProps {
  * - Color primario naranja (#fa8905) para estrellas llenas
  * - Hover corregido: solo rellena hasta la estrella sobre la que se hace hover
  * 
+ * AIDEV-NOTE: Memoizado con React.memo para evitar re-renders innecesarios
+ * en tablas con muchas filas. Solo se re-renderiza cuando value, onChange,
+ * readOnly, size, color, maxStars o className cambian.
+ * 
  * @example
  * ```tsx
  * <StarRating 
@@ -63,7 +67,7 @@ export interface StarRatingProps {
  * />
  * ```
  */
-export const StarRating: React.FC<StarRatingProps> = ({
+const StarRatingComponent: React.FC<StarRatingProps> = ({
   value,
   onChange,
   readOnly = false,
@@ -152,6 +156,10 @@ export const StarRating: React.FC<StarRatingProps> = ({
   );
 };
 
+/**
+ * Memoized StarRating - solo se re-renderiza cuando sus props cambian
+ */
+export const StarRating = memo(StarRatingComponent);
 StarRating.displayName = "StarRating";
 
 /**
