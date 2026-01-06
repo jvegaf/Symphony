@@ -16,6 +16,7 @@ import { BeatportSelectionModal } from "./components/ui/BeatportSelectionModal";
 import { useLibraryHandlers, useBeatportHandlers, useTrackActions, useFirstRun } from "./hooks/app";
 import { useAudioPlayer } from "./hooks/useAudioPlayer";
 import { useGetAllTracks } from "./hooks/library";
+import { useGetPlaylistTracks } from "./hooks/playlists";
 import { usePlaybackQueue } from "./hooks/usePlaybackQueue";
 import { usePlayerShortcuts } from "./hooks/usePlayerShortcuts";
 import { useThemeSync } from "./hooks/useThemeSync";
@@ -37,6 +38,9 @@ function App() {
   
   // AIDEV-NOTE: Estado para tracks pendientes para crear nuevo playlist (desde context menu)
   const [pendingTracksForNewPlaylist, setPendingTracksForNewPlaylist] = useState<{ trackIds: string[] } | null>(null);
+  
+  // AIDEV-NOTE: Estado para playlist seleccionada - cuando no es null, muestra tracks de esa playlist
+  const [selectedPlaylistId, setSelectedPlaylistId] = useState<string | null>(null);
 
   // AIDEV-NOTE: Hook de primer arranque para mostrar onboarding modal
   const { isFirstRun, completeFirstRun, isLoading: isLoadingFirstRun } = useFirstRun();
@@ -46,6 +50,15 @@ function App() {
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
 
   const { data: tracks = [], isLoading } = useGetAllTracks();
+  
+  // AIDEV-NOTE: Obtener tracks de la playlist seleccionada (si hay una)
+  const { data: playlistTracks = [], isLoading: isLoadingPlaylistTracks } = useGetPlaylistTracks(
+    selectedPlaylistId ?? ""
+  );
+  
+  // DEBUG: Log para verificar selección de playlist
+  console.log("[DEBUG] selectedPlaylistId:", selectedPlaylistId, "playlistTracks:", playlistTracks.length, "isLoading:", isLoadingPlaylistTracks);
+  
   const { play, pause, resume, isPlaying, seek, position, duration } = useAudioPlayer();
   
   // AIDEV-NOTE: Hooks de handlers agrupados por funcionalidad
@@ -88,7 +101,10 @@ function App() {
   });
 
   // AIDEV-NOTE: filteredTracks se calcula para la búsqueda en la tabla
-  const filteredTracks = tracks.filter((track) => {
+  // Si hay playlist seleccionada, usamos playlistTracks; si no, todos los tracks
+  const baseTracks = selectedPlaylistId ? playlistTracks : tracks;
+  
+  const filteredTracks = baseTracks.filter((track) => {
     if (!searchQuery) return true;
     const query = searchQuery.toLowerCase();
     return (
@@ -200,6 +216,8 @@ function App() {
             totalTracks={tracks.length}
             pendingTracksForNewPlaylist={pendingTracksForNewPlaylist}
             onPlaylistCreatedWithTracks={handlePlaylistCreatedWithTracks}
+            selectedPlaylistId={selectedPlaylistId}
+            onSelectPlaylist={setSelectedPlaylistId}
           />
 
           <div className="flex-1 flex flex-col overflow-hidden">
@@ -220,7 +238,7 @@ function App() {
               onFixTags={handleFixTags}
               onFindArtwork={handleFindArtwork}
               onAddToNewPlaylist={handleAddToNewPlaylist}
-              isLoading={isLoading}
+              isLoading={isLoading || (selectedPlaylistId !== null && isLoadingPlaylistTracks)}
               sortColumn={sortColumn}
               sortDirection={sortDirection}
               onSortChange={(column, direction) => {
@@ -232,14 +250,21 @@ function App() {
                 // Esto mantiene la cola sincronizada con el orden visual de la tabla
                 playbackQueue.generateQueue(sortedTracks, playingIndex);
               }}
+              selectedPlaylistId={selectedPlaylistId}
             />
           </div>
         </div>
 
         {/* Modal de detalles del track */}
         {trackDetailsId && (
-          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-            <div className="max-w-6xl w-full max-h-[95vh] overflow-auto rounded-lg">
+          <div 
+            className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4"
+            onClick={handleCloseDetails}
+          >
+            <div 
+              className="max-w-6xl w-full max-h-[95vh] overflow-auto rounded-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
               <TrackDetail 
                 trackId={trackDetailsId} 
                 tracks={filteredTracks}

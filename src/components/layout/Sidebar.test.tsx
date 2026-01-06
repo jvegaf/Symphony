@@ -20,6 +20,7 @@ vi.mock('../../hooks/playlists', () => ({
   useUpdatePlaylist: vi.fn(),
   useDeletePlaylist: vi.fn(),
   useCreatePlaylistWithTracks: vi.fn(),
+  useAddTracksToPlaylist: vi.fn(),
 }));
 
 import { 
@@ -27,7 +28,8 @@ import {
   useCreatePlaylist, 
   useUpdatePlaylist, 
   useDeletePlaylist,
-  useCreatePlaylistWithTracks 
+  useCreatePlaylistWithTracks,
+  useAddTracksToPlaylist,
 } from '../../hooks/playlists';
 
 const createWrapper = () => {
@@ -52,6 +54,8 @@ describe('Sidebar', () => {
     searchQuery: '',
     onSearchChange: vi.fn(),
     totalTracks: 100,
+    selectedPlaylistId: null as string | null,
+    onSelectPlaylist: vi.fn(),
   };
 
   beforeEach(() => {
@@ -82,6 +86,11 @@ describe('Sidebar', () => {
       mutate: vi.fn(),
       isPending: false,
     } as unknown as ReturnType<typeof useCreatePlaylistWithTracks>);
+
+    vi.mocked(useAddTracksToPlaylist).mockReturnValue({
+      mutate: vi.fn(),
+      isPending: false,
+    } as unknown as ReturnType<typeof useAddTracksToPlaylist>);
   });
 
   describe('Renderizado básico', () => {
@@ -356,6 +365,81 @@ describe('Sidebar', () => {
       
       const addButton = screen.getByTitle('Crear nuevo playlist');
       expect(addButton).toBeDisabled();
+    });
+  });
+
+  describe('Selección de playlist', () => {
+    it('debería llamar onSelectPlaylist con null al hacer click en All Tracks', () => {
+      const onSelectPlaylist = vi.fn();
+      render(
+        <Sidebar {...defaultProps} selectedPlaylistId="pl-1" onSelectPlaylist={onSelectPlaylist} />, 
+        { wrapper: createWrapper() }
+      );
+      
+      const allTracksButton = screen.getByText(/All Tracks/);
+      fireEvent.click(allTracksButton);
+      
+      expect(onSelectPlaylist).toHaveBeenCalledWith(null);
+    });
+
+    it('debería mostrar All Tracks como seleccionado cuando selectedPlaylistId es null', () => {
+      render(
+        <Sidebar {...defaultProps} selectedPlaylistId={null} />, 
+        { wrapper: createWrapper() }
+      );
+      
+      const allTracksButton = screen.getByText(/All Tracks/).closest('button');
+      // Verifica clases de selección: bg-gray-200/50 dark:bg-gray-700/50 font-semibold
+      expect(allTracksButton).toHaveClass('font-semibold');
+    });
+
+    it('debería llamar onSelectPlaylist con el id al hacer click en una playlist', () => {
+      const onSelectPlaylist = vi.fn();
+      vi.mocked(useGetPlaylists).mockReturnValue({
+        data: mockPlaylists,
+        isLoading: false,
+      } as ReturnType<typeof useGetPlaylists>);
+
+      render(
+        <Sidebar {...defaultProps} onSelectPlaylist={onSelectPlaylist} />, 
+        { wrapper: createWrapper() }
+      );
+      
+      const playlistItem = screen.getByText('Mi Playlist 1');
+      fireEvent.click(playlistItem);
+      
+      expect(onSelectPlaylist).toHaveBeenCalledWith('pl-1');
+    });
+
+    it('debería mostrar playlist como seleccionada cuando selectedPlaylistId coincide', () => {
+      vi.mocked(useGetPlaylists).mockReturnValue({
+        data: mockPlaylists,
+        isLoading: false,
+      } as ReturnType<typeof useGetPlaylists>);
+
+      render(
+        <Sidebar {...defaultProps} selectedPlaylistId="pl-1" />, 
+        { wrapper: createWrapper() }
+      );
+      
+      const playlistItem = screen.getByText('Mi Playlist 1').closest('button');
+      // Verifica clases de selección: bg-gray-200/50 dark:bg-gray-700/50 font-semibold
+      expect(playlistItem).toHaveClass('font-semibold');
+    });
+
+    it('no debería mostrar All Tracks como seleccionado cuando hay una playlist seleccionada', () => {
+      vi.mocked(useGetPlaylists).mockReturnValue({
+        data: mockPlaylists,
+        isLoading: false,
+      } as ReturnType<typeof useGetPlaylists>);
+
+      render(
+        <Sidebar {...defaultProps} selectedPlaylistId="pl-1" />, 
+        { wrapper: createWrapper() }
+      );
+      
+      const allTracksButton = screen.getByText(/All Tracks/).closest('button');
+      expect(allTracksButton).not.toHaveClass('font-semibold');
     });
   });
 });

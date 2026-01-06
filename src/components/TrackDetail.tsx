@@ -11,6 +11,7 @@
 
 import React, { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Track } from "../types/library";
 import { useArtwork } from "../hooks/useArtwork";
@@ -403,7 +404,7 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({
                   type="button"
                   onClick={() => {
                     const query = encodeURIComponent(`${artist} ${title}`.trim());
-                    window.open(`https://www.google.com/search?q=${query}`, "_blank");
+                    openUrl(`https://www.google.com/search?q=${query}`);
                   }}
                   disabled={!artist && !title}
                   className="flex w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-full h-10 px-4 bg-blue-600 text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
@@ -418,7 +419,7 @@ export const TrackDetail: React.FC<TrackDetailProps> = ({
                   type="button"
                   onClick={() => {
                     const query = encodeURIComponent(`${artist} ${title}`.trim());
-                    window.open(`https://www.beatport.com/search?q=${query}`, "_blank");
+                    openUrl(`https://www.beatport.com/search?q=${query}`);
                   }}
                   disabled={!artist && !title}
                   className="flex w-full cursor-pointer items-center justify-center gap-2 overflow-hidden rounded-full h-10 px-4 bg-green-600 text-white text-sm font-bold leading-normal tracking-[0.015em] hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

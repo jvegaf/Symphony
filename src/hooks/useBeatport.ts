@@ -144,11 +144,16 @@ export function useApplySelectedTags() {
     mutationFn: async (selections: TrackSelection[]): Promise<BatchFixResult> => {
       return await invoke<BatchFixResult>("apply_selected_tags", { selections });
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       // Invalidar queries de tracks para refrescar la tabla
       queryClient.invalidateQueries({ queryKey: ["tracks"] });
       queryClient.invalidateQueries({ queryKey: ["library-stats"] });
       queryClient.invalidateQueries({ queryKey: ["artwork"] });
+      // Invalidar queries individuales de tracks para refrescar TrackDetail
+      variables.forEach((selection) => {
+        queryClient.invalidateQueries({ queryKey: ["track", selection.local_track_id] });
+        queryClient.invalidateQueries({ queryKey: ["artwork", selection.local_track_id] });
+      });
     },
     onError: (error) => {
       console.error("Error en apply_selected_tags:", error);

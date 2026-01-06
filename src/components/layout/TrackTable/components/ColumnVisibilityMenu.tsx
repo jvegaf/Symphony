@@ -1,9 +1,13 @@
 /**
  * Menú contextual para gestionar visibilidad de columnas
  * Aparece con click derecho en headers de tabla
+ * 
+ * AIDEV-NOTE: Usa createPortal para renderizar fuera de la tabla
+ * ya que <button> no puede ser hijo de <table>
  */
 
 import { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, RotateCcw } from 'lucide-react';
 import type { SortColumn } from '../hooks/useTrackSorting';
 
@@ -25,6 +29,7 @@ export interface ColumnVisibilityMenuProps {
 
 /** Metadata de columnas para el menú */
 const COLUMN_LABELS: Record<SortColumn, string> = {
+  position: '#',
   fixed: 'Fixed',
   title: 'Title',
   artist: 'Artist',
@@ -105,7 +110,8 @@ export const ColumnVisibilityMenu = ({
 
   const isRequired = (column: SortColumn) => REQUIRED_COLUMNS.has(column);
 
-  return (
+  // Usar portal para renderizar fuera de la tabla
+  return createPortal(
     <>
       {/* Backdrop para cerrar al hacer click fuera */}
       <button
@@ -209,7 +215,8 @@ export const ColumnVisibilityMenu = ({
           to reset
         </div>
       </div>
-    </>
+    </>,
+    document.body
   );
 };
 

@@ -9,6 +9,7 @@ import type { SortColumn } from './useTrackSorting';
 
 /** Configuración de visibilidad de columnas */
 export interface ColumnVisibilityConfig {
+  position: boolean;
   fixed: boolean;
   title: boolean;
   artist: boolean;
@@ -26,8 +27,9 @@ export interface ColumnVisibilityConfig {
 /** Columnas que siempre deben ser visibles */
 const REQUIRED_COLUMNS: Set<SortColumn> = new Set(['title', 'artist']);
 
-/** Configuración por defecto - todas las columnas visibles */
+/** Configuración por defecto - todas las columnas visibles excepto position */
 const DEFAULT_CONFIG: ColumnVisibilityConfig = {
+  position: false, // Solo visible en vista de playlist
   fixed: true,
   title: true,
   artist: true,

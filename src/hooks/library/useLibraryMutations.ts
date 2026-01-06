@@ -71,6 +71,18 @@ export const useUpdateTrackRating = () => {
       queryClient.invalidateQueries({
         queryKey: ["tracks", "byId", variables.trackId],
       });
+      // Invalidar tracks de playlists (key: ["playlists", playlistId, "tracks"])
+      // Usamos partial match para invalidar todos los tracks de todas las playlists
+      queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = query.queryKey;
+          return (
+            Array.isArray(key) &&
+            key[0] === "playlists" &&
+            key[2] === "tracks"
+          );
+        },
+      });
     },
     onError: (error) => {
       console.error("Error updating track rating:", error);

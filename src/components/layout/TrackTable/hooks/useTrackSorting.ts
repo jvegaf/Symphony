@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { Track } from '../../../../types/library';
 
-export type SortColumn = 'fixed' | 'title' | 'artist' | 'album' | 'duration' | 'bpm' | 'rating' | 'year' | 'dateAdded' | 'bitrate' | 'genre' | 'key';
+export type SortColumn = 'position' | 'fixed' | 'title' | 'artist' | 'album' | 'duration' | 'bpm' | 'rating' | 'year' | 'dateAdded' | 'bitrate' | 'genre' | 'key';
 export type SortDirection = 'asc' | 'desc';
 
 export interface UseTrackSortingProps {
@@ -21,6 +21,11 @@ export const useTrackSorting = ({ tracks, sortColumn, sortDirection }: UseTrackS
       let bValue: string | number = '';
 
       switch (sortColumn) {
+        case 'position':
+          // La posición se determina por el índice original en el array
+          aValue = tracks.indexOf(a);
+          bValue = tracks.indexOf(b);
+          break;
         case 'fixed':
           aValue = a.beatportId ? 1 : 0;
           bValue = b.beatportId ? 1 : 0;
