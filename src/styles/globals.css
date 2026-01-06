@@ -1,7 +1,12 @@
 @import "tailwindcss";
-/* AIDEV-NOTE: Las fuentes Material Icons y Spline Sans se importan en main.tsx
-   para que Vite las procese correctamente. El @import de CSS desde node_modules
-   no resuelve las URLs relativas de los archivos .woff/.woff2 */
+
+/* AIDEV-NOTE: Configura Tailwind v4 para usar clase .dark en lugar de prefers-color-scheme */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* AIDEV-NOTE: Sistema de temas con CSS custom properties
+   El orden de imports es importante: light primero (base), dark después (override cuando .dark está presente) */
+@import "./themes/light.css";
+@import "./themes/dark.css";
 
 @theme {
   --color-primary-50: #fff8eb;
@@ -16,14 +21,14 @@
   --color-primary-900: #7a2d0d;
   --color-primary-950: #461502;
   --color-primary: #fa8905;
-  
+
   --color-background-light: #f8f7f5;
-  --color-background-dark: #231a0f;
-  
-  --font-family-sans: 'Spline Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --color-background-dark: #1a1a1a;
+
+  --font-family-sans: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* Base styles */
+/* Base styles usando las variables de tema */
 html, body, #root {
   height: 100%;
   margin: 0;
@@ -32,27 +37,30 @@ html, body, #root {
 
 body {
   font-family: var(--font-family-sans);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar usando variables */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #2d3748;
+  background: var(--scrollbar-track);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #4a5568;
+  background: var(--scrollbar-thumb);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #718096;
+  background: var(--scrollbar-thumb-hover);
 }
 
 /* Material Icons */
@@ -61,17 +69,232 @@ body {
   vertical-align: middle;
 }
 
-
-/* Custom select styles for dark mode */
-/* AIDEV-NOTE: Los navegadores no respetan bien los estilos CSS en elementos <option>.
-   Solución: usar color-scheme: dark para que el navegador aplique su tema oscuro nativo.
-   Esto funciona en todos los navegadores modernos (Chrome, Firefox, Safari, Edge). */
-.dark select {
-  color-scheme: dark;
+/* Select styles */
+select {
+  color-scheme: inherit;
 }
 
-.dark select option {
-  background-color: #1f2937;
-  color: #f3f4f6;
+select option {
+  background-color: var(--bg-elevated);
+  color: var(--text-primary);
+}
+
+/* Tauri drag region */
+*[data-tauri-drag-region] {
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+
+/* ============================================
+   UTILITY CLASSES - Usando variables de tema
+   ============================================ */
+
+/* Backgrounds */
+.bg-app {
+  background-color: var(--bg-primary);
+}
+
+.bg-surface {
+  background-color: var(--surface-1);
+}
+
+.bg-surface-2 {
+  background-color: var(--surface-2);
+}
+
+.bg-surface-3 {
+  background-color: var(--surface-3);
+}
+
+.bg-elevated {
+  background-color: var(--bg-elevated);
+}
+
+.bg-hover {
+  background-color: var(--bg-hover);
+}
+
+/* Text */
+.text-app {
+  color: var(--text-primary);
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-tertiary {
+  color: var(--text-tertiary);
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+/* Borders */
+.border-app {
+  border: 1px solid var(--border-primary);
+}
+
+.border-subtle {
+  border: 1px solid var(--border-subtle);
+}
+
+.border-color-app {
+  border-color: var(--border-primary);
+}
+
+.border-color-subtle {
+  border-color: var(--border-subtle);
+}
+
+/* Tooltip */
+.bg-tooltip {
+  background-color: var(--tooltip-bg);
+}
+
+.text-tooltip {
+  color: var(--tooltip-text);
+}
+
+/* Accent */
+.text-accent {
+  color: var(--accent-primary);
+}
+
+.bg-accent {
+  background-color: var(--accent-primary);
+}
+
+.bg-accent-muted {
+  background-color: var(--accent-primary-muted);
+}
+
+.border-accent {
+  border-color: var(--accent-primary);
+}
+
+/* Interactive states */
+.hover\:bg-hover:hover {
+  background-color: var(--bg-hover);
+}
+
+.hover\:bg-active:hover {
+  background-color: var(--bg-active);
+}
+
+/* Sidebar */
+.sidebar-bg {
+  background-color: var(--sidebar-bg);
+}
+
+/* Table */
+.table-header {
+  background-color: var(--table-header-bg);
+}
+
+.table-row-hover:hover {
+  background-color: var(--table-row-hover);
+}
+
+.table-row-selected {
+  background-color: var(--table-row-selected);
+}
+
+.table-row-playing {
+  background-color: var(--table-row-playing);
+}
+
+/* Waveform */
+.waveform-bg {
+  background-color: var(--waveform-bg);
+}
+
+/* Input */
+.input-bg {
+  background-color: var(--input-bg);
+  border-color: var(--input-border);
+}
+
+.input-bg:focus {
+  border-color: var(--input-focus-border);
+}
+
+.input-bg::placeholder {
+  color: var(--input-placeholder);
+}
+
+/* Buttons */
+.btn-primary {
+  background-color: var(--button-primary-bg);
+  color: var(--button-primary-text);
+}
+
+.btn-primary:hover {
+  background-color: var(--button-primary-hover);
+}
+
+.btn-secondary {
+  background-color: var(--button-secondary-bg);
+  color: var(--button-secondary-text);
+}
+
+.btn-secondary:hover {
+  background-color: var(--button-secondary-hover);
+}
+
+/* Modal */
+.modal-bg {
+  background-color: var(--modal-bg);
+}
+
+.modal-overlay {
+  background-color: var(--modal-overlay);
+}
+
+/* Shadows */
+.shadow-app-sm {
+  box-shadow: var(--shadow-sm);
+}
+
+.shadow-app-md {
+  box-shadow: var(--shadow-md);
+}
+
+.shadow-app-lg {
+  box-shadow: var(--shadow-lg);
+}
+
+/* Status colors */
+.text-success {
+  color: var(--success);
+}
+
+.bg-success-muted {
+  background-color: var(--success-muted);
+}
+
+.text-warning {
+  color: var(--warning);
+}
+
+.bg-warning-muted {
+  background-color: var(--warning-muted);
+}
+
+.text-error {
+  color: var(--error);
+}
+
+.bg-error-muted {
+  background-color: var(--error-muted);
+}
+
+.text-info {
+  color: var(--info);
+}
+
+.bg-info-muted {
+  background-color: var(--info-muted);
 }
 

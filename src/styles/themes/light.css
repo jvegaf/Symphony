@@ -1,0 +1,108 @@
+/**
+ * Symphony - Light Theme
+ * Variables CSS para el tema claro
+ * NOTA: Solo se aplica cuando NO hay clase .dark en el documento
+ */
+
+:root:not(.dark) {
+  /* Backgrounds */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f5f5;
+  --bg-tertiary: #ebebeb;
+  --bg-elevated: #ffffff;
+  --bg-hover: #f0f0f0;
+  --bg-active: #e5e5e5;
+  
+  /* Surfaces */
+  --surface-1: #ffffff;
+  --surface-2: #fafafa;
+  --surface-3: #f5f5f5;
+  
+  /* Text */
+  --text-primary: #1a1a1a;
+  --text-secondary: #666666;
+  --text-tertiary: #999999;
+  --text-muted: #cccccc;
+  
+  /* Borders */
+  --border-primary: #e0e0e0;
+  --border-secondary: #d0d0d0;
+  --border-subtle: #f0f0f0;
+  
+  /* Accent - Orange/Primary */
+  --accent-primary: #fa8905;
+  --accent-primary-hover: #dd6502;
+  --accent-primary-active: #b74506;
+  --accent-primary-muted: rgba(250, 137, 5, 0.15);
+  
+  /* Status Colors */
+  --success: #16a34a;
+  --success-muted: rgba(22, 163, 74, 0.15);
+  --warning: #ca8a04;
+  --warning-muted: rgba(202, 138, 4, 0.15);
+  --error: #dc2626;
+  --error-muted: rgba(220, 38, 38, 0.15);
+  --info: #2563eb;
+  --info-muted: rgba(37, 99, 235, 0.15);
+  
+  /* Waveform */
+  --waveform-bg: #f0f0f0;
+  --waveform-wave: #999999;
+  --waveform-progress: #fa8905;
+  --waveform-cursor: #1a1a1a;
+  
+  /* Table */
+  --table-header-bg: #f5f5f5;
+  --table-row-bg: transparent;
+  --table-row-hover: #f5f5f5;
+  --table-row-selected: #ebebeb;
+  --table-row-playing: rgba(250, 137, 5, 0.1);
+  --table-border: #e0e0e0;
+  
+  /* Sidebar */
+  --sidebar-bg: #f5f5f5;
+  --sidebar-item-hover: #ebebeb;
+  --sidebar-item-active: #e0e0e0;
+  
+  /* Header */
+  --header-bg: #ffffff;
+  --header-border: #e0e0e0;
+  
+  /* Player */
+  --player-bg: #ffffff;
+  --player-border: #e0e0e0;
+  
+  /* Scrollbar */
+  --scrollbar-track: #f0f0f0;
+  --scrollbar-thumb: #cccccc;
+  --scrollbar-thumb-hover: #bbbbbb;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.15);
+  
+  /* Input */
+  --input-bg: #ffffff;
+  --input-border: #d0d0d0;
+  --input-focus-border: #fa8905;
+  --input-placeholder: #999999;
+  
+  /* Button */
+  --button-primary-bg: #fa8905;
+  --button-primary-text: #ffffff;
+  --button-primary-hover: #dd6502;
+  --button-secondary-bg: #f0f0f0;
+  --button-secondary-text: #1a1a1a;
+  --button-secondary-hover: #e5e5e5;
+  
+  /* Modal */
+  --modal-bg: #ffffff;
+  --modal-overlay: rgba(0, 0, 0, 0.5);
+  
+  /* Tooltip */
+  --tooltip-bg: #1a1a1a;
+  --tooltip-text: #ffffff;
+  
+  color-scheme: light;
+}

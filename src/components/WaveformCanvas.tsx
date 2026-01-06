@@ -257,7 +257,7 @@ export function WaveformCanvas({
       {/* biome-ignore lint/a11y/useSemanticElements: Canvas container needs div for sizing */}
       <div
         ref={containerRef}
-        className="w-full bg-gray-100 dark:bg-gray-800 rounded-lg border border-gray-300 dark:border-gray-700 cursor-pointer relative"
+        className="w-full bg-surface rounded-lg border-app cursor-pointer relative"
         style={{ height: `${height}px` }}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
@@ -275,7 +275,7 @@ export function WaveformCanvas({
         {/* Tooltip de tiempo al hacer hover */}
         {hoverTime !== null && hoverX !== null && (
           <div
-            className="absolute bottom-0 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-xs px-2 py-1 rounded pointer-events-none"
+            className="absolute bottom-0 bg-tooltip text-tooltip text-xs px-2 py-1 rounded pointer-events-none"
             style={{
               left: `${hoverX}px`,
               transform: "translateX(-50%)",

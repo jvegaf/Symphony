@@ -1,6 +1,7 @@
 import { SettingsSection, SettingsSlider } from '../components';
 import type { AppSettings } from '../../../types/settings';
 import { useTheme } from '../../../hooks/useTheme';
+import { useEffect } from 'react';
 
 export interface UISettingsTabProps {
   settings: AppSettings;
@@ -12,7 +13,35 @@ export interface UISettingsTabProps {
  * Incluye: Tema, Idioma, Resolución de waveform
  */
 export const UISettingsTab = ({ settings, onChange }: UISettingsTabProps) => {
-  const { theme } = useTheme();
+  const { theme, setTheme } = useTheme();
+
+  // Sincronizar el tema de settings con el hook useTheme
+  useEffect(() => {
+    const settingsTheme = settings.ui.theme;
+    if (settingsTheme === 'system') {
+      // Si es system, usar preferencia del sistema
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setTheme(prefersDark ? 'dark' : 'light');
+    } else if (settingsTheme === 'light' || settingsTheme === 'dark') {
+      setTheme(settingsTheme);
+    }
+  }, [settings.ui.theme, setTheme]);
+
+  const handleThemeChange = (newTheme: 'light' | 'dark' | 'system') => {
+    // Actualizar settings
+    onChange({
+      ...settings,
+      ui: { ...settings.ui, theme: newTheme },
+    });
+    
+    // También aplicar inmediatamente al DOM
+    if (newTheme === 'system') {
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      setTheme(prefersDark ? 'dark' : 'light');
+    } else {
+      setTheme(newTheme);
+    }
+  };
 
   return (
     <div className="w-full space-y-6">
@@ -37,12 +66,7 @@ export const UISettingsTab = ({ settings, onChange }: UISettingsTabProps) => {
               id="theme"
               data-testid="settings-theme-select"
               value={settings.ui.theme}
-              onChange={(e) =>
-                onChange({
-                  ...settings,
-                  ui: { ...settings.ui, theme: e.target.value as 'light' | 'dark' | 'system' },
-                })
-              }
+              onChange={(e) => handleThemeChange(e.target.value as 'light' | 'dark' | 'system')}
               className="w-full px-4 py-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
               style={{ colorScheme: theme }}
             >

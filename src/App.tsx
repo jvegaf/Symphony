@@ -18,6 +18,7 @@ import { useAudioPlayer } from "./hooks/useAudioPlayer";
 import { useGetAllTracks } from "./hooks/library";
 import { usePlaybackQueue } from "./hooks/usePlaybackQueue";
 import { usePlayerShortcuts } from "./hooks/usePlayerShortcuts";
+import { useThemeSync } from "./hooks/useThemeSync";
 import type { Track } from "./types/library";
 // AIDEV-NOTE: Import waveform debugger to expose window.debugWaveform()
 // import "./utils/waveform-debug";
@@ -29,6 +30,10 @@ function App() {
   const [searchQuery, setSearchQuery] = useState("");
   const [playingTrack, setPlayingTrack] = useState<Track | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  
+  // AIDEV-NOTE: Hook de tema sincronizado con settings de base de datos
+  // Lee 'ui.theme' y aplica clase 'dark' al <html> según corresponda
+  useThemeSync();
   
   // AIDEV-NOTE: Estado para tracks pendientes para crear nuevo playlist (desde context menu)
   const [pendingTracksForNewPlaylist, setPendingTracksForNewPlaylist] = useState<{ trackIds: string[] } | null>(null);
@@ -174,7 +179,7 @@ function App() {
   return (
     <ErrorBoundary>
       <div
-        className="h-screen bg-background-dark flex flex-col overflow-hidden relative"
+        className="h-screen bg-app flex flex-col overflow-hidden relative"
         data-testid="app-root"
       >
         <Header

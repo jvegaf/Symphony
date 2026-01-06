@@ -59,7 +59,7 @@ impl Default for UiConfig {
 }
 
 fn default_theme() -> String {
-    "system".to_string()
+    "dark".to_string()
 }
 
 fn default_language() -> String {
@@ -244,7 +244,7 @@ mod tests {
     fn test_default_config() {
         let config = AppConfig::default();
         assert!(config.library_paths.is_empty());
-        assert_eq!(config.ui.theme, "system");
+        assert_eq!(config.ui.theme, "dark");
         assert_eq!(config.ui.language, "es");
         assert_eq!(config.audio.sample_rate, 44100);
         assert_eq!(config.conversion.bitrate, 320);
@@ -305,10 +305,10 @@ mod tests {
         // retorna los valores por defecto, no depende del estado del sistema.
         let json = "{}";
         let config: AppConfig = serde_json::from_str(json).unwrap();
-        
+
         // Con un JSON vacío, serde usa los valores por defecto
         assert!(config.library_paths.is_empty());
-        assert_eq!(config.ui.theme, "system");
+        assert_eq!(config.ui.theme, "dark");
         assert_eq!(config.audio.sample_rate, 44100);
     }
 }
