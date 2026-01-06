@@ -55,7 +55,7 @@ export const useGetPlaylistTracks = (playlistId: string) => {
     queryFn: async () => {
       try {
         const result = await invoke<Track[]>("get_playlist_tracks_cmd", {
-          playlist_id: playlistId,
+          playlistId,
         });
         return result;
       } catch (error) {

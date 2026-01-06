@@ -223,12 +223,13 @@ describe('OnboardingModal', () => {
       // Simular éxito en la importación
       const mutateCall = mockMutate.mock.calls[0];
       const onSuccessCallback = mutateCall[1].onSuccess;
-      onSuccessCallback({ imported: 150, failed: 0, total: 150 });
+      onSuccessCallback({ imported: 150, failed: 0, totalFiles: 150, durationSecs: 30 });
 
       rerender(<OnboardingModal onComplete={mockOnComplete} />);
 
       await waitFor(() => {
         expect(screen.getByText(/¡Listo para disfrutar!/i)).toBeInTheDocument();
+        expect(screen.getByText(/150 pistas importadas/i)).toBeInTheDocument();
       });
     });
 
@@ -251,7 +252,7 @@ describe('OnboardingModal', () => {
       // Simular éxito
       const mutateCall = mockMutate.mock.calls[0];
       const onSuccessCallback = mutateCall[1].onSuccess;
-      onSuccessCallback({ imported: 100, failed: 0, total: 100 });
+      onSuccessCallback({ imported: 100, failed: 0, totalFiles: 100, durationSecs: 20 });
 
       rerender(<OnboardingModal onComplete={mockOnComplete} />);
 

@@ -56,9 +56,10 @@ describe('ColumnVisibilityMenu', () => {
     });
 
     it('debe posicionarse en las coordenadas especificadas', () => {
-      const { container } = render(<ColumnVisibilityMenu {...defaultProps} />);
+      render(<ColumnVisibilityMenu {...defaultProps} />);
 
-      const menu = container.querySelector('[data-testid="column-visibility-menu"]');
+      // El menú se renderiza en un portal (document.body), usar screen en vez de container
+      const menu = screen.getByTestId('column-visibility-menu');
       expect(menu).toHaveStyle({
         left: '100px',
         top: '200px',

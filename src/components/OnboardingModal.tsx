@@ -38,6 +38,7 @@ interface OnboardingModalProps {
 export const OnboardingModal = ({ onComplete }: OnboardingModalProps) => {
   const [selectedPath, setSelectedPath] = useState<string>('');
   const [step, setStep] = useState<'welcome' | 'importing' | 'complete'>('welcome');
+  const [importResult, setImportResult] = useState<ImportResult | null>(null);
   const { mutate, progress, isError, error } = useImportLibrary();
   const updateSettings = useUpdateSettings();
 
@@ -93,6 +94,7 @@ export const OnboardingModal = ({ onComplete }: OnboardingModalProps) => {
     // Iniciar importación
     mutate(selectedPath, {
       onSuccess: (result: ImportResult) => {
+        setImportResult(result);
         setStep('complete');
         console.log(`✅ Importación completada: ${result.imported} pistas importadas`);
       },
@@ -279,7 +281,7 @@ export const OnboardingModal = ({ onComplete }: OnboardingModalProps) => {
 
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 dark:from-green-900/20 dark:to-emerald-900/20 rounded-lg p-6 mb-6 border border-green-200 dark:border-green-800">
                 <p className="text-lg text-gray-800 dark:text-gray-200 font-semibold">
-                  ✅ {progress.total} pistas importadas
+                  ✅ {importResult?.imported || 0} pistas importadas
                 </p>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                   Ahora puedes explorar, reproducir y disfrutar tu música

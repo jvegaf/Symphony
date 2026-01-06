@@ -10,6 +10,10 @@ export interface TableHeaderProps {
   visibleColumns: Set<SortColumn>;
   onToggleColumn: (column: SortColumn) => void;
   onResetColumns: () => void;
+  /** Indica si estamos mostrando una playlist (cambia columnas visibles) */
+  isPlaylistView?: boolean;
+  /** Indica si estamos en modo de reordenamiento (muestra columna de grip) */
+  reorderMode?: boolean;
 }
 
 /**
@@ -27,6 +31,8 @@ export const TableHeader = ({
   visibleColumns,
   onToggleColumn,
   onResetColumns,
+  isPlaylistView = false,
+  reorderMode = false,
 }: TableHeaderProps) => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState({ x: 0, y: 0 });
@@ -53,9 +59,23 @@ export const TableHeader = ({
         onContextMenu={handleContextMenu}
       >
         <tr>
-          {visibleColumns.has('fixed') && (
+          {/* Columna vacía para grip handle - solo en modo reordenamiento */}
+          {reorderMode && (
+            <th className="w-8" />
+          )}
+          {/* Columna de posición - solo en vista de playlist */}
+          {isPlaylistView && (
             <th
-              className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"
+              className="px-2 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-10"
+              title="Posición en playlist"
+            >
+              #
+            </th>
+          )}
+          {/* Columna fixed - solo en vista de biblioteca (no playlist) */}
+          {!isPlaylistView && visibleColumns.has('fixed') && (
+            <th
+              className="px-2 py-2 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 w-10"
               onClick={() => onSort('fixed')}
             >
               <span className="inline-flex items-center">
@@ -96,17 +116,17 @@ export const TableHeader = ({
           )}
           {visibleColumns.has('duration') && (
             <th
-              className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"
+              className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 w-16"
               onClick={() => onSort('duration')}
             >
               <span className="inline-flex items-center">
-                Duration {getSortIcon('duration')}
+                Time {getSortIcon('duration')}
               </span>
             </th>
           )}
           {visibleColumns.has('bpm') && (
             <th
-              className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"
+              className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 w-14"
               onClick={() => onSort('bpm')}
             >
               <span className="inline-flex items-center">
@@ -116,7 +136,7 @@ export const TableHeader = ({
           )}
           {visibleColumns.has('rating') && (
             <th
-              className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"
+              className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 w-24"
               onClick={() => onSort('rating')}
             >
               <span className="inline-flex items-center">
@@ -126,7 +146,7 @@ export const TableHeader = ({
           )}
           {visibleColumns.has('year') && (
             <th
-              className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"
+              className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 w-14"
               onClick={() => onSort('year')}
             >
               <span className="inline-flex items-center">
@@ -136,17 +156,17 @@ export const TableHeader = ({
           )}
           {visibleColumns.has('dateAdded') && (
             <th
-              className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"
+              className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 w-24"
               onClick={() => onSort('dateAdded')}
             >
               <span className="inline-flex items-center">
-                Date Added {getSortIcon('dateAdded')}
+                Added {getSortIcon('dateAdded')}
               </span>
             </th>
           )}
           {visibleColumns.has('bitrate') && (
             <th
-              className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"
+              className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 w-20"
               onClick={() => onSort('bitrate')}
             >
               <span className="inline-flex items-center">
@@ -156,17 +176,17 @@ export const TableHeader = ({
           )}
           {visibleColumns.has('genre') && (
             <th
-              className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"
+              className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 w-24"
               onClick={() => onSort('genre')}
             >
-              <span className="inline-flex items-center">
+              <span className="inline-flex items-center truncate">
                 Genre {getSortIcon('genre')}
               </span>
             </th>
           )}
           {visibleColumns.has('key') && (
             <th
-              className="px-3 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800"
+              className="px-2 py-2 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider cursor-pointer hover:bg-gray-200 dark:hover:bg-gray-800 w-20"
               onClick={() => onSort('key')}
             >
               <span className="inline-flex items-center">

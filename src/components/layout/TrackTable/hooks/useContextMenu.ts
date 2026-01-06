@@ -1,5 +1,4 @@
 import { Menu, MenuItem } from "@tauri-apps/api/menu";
-import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { confirm } from "@tauri-apps/plugin-dialog";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { invoke } from "@tauri-apps/api/core";
@@ -15,6 +14,10 @@ export interface UseContextMenuProps {
   /** Callback para crear nuevo playlist con los tracks seleccionados */
   onAddToNewPlaylist?: (trackIds: string[]) => void;
   deleteTrack: (trackId: string) => void;
+  /** ID de playlist seleccionada (para mostrar opción de eliminar del playlist) */
+  selectedPlaylistId?: string | null;
+  /** Callback para eliminar track de playlist */
+  onRemoveFromPlaylist?: (playlistId: string, trackId: string) => void;
 }
 
 /**
@@ -30,6 +33,8 @@ export const useContextMenu = ({
   onFindArtwork,
   onAddToNewPlaylist,
   deleteTrack,
+  selectedPlaylistId,
+  onRemoveFromPlaylist,
 }: UseContextMenuProps) => {
   const handleContextMenu = async (e: React.MouseEvent, track: Track) => {
     e.preventDefault();
@@ -146,6 +151,25 @@ export const useContextMenu = ({
     });
     menuItems.push(playlistSeparator);
 
+    // Opción "Eliminar del playlist" - solo en vista de playlist
+    if (selectedPlaylistId && onRemoveFromPlaylist) {
+      const tracksToRemove = isTrackSelected ? selectedTracks : [track];
+      const removeFromPlaylistItem = await MenuItem.new({
+        id: 'remove-from-playlist',
+        text: `Eliminar del playlist (${tracksToRemove.length} track${tracksToRemove.length > 1 ? 's' : ''})`,
+        action: async () => {
+          for (const t of tracksToRemove) {
+            if (t.id) {
+              onRemoveFromPlaylist(selectedPlaylistId, t.id);
+            }
+          }
+          // Limpiar selección después de eliminar
+          onTracksSelect([]);
+        }
+      });
+      menuItems.push(removeFromPlaylistItem);
+    }
+
     // Opción "Agregar a nuevo playlist" - crear nuevo playlist con tracks seleccionados
     if (onAddToNewPlaylist) {
       const tracksForPlaylist = isTrackSelected ? selectedTracks : [track];
@@ -163,19 +187,19 @@ export const useContextMenu = ({
       menuItems.push(addToPlaylistItem);
     }
 
-    // Opción "Delete Track" - elimina de DB y borra archivo
+    // Opción "Eliminar y borrar archivo" - elimina de DB y borra archivo del disco
     const tracksToDelete = isTrackSelected ? selectedTracks : [track];
     const deleteItem = await MenuItem.new({
       id: 'delete-track',
-      text: `Delete Track${tracksToDelete.length > 1 ? `s (${tracksToDelete.length})` : ''}`,
+      text: `🗑️ Eliminar y borrar archivo${tracksToDelete.length > 1 ? ` (${tracksToDelete.length})` : ''}`,
       action: async () => {
         // Confirmar antes de eliminar
         const trackNames = tracksToDelete.slice(0, 3).map(t => `"${t.title}"`).join(', ');
-        const moreText = tracksToDelete.length > 3 ? ` and ${tracksToDelete.length - 3} more` : '';
+        const moreText = tracksToDelete.length > 3 ? ` y ${tracksToDelete.length - 3} más` : '';
         
         const confirmed = await confirm(
-          `Are you sure you want to delete ${trackNames}${moreText}?\n\nThis will remove the track${tracksToDelete.length > 1 ? 's' : ''} from the library AND delete the file${tracksToDelete.length > 1 ? 's' : ''} from disk.`,
-          { title: 'Delete Track', kind: 'warning' }
+          `¿Estás seguro de eliminar ${trackNames}${moreText}?\n\nEsto eliminará ${tracksToDelete.length > 1 ? 'las pistas' : 'la pista'} de la biblioteca Y borrará ${tracksToDelete.length > 1 ? 'los archivos' : 'el archivo'} del disco.`,
+          { title: 'Eliminar y borrar archivo', kind: 'warning' }
         );
         
         if (confirmed) {
@@ -207,7 +231,8 @@ export const useContextMenu = ({
     menuItems.push(openInBrowserItem);
 
     const menu = await Menu.new({ items: menuItems });
-    await menu.popup(new LogicalPosition(e.clientX, e.clientY));
+    // Usar popup sin argumentos: Tauri posiciona automáticamente en el cursor
+    await menu.popup();
   };
 
   return { handleContextMenu };

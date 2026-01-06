@@ -5,6 +5,75 @@ Todos los cambios notables de Symphony se documentan aquí.
 El formato está basado en [Keep a Changelog](https://keepachangelog.com/es/1.0.0/),
 y este proyecto sigue [Semantic Versioning](https://semver.org/lang/es/).
 
+## [0.20.0] - 2026-01-06
+
+### Agregado
+- **Opción "Eliminar del playlist" en menú contextual:**
+  - Nueva opción visible solo cuando se está en vista de playlist
+  - Permite eliminar pistas de la playlist sin borrar el archivo
+  - Integración con hook `useRemoveTrackFromPlaylist`
+
+### Mejorado
+- **Optimización del ancho de tabla TrackTable:**
+  - Cambio a layout `table-fixed` para anchos predecibles
+  - Anchos fijos por columna para evitar scroll horizontal
+  - Clase `truncate` en textos largos con tooltips para ver contenido completo
+  - Nombres de columnas abreviados (#, Título, Artista, Álbum, etc.)
+  - Padding reducido para mejor aprovechamiento del espacio
+
+- **Alineación de tabla en vista de playlist:**
+  - Agregado prop `reorderMode` a TableHeader
+  - Columna vacía para el handle de arrastre cuando está en modo reordenar
+  - Columnas perfectamente alineadas entre header y filas
+
+- **Altura de filas optimizada:**
+  - Clase `whitespace-nowrap` en columna Key para evitar saltos de línea
+  - Ancho de columna Key aumentado de `w-14` a `w-20`
+  - Filas más compactas y consistentes
+
+- **Actualización de TrackDetail después de Fix Tags:**
+  - Invalidación de queries individuales por track en `useApplySelectedTags`
+  - El modal TrackDetail se actualiza inmediatamente después de aplicar tags de Beatport
+  - Invalidación de artwork también incluida
+
+- **Modal TrackDetail cierra al hacer click fuera:**
+  - Agregados onClick handlers en overlay del modal
+  - Comportamiento consistente con otros modales de la aplicación
+
+- **Botones de búsqueda en TrackDetail funcionando:**
+  - Migración de `window.open` a `openUrl` de `@tauri-apps/plugin-opener`
+  - Botones "Buscar en Google" y "Buscar en Beatport" ahora abren el navegador correctamente
+
+- **Menú contextual nativo de Tauri simplificado:**
+  - Confirmado uso de API nativa (`Menu`, `MenuItem` de `@tauri-apps/api/menu`)
+  - Simplificado `popup()` sin necesidad de `LogicalPosition`
+  - Menú aparece automáticamente en posición del cursor
+
+### Cambiado
+- **Texto de opción de eliminación en menú contextual:**
+  - "Eliminar" → "🗑️ Eliminar y borrar archivo" para mayor claridad
+  - Distingue claramente entre eliminar de playlist vs eliminar archivo
+
+### Corregido
+- **Columna "fixed" aparecía en vista de playlist:**
+  - Agregado prop `selectedPlaylistId` a TrackTable en App.tsx
+  - Columna de posición (#) ahora se muestra correctamente en playlists
+
+- **Rating no se actualizaba en vista de playlist:**
+  - Agregada invalidación con predicado en `useUpdateTrackRating`
+  - Invalida queries de tracks de playlist además de la biblioteca
+
+### Técnico
+- Archivos modificados:
+  - `src/App.tsx` - Props de playlist y handlers de cierre de modal
+  - `src/hooks/library/useLibraryMutations.ts` - Invalidación de playlist tracks
+  - `src/hooks/useBeatport.ts` - Invalidación individual de tracks
+  - `src/components/layout/TrackTable/index.tsx` - Layout table-fixed, props de contexto
+  - `src/components/layout/TrackTable/components/TableHeader.tsx` - reorderMode, anchos fijos
+  - `src/components/layout/TrackTable/components/TrackRow.tsx` - truncate, whitespace-nowrap
+  - `src/components/TrackDetail.tsx` - openUrl de Tauri
+  - `src/components/layout/TrackTable/hooks/useContextMenu.ts` - Menú nativo simplificado
+
 ## [0.19.0] - 2026-01-03
 
 ### Agregado

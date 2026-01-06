@@ -7,8 +7,9 @@
  * - Lista de playlists con creación inline
  * - Edición de nombre de playlist inline (doble click)
  * - Context menu para eliminar playlist (click derecho)
+ * - Drag and drop de tracks a playlists
  */
-import { useState, useRef, useEffect, useCallback, KeyboardEvent, MouseEvent } from "react";
+import { useState, useRef, useEffect, useCallback, KeyboardEvent, MouseEvent, DragEvent } from "react";
 import { Menu, MenuItem } from "@tauri-apps/api/menu";
 import { LogicalPosition } from "@tauri-apps/api/dpi";
 import { confirm } from "@tauri-apps/plugin-dialog";
@@ -17,7 +18,8 @@ import {
   useCreatePlaylist, 
   useUpdatePlaylist, 
   useDeletePlaylist,
-  useCreatePlaylistWithTracks 
+  useCreatePlaylistWithTracks,
+  useAddTracksToPlaylist,
 } from "../../hooks/playlists";
 import type { Playlist } from "../../types/playlist";
 
@@ -29,6 +31,10 @@ interface SidebarProps {
   pendingTracksForNewPlaylist?: { trackIds: string[] } | null;
   /** Callback cuando se completa la creación del playlist con tracks */
   onPlaylistCreatedWithTracks?: () => void;
+  /** ID de la playlist actualmente seleccionada (null = "All Tracks") */
+  selectedPlaylistId?: string | null;
+  /** Callback cuando se selecciona una playlist o se vuelve a "All Tracks" */
+  onSelectPlaylist?: (playlistId: string | null) => void;
 }
 
 interface EditingPlaylist {
@@ -46,15 +52,22 @@ export const Sidebar = ({
   totalTracks,
   pendingTracksForNewPlaylist,
   onPlaylistCreatedWithTracks,
+  selectedPlaylistId,
+  onSelectPlaylist,
 }: SidebarProps) => {
   const { data: playlists = [], isLoading: isLoadingPlaylists } = useGetPlaylists();
   const createPlaylist = useCreatePlaylist();
   const updatePlaylist = useUpdatePlaylist();
   const deletePlaylist = useDeletePlaylist();
   const createPlaylistWithTracks = useCreatePlaylistWithTracks();
+  const addTracksToPlaylist = useAddTracksToPlaylist();
   
   // AIDEV-NOTE: Estado para playlist en edición (nuevo o existente)
   const [editingPlaylist, setEditingPlaylist] = useState<EditingPlaylist | null>(null);
+  
+  // AIDEV-NOTE: Estado para drag and drop - playlist sobre la que se está haciendo hover
+  const [dropTargetPlaylistId, setDropTargetPlaylistId] = useState<string | null>(null);
+  
   const inputRef = useRef<HTMLInputElement>(null);
   
   // AIDEV-NOTE: Flag para evitar doble submit (Enter + onBlur)
@@ -249,7 +262,65 @@ export const Sidebar = ({
     }
   };
 
-  const isPending = createPlaylist.isPending || updatePlaylist.isPending || createPlaylistWithTracks.isPending || deletePlaylist.isPending;
+  /**
+   * Maneja el evento dragEnter sobre una playlist
+   * AIDEV-NOTE: Solo acepta drops si el payload es de tipo "tracks"
+   */
+  const handlePlaylistDragEnter = useCallback((e: DragEvent, playlistId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDropTargetPlaylistId(playlistId);
+  }, []);
+
+  /**
+   * Maneja el evento dragOver sobre una playlist
+   */
+  const handlePlaylistDragOver = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = "copy";
+  }, []);
+
+  /**
+   * Maneja el evento dragLeave sobre una playlist
+   */
+  const handlePlaylistDragLeave = useCallback((e: DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    // Solo resetear si el mouse realmente salió del elemento
+    // (evita flickering cuando el mouse pasa sobre elementos hijos)
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+      setDropTargetPlaylistId(null);
+    }
+  }, []);
+
+  /**
+   * Maneja el drop de tracks sobre una playlist
+   * AIDEV-NOTE: Parsea el JSON del dataTransfer y llama al backend
+   */
+  const handlePlaylistDrop = useCallback((e: DragEvent, playlistId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDropTargetPlaylistId(null);
+    
+    try {
+      const data = JSON.parse(e.dataTransfer.getData("application/json"));
+      if (data.type === "tracks" && data.trackIds && data.trackIds.length > 0) {
+        // Agregar tracks a la playlist
+        addTracksToPlaylist.mutate({
+          playlistId,
+          trackIds: data.trackIds,
+        });
+      }
+    } catch {
+      // Ignorar errores de parsing (drag desde otra fuente)
+    }
+  }, [addTracksToPlaylist]);
+
+  const isPending = createPlaylist.isPending || updatePlaylist.isPending || createPlaylistWithTracks.isPending || deletePlaylist.isPending || addTracksToPlaylist.isPending;
 
   return (
     <aside className="w-64 bg-gray-100/30 dark:bg-gray-900/40 p-4 space-y-4 flex-shrink-0">
@@ -277,10 +348,17 @@ export const Sidebar = ({
         </button>
         <button
           type="button"
-          className="w-full flex justify-between items-center px-3 py-1.5 rounded bg-gray-200/50 dark:bg-gray-700/50 font-semibold text-gray-800 dark:text-gray-200 text-left"
+          onClick={() => onSelectPlaylist?.(null)}
+          className={`w-full flex justify-between items-center px-3 py-1.5 rounded text-left ${
+            selectedPlaylistId === null 
+              ? "bg-gray-200/50 dark:bg-gray-700/50 font-semibold text-gray-800 dark:text-gray-200" 
+              : "text-gray-600 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-gray-700/50"
+          }`}
         >
           <span>All Tracks [{totalTracks}]</span>
-          <span className="material-icons text-primary text-lg">equalizer</span>
+          {selectedPlaylistId === null && (
+            <span className="material-icons text-primary text-lg">equalizer</span>
+          )}
         </button>
         <button
           type="button"
@@ -362,16 +440,38 @@ export const Sidebar = ({
                     />
                   </div>
                 ) : (
-                  // Modo visualización con context menu
+                  // Modo visualización con context menu y drop zone
                   <button
                     type="button"
+                    onClick={() => onSelectPlaylist?.(playlist.id)}
                     onDoubleClick={() => handlePlaylistDoubleClick(playlist)}
                     onContextMenu={(e) => handlePlaylistContextMenu(e, playlist)}
-                    className="w-full flex items-center px-3 py-1.5 rounded text-gray-600 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-gray-700/50 text-left"
-                    title="Doble click para renombrar, click derecho para más opciones"
+                    onDragEnter={(e) => playlist.id && handlePlaylistDragEnter(e, playlist.id)}
+                    onDragOver={handlePlaylistDragOver}
+                    onDragLeave={handlePlaylistDragLeave}
+                    onDrop={(e) => playlist.id && handlePlaylistDrop(e, playlist.id)}
+                    className={`w-full flex items-center px-3 py-1.5 rounded text-left transition-all ${
+                      dropTargetPlaylistId === playlist.id
+                        ? "bg-primary/20 ring-2 ring-primary ring-opacity-50"
+                        : selectedPlaylistId === playlist.id
+                          ? "bg-gray-200/50 dark:bg-gray-700/50 font-semibold text-gray-800 dark:text-gray-200"
+                          : "text-gray-600 dark:text-gray-400 hover:bg-gray-200/50 dark:hover:bg-gray-700/50"
+                    }`}
+                    title="Click para ver tracks, doble click para renombrar, click derecho para más opciones"
                   >
-                    <span className="material-icons text-sm mr-2 text-gray-400">queue_music</span>
-                    <span className="truncate">{playlist.name}</span>
+                    <span className={`material-icons text-sm mr-2 ${
+                      dropTargetPlaylistId === playlist.id 
+                        ? "text-primary" 
+                        : selectedPlaylistId === playlist.id 
+                          ? "text-primary" 
+                          : "text-gray-400"
+                    }`}>
+                      {dropTargetPlaylistId === playlist.id ? "add_circle" : "queue_music"}
+                    </span>
+                    <span className="truncate flex-1">{playlist.name}</span>
+                    {selectedPlaylistId === playlist.id && (
+                      <span className="material-icons text-primary text-lg ml-1">equalizer</span>
+                    )}
                   </button>
                 )}
               </div>

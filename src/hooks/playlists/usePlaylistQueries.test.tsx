@@ -202,7 +202,7 @@ describe("useGetPlaylistTracks", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(invoke).toHaveBeenCalledWith("get_playlist_tracks_cmd", {
-      playlist_id: "playlist-1",
+      playlistId: "playlist-1",
     });
     expect(result.current.data).toEqual(mockTracks);
     expect(result.current.data).toHaveLength(2);
@@ -250,7 +250,7 @@ describe("useGetPlaylistTracks", () => {
 
     // Verificar que se llamó con el playlistId correcto
     expect(invoke).toHaveBeenCalledWith("get_playlist_tracks_cmd", {
-      playlist_id: "playlist-5",
+      playlistId: "playlist-5",
     });
   });
 });
