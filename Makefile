@@ -47,6 +47,16 @@ dev: ## Iniciar servidor de desarrollo con hot-reload
 	@echo "$(BLUE)Iniciando Tauri en modo desarrollo...$(NC)"
 	$(TAURI) dev
 
+dev-fast: ## Desarrollo optimizado (menos lag, compilación más lenta primera vez)
+	@echo "$(BLUE)Iniciando Tauri en modo desarrollo optimizado...$(NC)"
+	@echo "$(YELLOW)Nota: Primera compilación más lenta, luego más fluido$(NC)"
+	CARGO_PROFILE=dev-fast $(TAURI) dev
+
+dev-release: ## Desarrollo con build release (máximo rendimiento, compilación lenta)
+	@echo "$(BLUE)Iniciando Tauri con build release...$(NC)"
+	@echo "$(YELLOW)Nota: Compilación lenta pero rendimiento igual a producción$(NC)"
+	$(TAURI) dev --release
+
 build-dev: ## Build de desarrollo (más rápido, sin optimizaciones)
 	@echo "$(BLUE)Building en modo desarrollo...$(NC)"
 	$(TAURI) build --debug

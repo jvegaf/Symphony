@@ -104,3 +104,38 @@ opt-level = 3
 
 [profile.dev.package.rb]
 opt-level = 3
+
+# Optimizar SQLite/rusqlite en dev (consultas a BD son frecuentes)
+[profile.dev.package.rusqlite]
+opt-level = 2
+
+[profile.dev.package.libsqlite3-sys]
+opt-level = 2
+
+# Optimizar serde para serialización más rápida
+[profile.dev.package.serde]
+opt-level = 2
+
+[profile.dev.package.serde_json]
+opt-level = 2
+
+# ============================================================================
+# PROFILE: dev-fast - Balance entre velocidad de compilación y rendimiento
+# Usar con: cargo build --profile dev-fast
+# ============================================================================
+[profile.dev-fast]
+inherits = "dev"
+opt-level = 1           # Optimización básica (más rápido que 0, menos que 2)
+debug = 1               # Debug info reducida (stacktraces pero sin DWARF completo)
+incremental = true      # Compilación incremental
+codegen-units = 256     # Más unidades = compilación paralela más rápida
+
+# ============================================================================
+# PROFILE: release optimizations
+# ============================================================================
+[profile.release]
+lto = true              # Link Time Optimization para binarios más pequeños
+codegen-units = 1       # Menos unidades = mejor optimización
+strip = true            # Eliminar símbolos de debug
+opt-level = 3           # Máxima optimización
+panic = "abort"         # Binarios más pequeños, sin unwind

@@ -32,6 +32,11 @@ const INITIAL_STATE: WaveformState = {
   error: null,
 };
 
+// AIDEV-NOTE: Logs deshabilitados por defecto para mejor rendimiento
+// Habilitar con localStorage.setItem('SYMPHONY_DEBUG_WAVEFORM', 'true')
+const DEBUG_WAVEFORM = typeof window !== 'undefined' && 
+  localStorage.getItem('SYMPHONY_DEBUG_WAVEFORM') === 'true';
+
 /**
  * Hook para obtener waveform con cache y streaming
  * 
@@ -51,7 +56,7 @@ export function useWaveform(
   useEffect(() => {
     return () => {
       if (trackId) {
-        invoke('cancel_waveform', { trackId }).catch(console.error);
+        invoke('cancel_waveform', { trackId }).catch(() => {});
       }
     };
   }, [trackId]);
@@ -65,10 +70,9 @@ export function useWaveform(
       return;
     }
 
-    console.log('========== useWaveform: SETUP START ==========');
-    console.log('Track ID:', trackId);
-    console.log('Track Path:', trackPath);
-    console.log('Duration:', duration);
+    if (DEBUG_WAVEFORM) {
+      console.log('[Waveform] Setup:', { trackId, trackPath, duration });
+    }
 
     // Reset estado
     setState({
@@ -82,8 +86,6 @@ export function useWaveform(
     let isActive = true;
     
     const setupListenersAndRequest = async () => {
-      console.log('👂 Setting up event listeners...');
-      
       // Setup all listeners
       const unlistenProgress = await listen<WaveformProgressPayload>('waveform:progress', (event) => {
         if (event.payload.trackId === trackId && isActive) {
@@ -103,8 +105,6 @@ export function useWaveform(
               }
               combined.set(newChunk, prev.peaks?.length || 0);
               
-              console.log(`📊 Chunk: +${newChunk.length} peaks, total: ${combined.length}`);
-              
               return {
                 ...prev,
                 progress: event.payload.progress,
@@ -117,18 +117,15 @@ export function useWaveform(
       });
 
       const unlistenComplete = await listen<WaveformCompletePayload>('waveform:complete', (event) => {
-        console.log('✅ waveform:complete event RECEIVED:', { 
-          trackId: event.payload.trackId, 
-          peaksLength: event.payload.peaks.length 
-        });
-        console.log('   Current trackId:', trackId);
-        console.log('   Match:', event.payload.trackId === trackId);
-        console.log('   isActive:', isActive);
+        if (DEBUG_WAVEFORM) {
+          console.log('[Waveform] Complete:', { 
+            trackId: event.payload.trackId, 
+            peaksLength: event.payload.peaks.length 
+          });
+        }
         
         if (event.payload.trackId === trackId && isActive) {
-          console.log('🎯 MATCH! Converting peaks to Float32Array...');
           const peaks = new Float32Array(event.payload.peaks);
-          console.log('✅ Float32Array created:', peaks.length, 'peaks');
           
           setState({
             isLoading: false,
@@ -136,15 +133,12 @@ export function useWaveform(
             peaks,
             error: null,
           });
-          console.log('✅ State updated with peaks!');
-        } else {
-          console.log('⚠️ Ignoring event - trackId mismatch or component unmounted');
         }
       });
 
       const unlistenError = await listen<WaveformErrorPayload>('waveform:error', (event) => {
-        console.error('❌ waveform:error event:', event.payload);
         if (event.payload.trackId === trackId && isActive) {
+          console.error('[Waveform] Error:', event.payload.error);
           setState({
             isLoading: false,
             progress: 0,
@@ -154,8 +148,6 @@ export function useWaveform(
         }
       });
 
-      console.log('✅ Listeners ready, now requesting waveform...');
-
       // NOW request waveform (listeners are ready!)
       try {
         await invoke('get_waveform', {
@@ -163,9 +155,7 @@ export function useWaveform(
           trackPath,
           duration,
         });
-        console.log('✅ get_waveform command sent successfully');
       } catch (error) {
-        console.error('❌ Failed to request waveform:', error);
         if (isActive) {
           setState({
             isLoading: false,
@@ -178,7 +168,6 @@ export function useWaveform(
 
       // Return cleanup function
       return () => {
-        console.log('🧹 Cleaning up listeners for track:', trackId);
         unlistenProgress();
         unlistenComplete();
         unlistenError();
@@ -210,8 +199,7 @@ export function useWaveform(
         setState(INITIAL_STATE);
       }
       return cancelled;
-    } catch (error) {
-      console.error('Failed to cancel waveform:', error);
+    } catch {
       return false;
     }
   }, [trackId]);
