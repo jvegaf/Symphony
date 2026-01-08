@@ -18,6 +18,11 @@ import TableHeader from './components/TableHeader.svelte';
 import TrackRow from './components/TrackRow.svelte';
 import EmptyState from './components/EmptyState.svelte';
 import LoadingState from './components/LoadingState.svelte';
+import { useUpdateTrackRating, useDeleteTrack } from '$lib/hooks/library';
+import {
+	useReorderPlaylistTracks,
+	useRemoveTrackFromPlaylist
+} from '$lib/hooks/playlists';
 
 // Re-export types for compatibility
 export type SortColumn =
@@ -91,26 +96,64 @@ let {
 	onDragEnd
 }: Props = $props();
 
-// AIDEV-TODO: Replace with TanStack Svelte Query mutations when migrated
-// Placeholder for mutations
+// AIDEV-NOTE: TanStack Svelte Query mutations - llamados al top level
+// biome-ignore lint/correctness/useHookAtTopLevel: False positive - hooks ARE at top level
+const updateRatingMutation = useUpdateTrackRating();
+// biome-ignore lint/correctness/useHookAtTopLevel: False positive - hooks ARE at top level
+const deleteTrackMutation = useDeleteTrack();
+// biome-ignore lint/correctness/useHookAtTopLevel: False positive - hooks ARE at top level
+const reorderTracksMutation = useReorderPlaylistTracks();
+// biome-ignore lint/correctness/useHookAtTopLevel: False positive - hooks ARE at top level
+const removeFromPlaylistMutation = useRemoveTrackFromPlaylist();
+
+// AIDEV-NOTE: Funciones wrapper para mutations
 function updateRating(trackId: string, rating: number) {
-	console.log('AIDEV-TODO: updateRating mutation', trackId, rating);
-	// TODO: Replace with real mutation
+	$updateRatingMutation.mutate(
+		{ trackId, rating },
+		{
+			onError: (err: Error) => {
+				alert(`Error al actualizar rating: ${err.message}`);
+			}
+		}
+	);
 }
 
 function deleteTrack(trackId: string) {
-	console.log('AIDEV-TODO: deleteTrack mutation', trackId);
-	// TODO: Replace with real mutation
+	$deleteTrackMutation.mutate(trackId, {
+		onSuccess: () => {
+			// Deseleccionar el track eliminado
+			onTracksSelect(selectedTracks.filter((t) => t.id !== trackId));
+		},
+		onError: (err: Error) => {
+			alert(`Error al eliminar track: ${err.message}`);
+		}
+	});
 }
 
 function reorderTracks(playlistId: string, trackIds: string[]) {
-	console.log('AIDEV-TODO: reorderTracks mutation', playlistId, trackIds);
-	// TODO: Replace with real mutation
+	$reorderTracksMutation.mutate(
+		{ playlistId, trackIds },
+		{
+			onError: (err: Error) => {
+				alert(`Error al reordenar tracks: ${err.message}`);
+			}
+		}
+	);
 }
 
 function removeFromPlaylist(playlistId: string, trackId: string) {
-	console.log('AIDEV-TODO: removeFromPlaylist mutation', playlistId, trackId);
-	// TODO: Replace with real mutation
+	$removeFromPlaylistMutation.mutate(
+		{ playlistId, trackId },
+		{
+			onSuccess: () => {
+				// Deseleccionar el track removido
+				onTracksSelect(selectedTracks.filter((t) => t.id !== trackId));
+			},
+			onError: (err: Error) => {
+				alert(`Error al remover track de playlist: ${err.message}`);
+			}
+		}
+	);
 }
 
 // AIDEV-TODO: Replace with proper Svelte store when migrated
