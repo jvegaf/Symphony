@@ -91,10 +91,16 @@ export function toggleTheme(): void {
 
 /**
  * Verifica si el tema actual es oscuro
+ * Uso: const dark = isDark();
  */
-export const isDark = $derived(currentTheme === 'dark');
+export function isDark(): boolean {
+  return currentTheme === 'dark';
+}
 
 /**
  * Verifica si el tema actual es claro
+ * Uso: const light = isLight();
  */
-export const isLight = $derived(currentTheme === 'light');
+export function isLight(): boolean {
+  return currentTheme === 'light';
+}

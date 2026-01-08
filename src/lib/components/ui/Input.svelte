@@ -31,8 +31,8 @@
     ...props 
   }: Props = $props();
 
-  // Generar ID automático si no se proporciona
-  const inputId = id || label?.toLowerCase().replace(/\s+/g, '-');
+  // Generar ID automático si no se proporciona (usar $derived para reactividad)
+  const inputId = $derived(id || label?.toLowerCase().replace(/\s+/g, '-'));
 </script>
 
 <div class="flex flex-col gap-1">
