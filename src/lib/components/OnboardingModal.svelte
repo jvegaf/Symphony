@@ -14,7 +14,9 @@
  */
 
 import { open } from '@tauri-apps/plugin-dialog';
-import type { ImportResult } from '../types/library';
+import type { ImportResult } from '../../types/library';
+import { useImportLibrary } from '../hooks/library';
+import { useUpdateSetting } from '../hooks/useSettings';
 
 interface Props {
 	/** Se invoca cuando el usuario completa el onboarding (después de importación exitosa) */
@@ -27,14 +29,25 @@ let selectedPath = $state('');
 let step = $state<'welcome' | 'importing' | 'complete'>('welcome');
 let importResult = $state<ImportResult | null>(null);
 
-// AIDEV-TODO: Replace with real TanStack Svelte Query mutation
-let progress = $state({ phase: 'scanning', current: 0, total: 0 });
-let isError = $state(false);
-let error = $state<Error | null>(null);
+// TanStack Svelte Query hooks
+const { mutation: importMutation, progress: importProgress, setupListeners, cleanup } = useImportLibrary();
+const updateSettingMutation = useUpdateSetting();
+
+// Reactive derived state from stores
+const progress = $derived($importProgress);
+const isError = $derived(importMutation.isError);
+const error = $derived(importMutation.error);
+const isImporting = $derived(importMutation.isPending);
 
 let progressPercentage = $derived(
 	progress.total > 0 ? (progress.current / progress.total) * 100 : 0
 );
+
+// Setup Tauri event listeners for import progress
+$effect(() => {
+	setupListeners();
+	return cleanup;
+});
 
 // AIDEV-NOTE: No permitir cerrar el modal con Escape durante onboarding obligatorio
 $effect(() => {
@@ -69,29 +82,33 @@ async function handleSelectFolder() {
 
 /**
  * Inicia la importación de la carpeta seleccionada
- * Actualiza library.import_folder en settings
+ * Actualiza library.import_folder en settings y luego ejecuta la importación
  */
-async function handleStartImport() {
+function handleStartImport() {
 	if (!selectedPath) return;
 
-	// AIDEV-TODO: Replace with real updateSettings mutation
-	console.log('AIDEV-TODO: updateSettings mutation', {
-		key: 'library.import_folder',
+	// Primero actualizar el setting de import_folder
+	updateSettingMutation.mutate({
+		key: 'library.importFolder',
 		value: selectedPath,
 		valueType: 'string'
 	});
 
+	// Cambiar al paso de importación
 	step = 'importing';
 
-	// AIDEV-TODO: Replace with real import mutation
-	console.log('AIDEV-TODO: importLibrary mutation', selectedPath);
-
-	// Simulate import for demo
-	setTimeout(() => {
-		importResult = { imported: 42, skipped: 0, failed: 0 };
-		step = 'complete';
-		console.log(`✅ Importación completada: ${importResult.imported} pistas importadas`);
-	}, 2000);
+	// Ejecutar la importación
+	importMutation.mutate(selectedPath, {
+		onSuccess: (result: ImportResult) => {
+			importResult = result;
+			step = 'complete';
+			console.log(`✅ Importación completada: ${result.imported} pistas importadas`);
+		},
+		onError: (err: Error) => {
+			console.error('Error en importación:', err);
+			// El error ya está manejado por el estado isError del mutation
+		}
+	});
 }
 
 /**
