@@ -14,11 +14,11 @@
 | **Phase 0: Preparation** | ✅ **COMPLETE** | 100% | 1 day | 2026-01-08 | 2026-01-08 |
 | **Phase 1: Foundation** | ✅ **COMPLETE** | 85% | 1 day | 2026-01-08 | 2026-01-08 |
 | **Phase 2: Core Components** | ✅ **COMPLETE** | 100% | 1 day | 2026-01-08 | 2026-01-08 |
-| **Phase 3: Complex Components** | 🟡 **IN PROGRESS** | 70% | 2-3 weeks | 2026-01-08 | TBD |
+| **Phase 3: Complex Components** | 🟡 **IN PROGRESS** | 90% | 2-3 weeks | 2026-01-08 | TBD |
 | Phase 4: Feature Pages | 🔜 Not Started | 0% | 2 weeks | TBD | TBD |
 | Phase 5: Integration & Testing | 🔜 Not Started | 0% | 2 weeks | TBD | TBD |
 
-**Total Progress:** 59.2% (3.55 of 6 phases complete)
+**Total Progress:** 63.5% (3.8 of 6 phases complete)
 
 ---
 
@@ -273,13 +273,13 @@ $effect(() => {
 
 ---
 
-## 🟡 Phase 3: Complex Components (IN PROGRESS - 70%)
+## 🟡 Phase 3: Complex Components (IN PROGRESS - 90%)
 
 **Estimated Duration:** 2-3 weeks  
 **Status:** 🟡 **IN PROGRESS** (Started: January 8, 2026)  
-**Components Migrated:** 7/10 (70%)
+**Components Migrated:** 9/10 (90%)
 
-### Complex Components (7/10 ✅)
+### Complex Components (9/10 ✅)
 
 - [x] `Header.svelte` ✅ (app header with custom titlebar, window controls, tab navigation, import progress)
 - [x] `TrackRow.svelte` ✅ (240 lines - table row with drag-drop, conditional columns, StarRating integration)
@@ -287,19 +287,23 @@ $effect(() => {
 - [x] `CuePointEditor.svelte` ✅ (162 lines - SVG overlay for cue points with colors and labels)
 - [x] `LoopEditor.svelte` ✅ (221 lines - SVG overlay for loop regions with draggable markers)
 - [x] `WaveformCanvas.svelte` ✅ (313 lines - Canvas-based waveform renderer with streaming, **needs useWaveform hook migration**)
-- [ ] `TrackTable.svelte` ⏳ (hardest - uses virtualization) **PRIORITY: HIGH**
-- [ ] `Sidebar.svelte` ⏳ (487 lines - very complex: drag-drop playlists, context menu, inline editing) **PRIORITY: HIGH**
-- [ ] `PlayerSection.svelte` ⏳ (353 lines - audio player with waveform, beatgrid overlay) **PRIORITY: HIGH**
-- [ ] `BeatgridOverlay.svelte` ⏳
+- [x] `Sidebar.svelte` ✅ (450 lines - drag-drop playlists, context menu, inline editing, search) **COMPLETED**
+- [x] `PlayerSection.svelte` ✅ (465 lines - audio player with waveform, beatgrid overlay, auto-play, Tauri events) **COMPLETED**
+- [x] `BeatgridOverlay.svelte` ✅ (SVG beatgrid visualization over waveform) **COMPLETED**
+- [ ] `TrackTable.svelte` ⏳ (hardest - uses virtualization) **PRIORITY: HIGH - LAST MAJOR COMPONENT**
 
 ### Files Created
 
 - `src/lib/components/layout/Header.svelte`
+- `src/lib/components/layout/Sidebar.svelte` ✅ (NEW - 2026-01-08)
+- `src/lib/components/layout/PlayerSection.svelte` ✅ (NEW - 2026-01-08)
 - `src/lib/components/layout/TrackTable/components/TrackRow.svelte`
 - `src/lib/components/layout/TrackTable/components/TableHeader.svelte`
 - `src/lib/components/analysis/CuePointEditor.svelte`
 - `src/lib/components/analysis/LoopEditor.svelte`
+- `src/lib/components/analysis/BeatgridOverlay.svelte` ✅ (NEW - 2026-01-08)
 - `src/lib/components/WaveformCanvas.svelte`
+- `src/lib/components/Toast.svelte` ✅ (NEW - 2026-01-08 - supporting component)
 
 ### Migration Patterns Used
 
@@ -340,6 +344,8 @@ const rowClasses = $derived(
 
 - ~~`TableHeader.svelte` has `ColumnVisibilityMenu` commented out~~ ✅ **RESOLVED** - ColumnVisibilityMenu migrated and integrated
 - `WaveformCanvas.svelte` uses placeholder data - needs `useWaveform` hook migration to Svelte store
+- `Sidebar.svelte` uses placeholder playlist data - needs TanStack Svelte Query integration for real mutations
+- `PlayerSection.svelte` uses placeholder state - needs audio player store migration and TanStack Svelte Query for beatgrid/artwork
 
 ### Commits
 
@@ -349,14 +355,18 @@ const rowClasses = $derived(
 - `aea1c8f` - feat(migration): add CuePointEditor component (Phase 3)
 - `5db0558` - feat(migration): add LoopEditor component (Phase 3)
 - `9e6d0f7` - feat(migration): add WaveformCanvas component (Phase 3 - needs useWaveform migration)
+- `ce2b93d` - feat(migration): add Sidebar component with playlist management (Phase 3)
+- `cdbf5f7` - feat(migration): add PlayerSection with audio player integration (Phase 3)
 
 ### Next Steps
 
 **Immediate Next Tasks:**
-1. Migrate `TrackTable.svelte` (Phase 3 - **HIGH PRIORITY**, most complex component with virtualization)
-2. Migrate `Sidebar.svelte` (Phase 3 - **HIGH PRIORITY**, 487 lines with complex state)
-3. Migrate `PlayerSection.svelte` (Phase 3 - **HIGH PRIORITY**, audio player with waveform)
-4. Migrate `useWaveform` hook to Svelte store (required for WaveformCanvas functionality)
+1. ✅ ~~Migrate `Sidebar.svelte`~~ **COMPLETED** (450 lines with complex state)
+2. ✅ ~~Migrate `PlayerSection.svelte`~~ **COMPLETED** (audio player with waveform)
+3. ✅ ~~Migrate `BeatgridOverlay.svelte`~~ **COMPLETED** (SVG visualization)
+4. Migrate `TrackTable.svelte` (Phase 3 - **HIGH PRIORITY**, most complex component with virtualization) **LAST MAJOR COMPONENT**
+5. Migrate `useWaveform` hook to Svelte store (required for WaveformCanvas functionality)
+6. Set up TanStack Svelte Query and migrate playlist/beatgrid/artwork hooks (required for Sidebar and PlayerSection functionality)
 
 ---
 
