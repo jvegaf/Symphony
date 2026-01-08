@@ -146,7 +146,7 @@ check: lint type-check test ## Verificación completa (lint + types + tests)
 
 build: ## Build de producción optimizado
 	@echo "$(BLUE)Building Symphony para producción...$(NC)"
-	$(TAURI) build
+	NO_STRIP=true $(TAURI) build
 	@echo "$(GREEN)✓ Build completado$(NC)"
 	@echo "$(YELLOW)Binarios en: src-tauri/target/release/bundle/$(NC)"
 
