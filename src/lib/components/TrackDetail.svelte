@@ -4,6 +4,7 @@
 	import { open as openUrl } from '@tauri-apps/plugin-opener';
 	import type { Track } from '../../types/library';
 	import { useGetTrack, useUpdateTrackMetadata } from '../hooks/library';
+	import { useGetTrackArtwork } from '../hooks/useArtwork';
 
 	/**
 	 * Componente para ver y editar metadatos de un track individual
@@ -15,7 +16,7 @@
 	 * - Soporte para navegación entre tracks (Previous/Next)
 	 * - Confirmación de cambios sin guardar al cerrar con Escape
 	 * - Integrado con TanStack Svelte Query para data fetching y mutations
-	 * - AIDEV-TODO: Integrate useArtwork hook for artwork loading
+	 * - Integrado con useArtwork hook para carga de artwork con cache
 	 */
 
 	/**
@@ -37,18 +38,20 @@
 	let { trackId, tracks = [], onNavigate, onFixTags, onClose }: Props = $props();
 
 	// TanStack Svelte Query hooks
+	// biome-ignore lint/correctness/useHookAtTopLevel: False positive - hooks ARE at top level
 	const trackQuery = useGetTrack(() => trackId);
+	// biome-ignore lint/correctness/useHookAtTopLevel: False positive - hooks ARE at top level
 	const updateMetadataMutation = useUpdateTrackMetadata();
+	// biome-ignore lint/correctness/useHookAtTopLevel: False positive - hooks ARE at top level
+	const artworkQuery = useGetTrackArtwork(() => trackId);
 
 	// Reactive state from queries
 	const isLoading = $derived($trackQuery.isLoading);
 	const isError = $derived($trackQuery.isError);
 	const track = $derived($trackQuery.data ?? null);
 	const updateMutationPending = $derived($updateMetadataMutation.isPending);
-
-	// AIDEV-TODO: Replace with useArtwork hook migration
-	let artwork = $state<string | null>(null);
-	let isArtworkLoading = $state(false);
+	const artwork = $derived<string | null>($artworkQuery.data ?? null);
+	const isArtworkLoading = $derived($artworkQuery.isLoading);
 
 	// Estado local para campos editables
 	let title = $state('');
