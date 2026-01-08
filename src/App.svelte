@@ -6,14 +6,31 @@
   import Card from './lib/components/ui/Card.svelte';
   import Input from './lib/components/ui/Input.svelte';
   import StarRating from './lib/components/ui/StarRating.svelte';
+  import ConfirmDialog from './lib/components/ui/ConfirmDialog.svelte';
+  import PlaylistCard from './lib/components/playlist/PlaylistCard.svelte';
+  import EmptyState from './lib/components/layout/TrackTable/components/EmptyState.svelte';
+  import LoadingState from './lib/components/layout/TrackTable/components/LoadingState.svelte';
+  import type { Playlist } from './types/playlist';
   
   let count = $state(0);
   let name = $state('Symphony');
   let inputValue = $state('');
   let rating = $state(3);
+  let showDialog = $state(false);
+  let showLoading = $state(false);
+  let showEmpty = $state(false);
   
   // Derived value
   let doubled = $derived(count * 2);
+  
+  // Mock playlist
+  const mockPlaylist: Playlist = {
+    id: '1',
+    name: 'Mi Playlist Favorita',
+    description: 'Una colección de mis mejores tracks',
+    date_created: new Date().toISOString(),
+    date_modified: new Date().toISOString(),
+  };
   
   onMount(() => {
     console.log('Symphony Svelte 5 app mounted!');
@@ -29,6 +46,20 @@
   
   function handleRatingChange(newRating: number) {
     rating = newRating;
+  }
+  
+  function handleConfirm() {
+    console.log('Confirmed!');
+    showDialog = false;
+  }
+  
+  function handlePlaylistOpen(playlist: Playlist) {
+    console.log('Opening playlist:', playlist.name);
+  }
+  
+  function handlePlaylistDelete(id: string) {
+    console.log('Deleting playlist:', id);
+    showDialog = true;
   }
 </script>
 
@@ -125,11 +156,83 @@
           <p>✅ <span class="text-green-400">Card</span> - Migrado y funcionando</p>
           <p>✅ <span class="text-green-400">Input</span> - Migrado y funcionando</p>
           <p>✅ <span class="text-green-400">StarRating</span> - Migrado y funcionando</p>
+          <p>✅ <span class="text-green-400">ConfirmDialog</span> - Migrado</p>
+          <p>✅ <span class="text-green-400">PlaylistCard</span> - Migrado</p>
+          <p>✅ <span class="text-green-400">EmptyState</span> - Migrado</p>
+          <p>✅ <span class="text-green-400">LoadingState</span> - Migrado</p>
           <p class="pt-4 text-white/60 text-xs">
-            Phase 2 Progress: 4/11 simple components complete (36%)
+            Phase 2 Progress: 8/11 simple components complete (73%)
           </p>
         </div>
       </Card>
+
+      <!-- PlaylistCard Demo -->
+      <Card title="PlaylistCard Component" class="bg-white/10 backdrop-blur-lg border-white/20">
+        <PlaylistCard 
+          playlist={mockPlaylist}
+          trackCount={42}
+          onOpen={handlePlaylistOpen}
+          onDelete={handlePlaylistDelete}
+        />
+      </Card>
+
+      <!-- States Demo -->
+      <Card title="States Components" class="bg-white/10 backdrop-blur-lg border-white/20">
+        <div class="space-y-6">
+          <!-- Empty State Toggle -->
+          <div>
+            <Button 
+              variant={showEmpty ? "primary" : "secondary"}
+              onclick={() => showEmpty = !showEmpty}
+            >
+              {showEmpty ? 'Hide' : 'Show'} Empty State
+            </Button>
+            {#if showEmpty}
+              <div class="mt-4">
+                <EmptyState />
+              </div>
+            {/if}
+          </div>
+
+          <!-- Loading State Toggle -->
+          <div>
+            <Button 
+              variant={showLoading ? "primary" : "secondary"}
+              onclick={() => showLoading = !showLoading}
+            >
+              {showLoading ? 'Hide' : 'Show'} Loading State
+            </Button>
+            {#if showLoading}
+              <div class="mt-4">
+                <LoadingState />
+              </div>
+            {/if}
+          </div>
+
+          <!-- Confirm Dialog Trigger -->
+          <div>
+            <Button 
+              variant="primary"
+              onclick={() => showDialog = true}
+              class="bg-red-600 hover:bg-red-700"
+            >
+              Show Confirm Dialog
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      <!-- Confirm Dialog -->
+      <ConfirmDialog
+        isOpen={showDialog}
+        title="¿Eliminar playlist?"
+        message="Esta acción no se puede deshacer. ¿Estás seguro?"
+        onConfirm={handleConfirm}
+        onCancel={() => showDialog = false}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        variant="destructive"
+      />
 
       <!-- Footer -->
       <div class="text-center text-white/40 text-xs mt-8">
