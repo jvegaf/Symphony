@@ -1,8 +1,7 @@
 <script lang="ts">
 	import { ArrowUp, ArrowDown, Check } from 'lucide-svelte';
 	import type { SortColumn, SortDirection } from '@/components/layout/TrackTable/hooks/useTrackSorting';
-	// AIDEV-NOTE: ColumnVisibilityMenu no migrado todavía, pendiente para Phase 2
-	// import { ColumnVisibilityMenu } from './ColumnVisibilityMenu';
+	import ColumnVisibilityMenu from './ColumnVisibilityMenu.svelte';
 
 	interface Props {
 		sortColumn: SortColumn;
@@ -22,15 +21,14 @@
 		sortDirection,
 		onSort,
 		visibleColumns,
-		onToggleColumn: _onToggleColumn,
-		onResetColumns: _onResetColumns,
+		onToggleColumn,
+		onResetColumns,
 		isPlaylistView = false,
 		reorderMode = false
 	}: Props = $props();
 
-	// AIDEV-NOTE: Variables para ColumnVisibilityMenu, pendiente de migración
-	let _menuOpen = $state(false);
-	let _menuPosition = $state({ x: 0, y: 0 });
+	let menuOpen = $state(false);
+	let menuPosition = $state({ x: 0, y: 0 });
 
 	/**
 	 * Retorna el icono de ordenamiento para una columna
@@ -42,12 +40,12 @@
 
 	function handleContextMenu(e: MouseEvent) {
 		e.preventDefault();
-		_menuPosition = { x: e.clientX, y: e.clientY };
-		_menuOpen = true;
+		menuPosition = { x: e.clientX, y: e.clientY };
+		menuOpen = true;
 	}
 
-	function _handleCloseMenu() {
-		_menuOpen = false;
+	function handleCloseMenu() {
+		menuOpen = false;
 	}
 </script>
 
@@ -273,12 +271,11 @@ para mantener sincronización con TrackRow
 	</tr>
 </thead>
 
-<!-- AIDEV-TODO: Uncomment when ColumnVisibilityMenu is migrated -->
-<!-- <ColumnVisibilityMenu
+<ColumnVisibilityMenu
 	isOpen={menuOpen}
 	position={menuPosition}
-	visibleColumns={visibleColumns}
-	onToggleColumn={onToggleColumn}
-	onResetColumns={onResetColumns}
+	{visibleColumns}
+	{onToggleColumn}
+	{onResetColumns}
 	onClose={handleCloseMenu}
-/> -->
+/>
