@@ -2,6 +2,9 @@
 	import Toast from './Toast.svelte';
 	import type { AppSettings } from '../../types/settings';
 	import { DEFAULT_SETTINGS } from '../../types/settings';
+	import { useGetAllSettings, useUpdateSettings, useResetSettings } from '$lib/hooks/useSettings';
+	import { stringifySettingValue } from '../../types/settings';
+	import type { Setting } from '../../types/settings';
 
 	// AIDEV-TODO: Import settings tabs when migrated
 	// import UISettingsTab from '../pages/Settings/tabs/UISettingsTab.svelte';
@@ -28,14 +31,27 @@
 	let toastMessage = $state('');
 	let toastType = $state<'success' | 'error' | 'info' | 'warning'>('success');
 
-	// AIDEV-TODO: Replace with actual TanStack Svelte Query hook
-	// import { useSettings } from '../../hooks/useSettings';
-	// const { settings, isLoading, error, updateSettings, resetSettings, isUpdating, isResetting } = useSettings();
-	let isLoading = $state(false);
-	let error = $state<Error | null>(null);
-	let isUpdating = $state(false);
-	let isResetting = $state(false);
+	// TanStack Svelte Query hooks
+	const settingsQuery = useGetAllSettings();
+	const updateSettingsMutation = useUpdateSettings();
+	const resetSettingsMutation = useResetSettings();
+
+	// Derived reactive state
+	const isLoading = $derived($settingsQuery.isLoading);
+	const error = $derived($settingsQuery.error);
+	const isUpdating = $derived($updateSettingsMutation.isPending);
+	const isResetting = $derived($resetSettingsMutation.isPending);
+	const serverSettings = $derived($settingsQuery.data ?? DEFAULT_SETTINGS);
+
+	// Local editable copy of settings
 	let localSettings = $state<AppSettings>(DEFAULT_SETTINGS);
+
+	// Sync local settings when server settings load
+	$effect(() => {
+		if (serverSettings) {
+			localSettings = { ...serverSettings };
+		}
+	});
 
 	// Definición de tabs
 	const tabs: Array<{ id: TabId; label: string; icon: string }> = [
@@ -57,46 +73,54 @@
 
 	/**
 	 * Guarda los cambios al servidor
-	 * AIDEV-TODO: Implement with TanStack Svelte Query mutation
+	 * Usa TanStack Svelte Query mutation
 	 */
-	async function handleSave() {
-		console.log('AIDEV-TODO: Implement settings save with TanStack Svelte Query');
-		console.log('Settings to save:', localSettings);
+	function handleSave() {
+		// Convert AppSettings to array of Setting objects for the mutation
+		const settingsToUpdate: Array<{ key: string; value: unknown; valueType: Setting['valueType'] }> = [
+			{ key: 'ui.theme', value: localSettings.ui.theme, valueType: 'string' },
+			{ key: 'ui.language', value: localSettings.ui.language, valueType: 'string' },
+			{ key: 'ui.waveformResolution', value: localSettings.ui.waveformResolution, valueType: 'integer' },
+			{ key: 'audio.outputDevice', value: localSettings.audio.outputDevice, valueType: 'string' },
+			{ key: 'audio.sampleRate', value: localSettings.audio.sampleRate, valueType: 'integer' },
+			{ key: 'audio.bufferSize', value: localSettings.audio.bufferSize, valueType: 'integer' },
+			{ key: 'library.autoScan', value: localSettings.library.autoScan, valueType: 'boolean' },
+			{ key: 'library.scanInterval', value: localSettings.library.scanInterval, valueType: 'integer' },
+			{ key: 'library.importFolder', value: localSettings.library.importFolder, valueType: 'string' },
+			{ key: 'conversion.autoConvert', value: localSettings.conversion.autoConvert, valueType: 'boolean' },
+			{ key: 'conversion.bitrate', value: localSettings.conversion.bitrate, valueType: 'integer' },
+			{ key: 'conversion.outputFolder', value: localSettings.conversion.outputFolder, valueType: 'string' }
+		];
 
-		// Simulate API call
-		isUpdating = true;
-		try {
-			await new Promise((resolve) => setTimeout(resolve, 1000));
-			showToast('✅ Configuración guardada correctamente');
-			isUpdating = false;
-		} catch (err) {
-			showToast(`❌ Error: ${err}`);
-			isUpdating = false;
-		}
+		$updateSettingsMutation.mutate(settingsToUpdate, {
+			onSuccess: () => {
+				showToast('✅ Configuración guardada correctamente');
+			},
+			onError: (err: Error) => {
+				showToast(`❌ Error: ${err.message}`);
+			}
+		});
 	}
 
 	/**
 	 * Reinicia configuración a valores por defecto
-	 * AIDEV-TODO: Implement with TanStack Svelte Query mutation
+	 * Usa TanStack Svelte Query mutation
 	 */
-	async function handleReset() {
+	function handleReset() {
 		if (
 			confirm(
 				'¿Estás seguro de que quieres resetear todos los ajustes a sus valores por defecto?'
 			)
 		) {
-			console.log('AIDEV-TODO: Implement settings reset with TanStack Svelte Query');
-
-			isResetting = true;
-			try {
-				await new Promise((resolve) => setTimeout(resolve, 1000));
-				localSettings = { ...DEFAULT_SETTINGS };
-				showToast('✅ Configuración restablecida a valores predeterminados');
-				isResetting = false;
-			} catch (err) {
-				showToast(`❌ Error al restablecer: ${err}`);
-				isResetting = false;
-			}
+			$resetSettingsMutation.mutate(undefined, {
+				onSuccess: () => {
+					localSettings = { ...DEFAULT_SETTINGS };
+					showToast('✅ Configuración restablecida a valores predeterminados');
+				},
+				onError: (err: Error) => {
+					showToast(`❌ Error al restablecer: ${err.message}`);
+				}
+			});
 		}
 	}
 
