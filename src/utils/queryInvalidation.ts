@@ -3,7 +3,7 @@
  * Evita duplicación y garantiza consistencia en todo el proyecto
  * @module utils/queryInvalidation
  */
-import type { QueryClient } from "@tanstack/react-query";
+import type { QueryClient } from "@tanstack/svelte-query";
 
 /**
  * Claves de query centralizadas para evitar strings mágicos
