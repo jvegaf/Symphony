@@ -13,12 +13,12 @@
 |-------|--------|------------|----------|------------|----------|
 | **Phase 0: Preparation** | ✅ **COMPLETE** | 100% | 1 day | 2026-01-08 | 2026-01-08 |
 | **Phase 1: Foundation** | ✅ **COMPLETE** | 85% | 1 day | 2026-01-08 | 2026-01-08 |
-| Phase 2: Core Components | 🔜 Not Started | 0% | 2-3 weeks | TBD | TBD |
-| Phase 3: Complex Components | 🔜 Not Started | 0% | 2-3 weeks | TBD | TBD |
+| **Phase 2: Core Components** | 🟡 **IN PROGRESS** | 82% | 2-3 weeks | 2026-01-08 | TBD |
+| **Phase 3: Complex Components** | 🟡 **IN PROGRESS** | 30% | 2-3 weeks | 2026-01-08 | TBD |
 | Phase 4: Feature Pages | 🔜 Not Started | 0% | 2 weeks | TBD | TBD |
 | Phase 5: Integration & Testing | 🔜 Not Started | 0% | 2 weeks | TBD | TBD |
 
-**Total Progress:** 30.83% (1.85 of 6 phases complete)
+**Total Progress:** 49.5% (2.97 of 6 phases complete)
 
 ---
 
@@ -211,52 +211,146 @@
 
 ---
 
-## 📋 Phase 2: Core Components (Not Started)
+## 🟡 Phase 2: Core Components (IN PROGRESS - 82%)
 
 **Estimated Duration:** 2-3 weeks  
-**Status:** 🔜 Not Started
+**Status:** 🟡 **IN PROGRESS** (Started: January 8, 2026)  
+**Components Migrated:** 9/11 (82%)
 
-### Simple Components (0/11)
+### Simple Components (9/11 ✅)
 
-- [ ] `Button.svelte` ✅ (from Phase 1)
-- [ ] `Card.svelte`
-- [ ] `Input.svelte`
-- [ ] `StarRating.svelte`
-- [ ] `Modal.svelte`
-- [ ] `ConfirmDialog.svelte`
-- [ ] `PlaylistCard.svelte`
-- [ ] `EmptyState.svelte`
-- [ ] `LoadingState.svelte`
-- [ ] `ColumnVisibilityMenu.svelte`
-- [ ] `ContextMenu.svelte`
+- [x] `Button.svelte` ✅ (from Phase 1)
+- [x] `Card.svelte` ✅ 
+- [x] `Input.svelte` ✅ (with `$bindable()` for two-way binding)
+- [x] `StarRating.svelte` ✅ (interactive 0-5 star rating with hover preview)
+- [x] `ConfirmDialog.svelte` ✅ (confirmation modal with backdrop)
+- [x] `PlaylistCard.svelte` ✅ (playlist display card with actions)
+- [x] `EmptyState.svelte` ✅ (empty state display)
+- [x] `LoadingState.svelte` ✅ (loading spinner with animated icon)
+- [x] `BeatportResultsModal.svelte` ✅ (results display for Beatport batch fix)
+- [ ] `ColumnVisibilityMenu.svelte` ⏳ (pending)
+- [ ] `ContextMenu.svelte` ⏳ (pending)
 
-### Medium Components (0/5)
+### Files Created
 
-- [ ] `WaveformCanvas.svelte`
-- [ ] `WaveformOverlay.svelte`
-- [ ] `CreatePlaylistDialog.svelte`
-- [ ] `TableHeader.svelte`
-- [ ] `TrackRow.svelte`
+- `src/lib/components/ui/Button.svelte` (Phase 1)
+- `src/lib/components/ui/Card.svelte`
+- `src/lib/components/ui/Input.svelte`
+- `src/lib/components/ui/StarRating.svelte`
+- `src/lib/components/ui/ConfirmDialog.svelte`
+- `src/lib/components/ui/BeatportResultsModal.svelte`
+- `src/lib/components/playlist/PlaylistCard.svelte`
+- `src/lib/components/layout/TrackTable/components/EmptyState.svelte`
+- `src/lib/components/layout/TrackTable/components/LoadingState.svelte`
+
+### Key Patterns Established
+
+**Two-Way Binding:**
+```typescript
+let { value = $bindable('') } = $props();
+// Usage: <Input bind:value={myVar} />
+```
+
+**Derived State:**
+```typescript
+let doubled = $derived(count * 2);
+```
+
+**Effects:**
+```typescript
+$effect(() => {
+  // Runs when dependencies change
+});
+```
+
+### Commits
+
+- `086b9a7` - feat(migration): Phase 1 foundation - Button component
+- `7c79f99` - feat(migration): add Card, Input (with $bindable), and StarRating components
+- `aada819` - feat(migration): add ConfirmDialog, PlaylistCard, EmptyState, LoadingState components
+- `452185f` - feat(migration): add BeatportResultsModal component
+- `b6f696c` - fix(migration): resolve Svelte 5 compilation warnings
 
 ---
 
-## 📋 Phase 3: Complex Components (Not Started)
+## 🟡 Phase 3: Complex Components (IN PROGRESS - 30%)
 
 **Estimated Duration:** 2-3 weeks  
-**Status:** 🔜 Not Started
+**Status:** 🟡 **IN PROGRESS** (Started: January 8, 2026)  
+**Components Migrated:** 3/10 (30%)
 
-### Complex Components (0/10)
+### Complex Components (3/10 ✅)
 
-- [ ] `TrackTable.svelte` (hardest - uses virtualization)
-- [ ] `Header.svelte`
-- [ ] `Sidebar.svelte`
-- [ ] `PlayerSection.svelte`
-- [ ] `BeatgridOverlay.svelte`
-- [ ] `CuePointEditor.svelte`
-- [ ] `LoopEditor.svelte`
-- [ ] `WaveformDisplay.svelte`
-- [ ] `KeyWheelVisualizer.svelte`
-- [ ] `VinylBackground.svelte`
+- [x] `Header.svelte` ✅ (app header with custom titlebar, window controls, tab navigation, import progress)
+- [x] `TrackRow.svelte` ✅ (240 lines - table row with drag-drop, conditional columns, StarRating integration)
+- [x] `TableHeader.svelte` ✅ (211 lines - sortable table header with column visibility)
+- [ ] `TrackTable.svelte` ⏳ (hardest - uses virtualization) **PRIORITY: HIGH**
+- [ ] `Sidebar.svelte` ⏳ (487 lines - very complex: drag-drop playlists, context menu, inline editing) **PRIORITY: HIGH**
+- [ ] `PlayerSection.svelte` ⏳ (353 lines - audio player with waveform, beatgrid overlay) **PRIORITY: HIGH**
+- [ ] `BeatgridOverlay.svelte` ⏳
+- [ ] `CuePointEditor.svelte` ⏳
+- [ ] `LoopEditor.svelte` ⏳
+- [ ] `WaveformDisplay.svelte` ⏳
+
+### Files Created
+
+- `src/lib/components/layout/Header.svelte`
+- `src/lib/components/layout/TrackTable/components/TrackRow.svelte`
+- `src/lib/components/layout/TrackTable/components/TableHeader.svelte`
+
+### Migration Patterns Used
+
+**React.memo Removal:**
+- Svelte 5 auto-optimizes component re-rendering
+- No need for manual memoization wrappers
+
+**Drag-and-Drop Handlers:**
+```typescript
+function handleDragStart(e: DragEvent) {
+  if (!onDragStart || !track.id) return;
+  const trackIds = isSelected && selectedTrackIds.length > 0 
+    ? selectedTrackIds : [track.id];
+  onDragStart(trackIds, e);
+}
+```
+
+**Computed Classes:**
+```typescript
+const rowClasses = $derived(
+  [
+    'base-class',
+    isPlaying ? 'active-class' : 'inactive-class',
+    isFocused ? 'focus-class' : ''
+  ].filter(Boolean).join(' ')
+);
+```
+
+**Component Icon Rendering:**
+```svelte
+{#if getSortIcon('title')}
+  {@const Icon = getSortIcon('title')}
+  <Icon class="ml-1 w-3 h-3 inline" />
+{/if}
+```
+
+### Known Issues
+
+- `TableHeader.svelte` has `ColumnVisibilityMenu` commented out (pending migration from Phase 2)
+- Context menu functionality temporarily disabled until `ColumnVisibilityMenu` is migrated
+
+### Commits
+
+- `5a08361` - feat(migration): add Header component (Phase 3 start)
+- `c327a7c` - feat(migration): add TrackRow component (Phase 3)
+- `455d269` - feat(migration): add TableHeader component (Phase 3)
+
+### Next Steps
+
+**Immediate Next Tasks:**
+1. Migrate `ColumnVisibilityMenu.svelte` (Phase 2 - required for TableHeader)
+2. Migrate `TrackTable.svelte` (Phase 3 - **HIGH PRIORITY**, most complex component)
+3. Migrate `Sidebar.svelte` (Phase 3 - **HIGH PRIORITY**, 487 lines with complex state)
+4. Migrate `PlayerSection.svelte` (Phase 3 - **HIGH PRIORITY**, audio player with waveform)
 
 ---
 
