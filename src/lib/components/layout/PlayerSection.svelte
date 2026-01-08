@@ -19,6 +19,7 @@ import WaveformCanvas from '../../WaveformCanvas.svelte';
 import BeatgridOverlay from '../../analysis/BeatgridOverlay.svelte';
 import Toast from '../../Toast.svelte';
 import { useGetBeatgrid, useAnalyzeBeatgrid } from '$lib/hooks/useAnalysis';
+import { useGetTrackArtwork } from '$lib/hooks/useArtwork';
 import type { Beatgrid } from '@/types/analysis';
 
 interface Props {
@@ -29,15 +30,18 @@ interface Props {
 
 let { track = null, tracks = [], onTrackChange }: Props = $props();
 
-// AIDEV-NOTE: TanStack Svelte Query hooks para beatgrid analysis
+// AIDEV-NOTE: TanStack Svelte Query hooks para beatgrid analysis y artwork
 // biome-ignore lint/correctness/useHookAtTopLevel: False positive - hooks ARE at top level
 const beatgridQuery = useGetBeatgrid(() => track?.id ?? '');
 // biome-ignore lint/correctness/useHookAtTopLevel: False positive - hooks ARE at top level
 const analyzeBeatgridMutation = useAnalyzeBeatgrid();
+// biome-ignore lint/correctness/useHookAtTopLevel: False positive - hooks ARE at top level
+const artworkQuery = useGetTrackArtwork(() => track?.id ?? '');
 
-// AIDEV-NOTE: Reactive derived state para beatgrid
+// AIDEV-NOTE: Reactive derived state para beatgrid y artwork
 const beatgrid = $derived<Beatgrid | null>($beatgridQuery.data ?? null);
 const analyzingBeatgrid = $derived(analyzeBeatgridMutation.isPending);
+const artwork = $derived<string | null>($artworkQuery.data ?? null);
 
 // AIDEV-TODO: Replace with Svelte audio player store when migrated
 // Placeholder state for audio player
@@ -47,10 +51,6 @@ let duration = $state(0);
 let volume = $state(1.0);
 let state = $state<'playing' | 'paused' | 'stopped'>('stopped');
 let error = $state<string | null>(null);
-
-// AIDEV-TODO: Replace with Svelte artwork hook/store when migrated
-// Placeholder for artwork
-let artwork = $state<string | null>(null);
 
 // Waveform dimensions
 let waveformContainerRef: HTMLDivElement | undefined = $state();
@@ -276,29 +276,9 @@ $effect(() => {
 	};
 });
 
-// AIDEV-NOTE: Load artwork when track changes
-$effect(() => {
-	if (!track) {
-		artwork = null;
-		return;
-	}
+// AIDEV-NOTE: Artwork y Beatgrid se cargan automáticamente via queries
+// cuando cambia el track.id. No necesitamos $effects manuales
 
-	// AIDEV-TODO: Replace with proper Svelte artwork store/hook
-	const loadArtwork = async () => {
-		try {
-			const result = await invoke<string | null>('get_track_artwork', { id: track.id });
-			artwork = result;
-		} catch (err) {
-			console.error('Error loading artwork:', err);
-			artwork = null;
-		}
-	};
-
-	loadArtwork();
-});
-
-// AIDEV-NOTE: Beatgrid se carga automáticamente via useGetBeatgrid query
-// cuando cambia el track.id. No necesitamos $effect manual
 
 </script>
 
