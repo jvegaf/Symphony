@@ -3,7 +3,7 @@
  * Exporta todos los hooks de biblioteca desde un único punto
  * 
  * AIDEV-NOTE: Migrado de React hooks a Svelte Query
- * - Queries y mutations ahora disponibles
+ * - Queries, mutations e import ahora disponibles
  */
 
 // Queries
@@ -18,12 +18,11 @@ export {
 	type DeleteTrackResult
 } from './useLibraryMutations';
 
-// TODO: Migrate these when needed
-// Batch operations
+// Import
+export { useImportLibrary } from './useLibraryImport';
+
+// TODO: Migrate batch operations when needed
 // export {
 //   useBatchFilenameToTags,
 //   extractMetadataFromFilename,
 // } from "./useLibraryBatch";
-
-// Import
-// export { useImportLibrary } from "./useLibraryImport";
