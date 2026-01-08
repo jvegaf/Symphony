@@ -1,5 +1,5 @@
 import { defineConfig, type UserConfig } from "vite";
-import react from "@vitejs/plugin-react";
+import { svelte } from "@sveltejs/vite-plugin-svelte";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 
@@ -8,10 +8,7 @@ const host = process.env.TAURI_DEV_HOST;
 // https://vite.dev/config/
 export default defineConfig(async (): Promise<UserConfig> => ({
   plugins: [
-    react({
-      // Usar SWC para transformaciones más rápidas en desarrollo
-      babel: undefined,
-    }),
+    svelte(),
     tailwindcss(),
   ],
 
@@ -19,14 +16,11 @@ export default defineConfig(async (): Promise<UserConfig> => ({
   optimizeDeps: {
     // Pre-bundle dependencias pesadas para evitar re-bundling
     include: [
-      "react",
-      "react-dom",
-      "@tanstack/react-query",
-      "lucide-react",
+      "svelte",
+      "@tanstack/svelte-query",
+      "lucide-svelte",
       "wavesurfer.js",
-      "@dnd-kit/core",
-      "@dnd-kit/sortable",
-      "react-window",
+      "svelte-dnd-action",
       "clsx",
     ],
     // Excluir módulos nativos de Tauri
@@ -48,9 +42,9 @@ export default defineConfig(async (): Promise<UserConfig> => ({
       output: {
         // Separar vendor chunks para mejor caching
         manualChunks: {
-          vendor: ["react", "react-dom"],
-          query: ["@tanstack/react-query"],
-          ui: ["lucide-react", "clsx"],
+          vendor: ["svelte"],
+          query: ["@tanstack/svelte-query"],
+          ui: ["lucide-svelte", "clsx"],
           audio: ["wavesurfer.js"],
         },
       },
@@ -91,10 +85,10 @@ export default defineConfig(async (): Promise<UserConfig> => ({
     // Warming cache de módulos
     warmup: {
       clientFiles: [
-        "./src/App.tsx",
-        "./src/main.tsx",
-        "./src/components/**/*.tsx",
-        "./src/hooks/**/*.ts",
+        "./src/App.svelte",
+        "./src/main.ts",
+        "./src/components/**/*.svelte",
+        "./src/lib/**/*.ts",
       ],
     },
   },
