@@ -24,10 +24,10 @@ export {
 	type ReorderPlaylistTracksRequest
 } from './usePlaylistMutations';
 
-// TODO: Migrate batch operations when needed
-// export {
-//   useAddTracksToPlaylist,
-//   useCreatePlaylistWithTracks,
-//   type AddTracksToPlaylistRequest,
-//   type CreatePlaylistWithTracksRequest
-// } from './useAddTracksToPlaylist';
+// Batch operations
+export {
+	useAddTracksToPlaylist,
+	useCreatePlaylistWithTracks,
+	type AddTracksToPlaylistRequest,
+	type CreatePlaylistWithTracksRequest
+} from './useAddTracksToPlaylist';

@@ -13,8 +13,14 @@
 	import { Menu, MenuItem } from '@tauri-apps/api/menu';
 	import { LogicalPosition } from '@tauri-apps/api/dpi';
 	import { confirm } from '@tauri-apps/plugin-dialog';
-	// AIDEV-TODO: Import playlist hooks when migrated to Svelte Query
-	// import { useGetPlaylists, useCreatePlaylist, ... } from '@/hooks/playlists';
+	import {
+		useGetPlaylists,
+		useCreatePlaylist,
+		useUpdatePlaylist,
+		useDeletePlaylist,
+		useAddTracksToPlaylist,
+		useCreatePlaylistWithTracks
+	} from '$lib/hooks/playlists';
 	import type { Playlist } from '@/types/playlist';
 
 	interface Props {
@@ -50,10 +56,30 @@
 		trackIds?: string[];
 	}
 
-	// AIDEV-TODO: Replace with Svelte Query hooks when migrated
-	let playlists = $state<Playlist[]>([]);
-	let isLoadingPlaylists = $state(false);
-	let isPending = $state(false);
+	// AIDEV-NOTE: TanStack Svelte Query hooks - llamados al top level
+	// biome-ignore lint/correctness/useHookAtTopLevel: False positive - hooks ARE at top level
+	const playlistsQuery = useGetPlaylists();
+	// biome-ignore lint/correctness/useHookAtTopLevel: False positive - hooks ARE at top level
+	const createPlaylistMutation = useCreatePlaylist();
+	// biome-ignore lint/correctness/useHookAtTopLevel: False positive - hooks ARE at top level
+	const updatePlaylistMutation = useUpdatePlaylist();
+	// biome-ignore lint/correctness/useHookAtTopLevel: False positive - hooks ARE at top level
+	const deletePlaylistMutation = useDeletePlaylist();
+	// biome-ignore lint/correctness/useHookAtTopLevel: False positive - hooks ARE at top level
+	const addTracksToPlaylistMutation = useAddTracksToPlaylist();
+	// biome-ignore lint/correctness/useHookAtTopLevel: False positive - hooks ARE at top level
+	const createPlaylistWithTracksMutation = useCreatePlaylistWithTracks();
+
+	// AIDEV-NOTE: Reactive derived state - usa $ para queries, no para mutations
+	const isLoadingPlaylists = $derived($playlistsQuery.isLoading);
+	const playlists = $derived($playlistsQuery.data ?? []);
+	const isPending = $derived(
+		createPlaylistMutation.isPending ||
+			updatePlaylistMutation.isPending ||
+			deletePlaylistMutation.isPending ||
+			addTracksToPlaylistMutation.isPending ||
+			createPlaylistWithTracksMutation.isPending
+	);
 
 	// AIDEV-NOTE: Estado para playlist en edición (nuevo o existente)
 	let editingPlaylist = $state<EditingPlaylist | null>(null);
@@ -164,8 +190,17 @@
 				);
 
 				if (confirmed && playlist.id) {
-					// AIDEV-TODO: Call deletePlaylist mutation when migrated
-					console.log('Delete playlist:', playlist.id);
+					$deletePlaylistMutation.mutate(playlist.id, {
+						onSuccess: () => {
+							// AIDEV-NOTE: Si la playlist eliminada estaba seleccionada, volver a All Tracks
+							if (selectedPlaylistId === playlist.id) {
+								onSelectPlaylist?.(null);
+							}
+						},
+						onError: (err: Error) => {
+							alert(`Error al eliminar playlist: ${err.message}`);
+						}
+					});
 				}
 			}
 		});
@@ -199,20 +234,68 @@
 		if (editingPlaylist.id === null) {
 			// Crear nuevo playlist
 			if (editingPlaylist.trackIds && editingPlaylist.trackIds.length > 0) {
-				// AIDEV-TODO: Create with tracks (desde context menu)
-				console.log('Create playlist with tracks:', name, editingPlaylist.trackIds);
+				// AIDEV-NOTE: Crear playlist con tracks (desde context menu)
+				$createPlaylistWithTracksMutation.mutate(
+					{
+						name,
+						description: null,
+						trackIds: editingPlaylist.trackIds
+					},
+					{
+						onSuccess: () => {
+							// Limpiar estado de edición
+							editingPlaylist = null;
+							isSubmitting = false;
+						},
+						onError: (err: Error) => {
+							alert(`Error al crear playlist: ${err.message}`);
+							isSubmitting = false;
+						}
+					}
+				);
 			} else {
-				// AIDEV-TODO: Create empty (desde botón +)
-				console.log('Create empty playlist:', name);
+				// AIDEV-NOTE: Crear playlist vacío (desde botón +)
+				$createPlaylistMutation.mutate(
+					{
+						name,
+						description: null
+					},
+					{
+						onSuccess: () => {
+							// Limpiar estado de edición
+							editingPlaylist = null;
+							isSubmitting = false;
+						},
+						onError: (err: Error) => {
+							alert(`Error al crear playlist: ${err.message}`);
+							isSubmitting = false;
+						}
+					}
+				);
 			}
 		} else {
-			// AIDEV-TODO: Update playlist name
-			console.log('Update playlist:', editingPlaylist.id, name);
+			// AIDEV-NOTE: Actualizar nombre de playlist existente
+			$updatePlaylistMutation.mutate(
+				{
+					id: editingPlaylist.id,
+					name
+				},
+				{
+					onSuccess: () => {
+						// Limpiar estado de edición
+						editingPlaylist = null;
+						isSubmitting = false;
+					},
+					onError: (err: Error) => {
+						alert(`Error al actualizar playlist: ${err.message}`);
+						isSubmitting = false;
+					}
+				}
+			);
 		}
 
-		// Simular onSettled
-		editingPlaylist = null;
-		isSubmitting = false;
+		// AIDEV-NOTE: No ejecutar editingPlaylist = null aquí - lo hace onSuccess/onError
+		// para evitar race conditions con el async mutation
 	}
 
 	/**
@@ -286,8 +369,21 @@
 			if (!e.dataTransfer) return;
 			const data = JSON.parse(e.dataTransfer.getData('application/json'));
 			if (data.type === 'tracks' && data.trackIds && data.trackIds.length > 0) {
-				// AIDEV-TODO: Add tracks to playlist
-				console.log('Add tracks to playlist:', playlistId, data.trackIds);
+				// AIDEV-NOTE: Agregar múltiples tracks a playlist (drag and drop)
+				$addTracksToPlaylistMutation.mutate(
+					{
+						playlistId,
+						trackIds: data.trackIds
+					},
+					{
+						onSuccess: (count: number) => {
+							console.log(`${count} tracks agregados a playlist ${playlistId}`);
+						},
+						onError: (err: Error) => {
+							alert(`Error al agregar tracks: ${err.message}`);
+						}
+					}
+				);
 			}
 		} catch {
 			// Ignorar errores de parsing (drag desde otra fuente)
