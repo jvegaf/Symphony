@@ -18,6 +18,8 @@ import type { Track } from '../../../types/library';
 import WaveformCanvas from '../../WaveformCanvas.svelte';
 import BeatgridOverlay from '../../analysis/BeatgridOverlay.svelte';
 import Toast from '../../Toast.svelte';
+import { useGetBeatgrid, useAnalyzeBeatgrid } from '$lib/hooks/useAnalysis';
+import type { Beatgrid } from '@/types/analysis';
 
 interface Props {
 	track: Track | null;
@@ -26,6 +28,16 @@ interface Props {
 }
 
 let { track = null, tracks = [], onTrackChange }: Props = $props();
+
+// AIDEV-NOTE: TanStack Svelte Query hooks para beatgrid analysis
+// biome-ignore lint/correctness/useHookAtTopLevel: False positive - hooks ARE at top level
+const beatgridQuery = useGetBeatgrid(() => track?.id ?? '');
+// biome-ignore lint/correctness/useHookAtTopLevel: False positive - hooks ARE at top level
+const analyzeBeatgridMutation = useAnalyzeBeatgrid();
+
+// AIDEV-NOTE: Reactive derived state para beatgrid
+const beatgrid = $derived<Beatgrid | null>($beatgridQuery.data ?? null);
+const analyzingBeatgrid = $derived(analyzeBeatgridMutation.isPending);
 
 // AIDEV-TODO: Replace with Svelte audio player store when migrated
 // Placeholder state for audio player
@@ -39,16 +51,6 @@ let error = $state<string | null>(null);
 // AIDEV-TODO: Replace with Svelte artwork hook/store when migrated
 // Placeholder for artwork
 let artwork = $state<string | null>(null);
-
-// AIDEV-TODO: Replace with TanStack Svelte Query when migrated
-// Placeholder for beatgrid data
-let beatgrid = $state<{
-	bpm: number;
-	offset: number;
-	confidence: number;
-	trackId: string;
-} | null>(null);
-let analyzingBeatgrid = $state(false);
 
 // Waveform dimensions
 let waveformContainerRef: HTMLDivElement | undefined = $state();
@@ -147,24 +149,18 @@ const handlePlayPause = async () => {
 const handleAnalyzeBeatgrid = async () => {
 	if (!track) return;
 
-	try {
-		analyzingBeatgrid = true;
-		// AIDEV-TODO: Replace with TanStack Svelte Query mutation
-		const result = await invoke<{
-			bpm: number;
-			offset: number;
-			confidence: number;
-			trackId: string;
-		}>('analyze_beatgrid', {
+	$analyzeBeatgridMutation.mutate(
+		{
 			trackId: track.id,
 			trackPath: track.path
-		});
-		beatgrid = result;
-	} catch (err) {
-		console.error('Error analizando beatgrid:', err);
-	} finally {
-		analyzingBeatgrid = false;
-	}
+		},
+		{
+			onError: (err: Error) => {
+				console.error('Error analizando beatgrid:', err);
+				alert(`Error al analizar beatgrid: ${err.message}`);
+			}
+		}
+	);
 };
 
 // Update waveform dimensions on resize
@@ -301,31 +297,9 @@ $effect(() => {
 	loadArtwork();
 });
 
-// AIDEV-NOTE: Load beatgrid when track changes
-$effect(() => {
-	if (!track) {
-		beatgrid = null;
-		return;
-	}
+// AIDEV-NOTE: Beatgrid se carga automáticamente via useGetBeatgrid query
+// cuando cambia el track.id. No necesitamos $effect manual
 
-	// AIDEV-TODO: Replace with TanStack Svelte Query
-	const loadBeatgrid = async () => {
-		try {
-			const result = await invoke<{
-				bpm: number;
-				offset: number;
-				confidence: number;
-				trackId: string;
-			} | null>('get_beatgrid', { trackId: track.id });
-			beatgrid = result;
-		} catch (err) {
-			console.error('Error loading beatgrid:', err);
-			beatgrid = null;
-		}
-	};
-
-	loadBeatgrid();
-});
 </script>
 
 <!-- AIDEV-NOTE: Siempre renderizar el mismo layout (altura fija) -->
