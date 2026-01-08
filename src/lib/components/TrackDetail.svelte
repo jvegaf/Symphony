@@ -3,6 +3,7 @@
 	import { invoke } from '@tauri-apps/api/core';
 	import { open as openUrl } from '@tauri-apps/plugin-opener';
 	import type { Track } from '../../types/library';
+	import { useGetTrack, useUpdateTrackMetadata } from '../hooks/library';
 
 	/**
 	 * Componente para ver y editar metadatos de un track individual
@@ -13,7 +14,7 @@
 	 * - Inputs con estilo rounded-full y colores oscuros
 	 * - Soporte para navegación entre tracks (Previous/Next)
 	 * - Confirmación de cambios sin guardar al cerrar con Escape
-	 * - AIDEV-TODO: Integrate TanStack Svelte Query for data fetching and mutations
+	 * - Integrado con TanStack Svelte Query para data fetching y mutations
 	 * - AIDEV-TODO: Integrate useArtwork hook for artwork loading
 	 */
 
@@ -35,12 +36,15 @@
 
 	let { trackId, tracks = [], onNavigate, onFixTags, onClose }: Props = $props();
 
-	// AIDEV-TODO: Replace with TanStack Svelte Query
-	// import { createQuery, createMutation, useQueryClient } from '@tanstack/svelte-query';
-	let isLoading = $state(false);
-	let isError = $state(false);
-	let track = $state<Track | null>(null);
-	let updateMutationPending = $state(false);
+	// TanStack Svelte Query hooks
+	const trackQuery = useGetTrack(() => trackId);
+	const updateMetadataMutation = useUpdateTrackMetadata();
+
+	// Reactive state from queries
+	const isLoading = $derived($trackQuery.isLoading);
+	const isError = $derived($trackQuery.isError);
+	const track = $derived($trackQuery.data ?? null);
+	const updateMutationPending = $derived($updateMetadataMutation.isPending);
 
 	// AIDEV-TODO: Replace with useArtwork hook migration
 	let artwork = $state<string | null>(null);
@@ -98,35 +102,12 @@
 	const filename = $derived(track ? getFilename(track.path) : '');
 
 	/**
-	 * Carga el track desde el servidor
-	 * AIDEV-TODO: Replace with TanStack Svelte Query
-	 */
-	async function loadTrack() {
-		console.log('AIDEV-TODO: Implement track loading with TanStack Svelte Query');
-		isLoading = true;
-		isError = false;
-
-		try {
-			// Simulate API call
-			await new Promise((resolve) => setTimeout(resolve, 500));
-			const result = await invoke<Track>('get_track_by_id', { id: trackId });
-			track = result;
-
-			// Sync local state with track data
-			syncTrackToState(result);
-
-			isLoading = false;
-		} catch (err) {
-			console.error('Error loading track:', err);
-			isError = true;
-			isLoading = false;
-		}
-	}
-
-	/**
 	 * Sincroniza el track cargado con el estado local
+	 * Se llama automáticamente cuando el track cambia via $effect
 	 */
-	function syncTrackToState(t: Track) {
+	function syncTrackToState(t: Track | null) {
+		if (!t) return;
+
 		const trackTitle = t.title || '';
 		const trackArtist = t.artist || '';
 		const trackAlbum = t.album || '';
@@ -177,51 +158,45 @@
 	}
 
 	/**
-	 * Guarda los cambios al servidor
-	 * AIDEV-TODO: Implement with TanStack Svelte Query mutation
+	 * Guarda los cambios al servidor usando TanStack Svelte Query mutation
 	 */
-	async function handleSave() {
-		console.log('AIDEV-TODO: Implement track metadata save with TanStack Svelte Query');
-		updateMutationPending = true;
+	function handleSave() {
+		const request = {
+			id: trackId,
+			title,
+			artist,
+			album,
+			year,
+			genre,
+			rating,
+			bpm,
+			key
+		};
 
-		try {
-			const request = {
-				id: trackId,
-				title,
-				artist,
-				album,
-				year,
-				genre,
-				rating,
-				bpm,
-				key
-			};
+		$updateMetadataMutation.mutate(request, {
+			onSuccess: () => {
+				// Update original values after successful save
+				originalTitle = title;
+				originalArtist = artist;
+				originalAlbum = album;
+				originalYear = year;
+				originalGenre = genre;
+				originalBpm = bpm;
+				originalKey = key;
+				originalRating = rating;
+				originalComment = comment;
 
-			await invoke('update_track_metadata', { request });
-
-			// Update original values
-			originalTitle = title;
-			originalArtist = artist;
-			originalAlbum = album;
-			originalYear = year;
-			originalGenre = genre;
-			originalBpm = bpm;
-			originalKey = key;
-			originalRating = rating;
-			originalComment = comment;
-
-			// Show success message
-			showSuccess = true;
-			setTimeout(() => {
-				showSuccess = false;
-			}, 3000);
-
-			updateMutationPending = false;
-		} catch (err) {
-			console.error('Error saving track metadata:', err);
-			alert(`Error al guardar: ${err}`);
-			updateMutationPending = false;
-		}
+				// Show success message
+				showSuccess = true;
+				setTimeout(() => {
+					showSuccess = false;
+				}, 3000);
+			},
+			onError: (err: Error) => {
+				console.error('Error saving track metadata:', err);
+				alert(`Error al guardar: ${err.message}`);
+			}
+		});
 	}
 
 	/**
@@ -303,10 +278,10 @@
 	/**
 	 * Cargar track cuando cambia el trackId
 	 */
+	// Sync local editable state when track data loads or changes
 	$effect(() => {
-		const id = trackId;
-		if (id) {
-			loadTrack();
+		if (track) {
+			syncTrackToState(track);
 		}
 	});
 
