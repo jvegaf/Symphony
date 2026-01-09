@@ -276,7 +276,7 @@
 		role="button"
 		tabindex="0"
 	>
-		<canvas bind:this={canvasElement} class="w-full h-full" />
+		<canvas bind:this={canvasElement} class="w-full h-full"></canvas>
 
 		<!-- Tooltip de tiempo al hacer hover -->
 		{#if hoverTime !== null && hoverX !== null}

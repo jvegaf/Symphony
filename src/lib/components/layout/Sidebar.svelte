@@ -20,7 +20,7 @@
 		useDeletePlaylist,
 		useAddTracksToPlaylist,
 		useCreatePlaylistWithTracks
-	} from '$lib/hooks/playlists';
+	} from '@/lib/hooks/playlists';
 	import type { Playlist } from '@/types/playlist';
 
 	interface Props {
@@ -445,7 +445,7 @@
 		</button>
 	</nav>
 
-	<div class="border-t border-gray-200/50 dark:border-gray-700/50 my-2" />
+	<div class="border-t border-gray-200/50 dark:border-gray-700/50 my-2"></div>
 
 	<!-- Playlists -->
 	<div>

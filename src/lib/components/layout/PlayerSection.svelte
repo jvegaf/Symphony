@@ -15,11 +15,11 @@ import { invoke } from '@tauri-apps/api/core';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 
 import type { Track } from '../../../types/library';
-import WaveformCanvas from '../../WaveformCanvas.svelte';
-import BeatgridOverlay from '../../analysis/BeatgridOverlay.svelte';
-import Toast from '../../Toast.svelte';
-import { useGetBeatgrid, useAnalyzeBeatgrid } from '$lib/hooks/useAnalysis';
-import { useGetTrackArtwork } from '$lib/hooks/useArtwork';
+import WaveformCanvas from '@/lib/components/WaveformCanvas.svelte';
+import BeatgridOverlay from '@/lib/components/analysis/BeatgridOverlay.svelte';
+import Toast from '@/lib/components/Toast.svelte';
+import { useGetBeatgrid, useAnalyzeBeatgrid } from '@/lib/hooks/useAnalysis';
+import { useGetTrackArtwork } from '@/lib/hooks/useArtwork';
 import type { Beatgrid } from '@/types/analysis';
 
 interface Props {

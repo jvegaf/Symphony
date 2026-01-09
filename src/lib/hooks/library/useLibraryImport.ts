@@ -25,7 +25,7 @@ import type { ImportProgress, ImportResult } from '../../../types/library';
  * @example
  * ```svelte
  * <script lang="ts">
- *   import { useImportLibrary } from '$lib/hooks/library';
+ *   import { useImportLibrary } from '@/lib/hooks/library';
  *   
  *   const { mutation, progress, setupListeners, cleanup } = useImportLibrary();
  *   

@@ -16,7 +16,7 @@ import type { LibraryStats, Track } from '../../../types/library';
  * @example
  * ```svelte
  * <script lang="ts">
- *   import { useGetAllTracks } from '$lib/hooks/library';
+ *   import { useGetAllTracks } from '@/lib/hooks/library';
  *   
  *   const tracksQuery = useGetAllTracks();
  *   const tracks = $derived($tracksQuery.data ?? []);

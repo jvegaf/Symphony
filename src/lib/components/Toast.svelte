@@ -41,6 +41,8 @@ $effect(() => {
 
 		return () => clearTimeout(timer);
 	}
+	// No cleanup needed when duration <= 0
+	return () => {};
 });
 
 const handleClose = () => {
@@ -48,19 +50,20 @@ const handleClose = () => {
 	onClose?.();
 };
 
-const bgColorClass = {
+// Computed values based on type
+const bgColorClass = $derived(() => ({
 	error: 'bg-red-600',
 	success: 'bg-green-600',
 	info: 'bg-blue-600',
 	warning: 'bg-yellow-600'
-}[type];
+}[type]));
 
-const iconClass = {
+const iconClass = $derived(() => ({
 	error: '❌',
 	success: '✅',
 	info: 'ℹ️',
 	warning: '⚠️'
-}[type];
+}[type]));
 </script>
 
 {#if isVisible}

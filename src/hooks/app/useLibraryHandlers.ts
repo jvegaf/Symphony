@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { open } from "@tauri-apps/plugin-dialog";
+import { open } from "@tauri-apps/plugin-opener";
 import { useImportLibrary } from '../library';
 import type { ImportProgress, Track } from '../../types/library';
 

@@ -18,11 +18,11 @@ import TableHeader from './components/TableHeader.svelte';
 import TrackRow from './components/TrackRow.svelte';
 import EmptyState from './components/EmptyState.svelte';
 import LoadingState from './components/LoadingState.svelte';
-import { useUpdateTrackRating, useDeleteTrack } from '$lib/hooks/library';
+import { useUpdateTrackRating, useDeleteTrack } from '@/lib/hooks/library';
 import {
 	useReorderPlaylistTracks,
 	useRemoveTrackFromPlaylist
-} from '$lib/hooks/playlists';
+} from '@/lib/hooks/playlists';
 
 // Re-export types for compatibility
 export type SortColumn =

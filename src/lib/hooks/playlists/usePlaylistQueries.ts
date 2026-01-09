@@ -17,7 +17,7 @@ import type { Track } from '../../../types/library';
  * @example
  * ```svelte
  * <script lang="ts">
- *   import { useGetPlaylists } from '$lib/hooks/playlists';
+ *   import { useGetPlaylists } from '@/lib/hooks/playlists';
  *   
  *   const playlistsQuery = useGetPlaylists();
  *   const playlists = $derived($playlistsQuery.data ?? []);

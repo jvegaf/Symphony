@@ -2,7 +2,7 @@
 	import Toast from './Toast.svelte';
 	import type { AppSettings } from '../../types/settings';
 	import { DEFAULT_SETTINGS } from '../../types/settings';
-	import { useGetAllSettings, useUpdateSettings, useResetSettings } from '$lib/hooks/useSettings';
+	import { useGetAllSettings, useUpdateSettings, useResetSettings } from '@/lib/hooks/useSettings';
 	import { stringifySettingValue } from '../../types/settings';
 	import type { Setting } from '../../types/settings';
 

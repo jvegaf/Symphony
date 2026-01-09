@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { open } from "@tauri-apps/plugin-dialog";
+import { open } from "@tauri-apps/plugin-opener";
 import { useImportLibrary } from "../hooks/library";
 import type { ImportResult } from "../types/library";
 

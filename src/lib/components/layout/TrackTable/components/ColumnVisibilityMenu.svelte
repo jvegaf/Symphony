@@ -126,6 +126,7 @@ Features:
 		onclick={(e) => e.stopPropagation()}
 		onkeydown={(e) => e.stopPropagation()}
 		role="dialog"
+		tabindex="0"
 		aria-label="Column visibility settings"
 	>
 		<!-- Header -->

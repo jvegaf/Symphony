@@ -1,18 +1,18 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { QueryClientProvider } from '@tanstack/svelte-query';
-  import { queryClient } from '@/lib/query-client';
+  import { queryClient } from './lib/query-client';
 
   // Main application components
-  import Sidebar from '@/lib/components/layout/Sidebar.svelte';
-  import TrackTable from '@/lib/components/layout/TrackTable/index.svelte';
-  import PlayerSection from '@/lib/components/layout/PlayerSection.svelte';
-  import SettingsModal from '@/lib/components/SettingsModal.svelte';
-  import OnboardingModal from '@/lib/components/OnboardingModal.svelte';
-  import TrackDetail from '@/lib/components/TrackDetail.svelte';
+  import Sidebar from './lib/components/layout/Sidebar.svelte';
+  import TrackTable from './lib/components/layout/TrackTable/index.svelte';
+  import PlayerSection from './lib/components/layout/PlayerSection.svelte';
+  import SettingsModal from './lib/components/SettingsModal.svelte';
+  import OnboardingModal from './lib/components/OnboardingModal.svelte';
+  import TrackDetail from './lib/components/TrackDetail.svelte';
 
   // Types
-  import type { Track } from '@/types/library';
+  import type { Track } from './types/library';
 
   // Application state
   let currentTrack: Track | null = $state(null);
@@ -23,10 +23,10 @@
   let isSettingsOpen = $state(false);
   let isOnboardingOpen = $state(false);
   let isTrackDetailOpen = $state(false);
-  let trackDetailId: string | null = $state(null);
+  let trackDetailId = $state<string | null>(null);
   let pendingTracksForNewPlaylist = $state<{ trackIds: string[] } | null>(null);
 
-  // Mock data for demonstration
+  // Mock data for web demonstration
   const mockTracks: Track[] = [
     {
       id: '1',
@@ -65,11 +65,50 @@
       bitrate: 320,
       sampleRate: 44100,
       playCount: 0
+    },
+    {
+      id: '3',
+      title: 'Hotel California',
+      artist: 'Eagles',
+      album: 'Hotel California',
+      duration: 391,
+      year: 1976,
+      genre: 'Rock',
+      bpm: 75,
+      key: 'Am',
+      rating: 4,
+      path: '/mock/path/3.mp3',
+      dateAdded: new Date().toISOString(),
+      dateModified: new Date().toISOString(),
+      fileSize: 14567890,
+      bitrate: 320,
+      sampleRate: 44100,
+      playCount: 0
+    },
+    {
+      id: '4',
+      title: 'Dream On',
+      artist: 'Aerosmith',
+      album: 'Aerosmith',
+      duration: 267,
+      year: 1973,
+      genre: 'Rock',
+      bpm: 78,
+      key: 'F# Minor',
+      rating: 4,
+      path: '/mock/path/4.mp3',
+      dateAdded: new Date().toISOString(),
+      dateModified: new Date().toISOString(),
+      fileSize: 9876543,
+      bitrate: 320,
+      sampleRate: 44100,
+      playCount: 0
     }
   ];
 
   onMount(() => {
-    console.log('🎵 Symphony Music Library - Main Application Loaded!');
+    console.log('🎵 Symphony Music Library - Web Demo Version');
+    console.log('📊 Mock data loaded:', mockTracks.length, 'tracks');
     // Initialize with mock data
     totalTracks = mockTracks.length;
   });
@@ -77,36 +116,33 @@
   // Event handlers
   function handleSearchChange(query: string) {
     searchQuery = query;
-    console.log('Search query:', query);
+    console.log('🔍 Search query:', query);
   }
 
   function handleTracksSelect(tracks: Track[]) {
     selectedTracks = tracks;
-    console.log('Selected tracks:', tracks.length);
+    console.log('🎵 Selected tracks:', tracks.length);
   }
 
   function handleTrackDoubleClick(track: Track, _sortedTracks: Track[], index: number) {
     currentTrack = track;
-    console.log('Playing track:', track.title, 'at index:', index);
+    console.log('🎶 Playing track:', track.title, 'at index:', index);
   }
 
   function handleSelectPlaylist(playlistId: string | null) {
     selectedPlaylistId = playlistId;
-    console.log('Selected playlist:', playlistId);
+    console.log('📂 Selected playlist:', playlistId);
   }
 
   function handleTrackDetails(track: Track) {
     trackDetailId = track.id ?? null;
     isTrackDetailOpen = true;
+    console.log('📋 Opening track details:', track.title);
   }
 
   function handleAddToNewPlaylist(trackIds: string[]) {
     pendingTracksForNewPlaylist = { trackIds };
-    console.log('Adding tracks to new playlist:', trackIds);
-  }
-
-  function handlePlaylistCreatedWithTracks() {
-    pendingTracksForNewPlaylist = null;
+    console.log('➕ Adding tracks to new playlist:', trackIds);
   }
 
   function handleCloseTrackDetail() {
@@ -116,6 +152,7 @@
 
   function handleOnboardingComplete() {
     isOnboardingOpen = false;
+    console.log('✅ Onboarding completed');
   }
 </script>
 
@@ -127,7 +164,7 @@
       onSearchChange={handleSearchChange}
       {totalTracks}
       {pendingTracksForNewPlaylist}
-      onPlaylistCreatedWithTracks={handlePlaylistCreatedWithTracks}
+      onPlaylistCreatedWithTracks={() => pendingTracksForNewPlaylist = null}
       {selectedPlaylistId}
       onSelectPlaylist={handleSelectPlaylist}
     />
@@ -138,7 +175,7 @@
       <header class="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-6 py-4">
         <div class="flex items-center justify-between">
           <h1 class="text-2xl font-bold text-gray-900 dark:text-white">
-            🎵 Symphony
+            🎵 Symphony <span class="text-sm text-gray-500 dark:text-gray-400">(Web Demo)</span>
           </h1>
           <div class="flex items-center space-x-4">
             <button
