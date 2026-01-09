@@ -8,7 +8,7 @@ import '@fontsource/spline-sans/400.css';
 import '@fontsource/spline-sans/500.css';
 import '@fontsource/spline-sans/700.css';
 
-import App from './App.svelte';
+import App from './MainApp.svelte';
 import './styles/globals.css';
 
 // AIDEV-NOTE: Configurar logger para reducir spam en dev
